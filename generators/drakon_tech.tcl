@@ -238,7 +238,10 @@ proc generate_drakon_tech { db filename } {
 		set outputFolder [string range $filename 0 end-4]
 		file delete -force $outputFolder
 		file mkdir $outputFolder
-		convert_folder $db 0 $outputFolder
+		set exported_functions [get_exported_functions]
+		convert_folder $db 0 $outputFolder $exported_functions
+
+		write_module $outputFolder	
 	}
 	
 
@@ -253,7 +256,145 @@ proc generate_drakon_tech { db filename } {
 	return 1
 }
 
-proc convert_folder { db parent parentFolder } {
+proc write_module { outputFolder } {
+	set header [get_header]
+	set content [create_module $header ]
+	set outputFilename [file join $outputFolder "module.drakon"]
+	write_file $outputFilename [toJson $content]	
+}
+
+proc parse_description {text} {
+    set lines [split $text "\n"]
+    set header_index -1
+    set footer_index -1
+    set i 0
+    foreach line $lines {
+        if {[string match "*=== header ==*" $line]} {set header_index $i}
+        if {[string match "*=== footer ==*" $line]} {set footer_index $i}
+        incr i
+    }
+    if {$header_index != -1} {
+        if {$footer_index != -1} {
+            if {$footer_index < $header_index} {
+                set header {}; set footer {}
+            } else {
+                set header [lrange $lines [expr {$header_index+1}] [expr {$footer_index-1}]]
+                set footer [lrange $lines [expr {$footer_index+1}] end]
+            }
+        } else {
+            set header [lrange $lines [expr {$header_index+1}] end]
+            set footer {}
+        }
+    } else {
+        set header {}
+        if {$footer_index != -1} {
+            set footer [lrange $lines [expr {$footer_index+1}] end]
+        } else {set footer {}}
+    }
+    return [list $header $footer]
+}
+
+proc extract_values {lines} {
+    set result {}
+    foreach line $lines {
+        if {[string match "*=*" $line]} {
+            set raw_value [string trim [lindex [split $line "="] end]]
+            set value [string trimright $raw_value ",;"]
+            dict set result $value 1
+        }
+    }
+    return $result
+}
+
+# Procedure: convert_lines_to_blocks
+# Splits a list of lines into blocks separated by empty lines or max 4 lines per block
+proc convert_lines_to_blocks {lines} {
+    set blocks [list]
+    set buffer [list]
+    
+    foreach line $lines {
+        set dry [string trim $line]
+        
+        if {$dry eq ""} {
+            # Empty line - finalize current block if not empty
+            if {[llength $buffer] > 0} {
+                set block [join $buffer "\n"]
+                lappend blocks $block
+                set buffer [list]
+            }
+        } else {
+            # Non-empty line - add to buffer
+            lappend buffer $line
+            
+            # If buffer reaches 5 lines, finalize the block
+            if {[llength $buffer] >= 5} {
+                set block [join $buffer "\n"]
+                lappend blocks $block
+                set buffer [list]
+            }
+        }
+    }
+    
+    # Handle any remaining lines in buffer
+    if {[llength $buffer] > 0} {
+        set block [join $buffer "\n"]
+        lappend blocks $block
+    }
+    
+    return $blocks
+}
+
+# Procedure: convert_block_to_item
+# Converts a text block to an item structure with a "next" reference
+proc convert_block_to_item {text next} {
+    return [list obj [list \
+        type [list str "action"] \
+        content [list str $text] \
+        one [list str $next] \
+    ]]
+}
+
+# Procedure: Create_module
+# Main procedure that converts lines to a diagram structure
+proc create_module {lines} {
+    set blocks [convert_lines_to_blocks $lines]
+    set items [dict create]
+    set counter 1
+    
+    # Add initial branch item
+    set next [expr {$counter + 1}]
+    dict set items $counter [list obj [list \
+        type [list str "branch"] \
+        branchId [list num 0] \
+        one [list str $next] \
+    ]]
+    incr counter
+    
+    # Process each block
+    foreach block $blocks {
+        set next [expr {$counter + 1}]
+        set item [convert_block_to_item $block $next]
+        dict set items $counter $item
+        incr counter
+    }
+    
+    # Add end marker
+    dict set items $counter [list obj [list \
+        type [list str "end"] \
+    ]]
+    
+    # Create the diagram structure
+    set diagram [list obj [list \
+        name [list str "module"] \
+        type [list str "drakon"] \
+        items [list obj $items] \
+    ]]
+    
+    return $diagram
+}
+
+
+proc convert_folder { db parent parentFolder exported_functions} {
 	set nodes [ $db eval {
 		select node_id from tree_nodes where parent = :parent} ]
 	foreach node_id $nodes {
@@ -263,14 +404,27 @@ proc convert_folder { db parent parentFolder } {
 		if { $type == "folder" } {
 			set outputFolder [file join $parentFolder $name]
 			file mkdir $outputFolder
-			convert_folder $db $node_id $outputFolder
+			convert_folder $db $node_id $outputFolder $exported_functions
 		} else {
 			lassign [ $db eval { select name from diagrams where diagram_id = :diagram_id}] name
-			set content [convert_diagram $name $diagram_id]
+			set exported [ dict exists $exported_functions $name ]
+			set content [convert_diagram $name $diagram_id $exported]
 			set outputFilename [file join $parentFolder "${name}.drakon"]
 			write_file $outputFilename $content
 		}
 	}
+}
+
+proc get_exported_functions {} {
+	set description [ db onecolumn { select description from state where row = 1 } ]
+	lassign [parse_description $description] header footer
+	return [extract_values $footer]
+}
+
+proc get_header {} {
+	set description [ db onecolumn { select description from state where row = 1 } ]
+	lassign [parse_description $description] header footer
+	return $header	
 }
 
 proc get_text_by_vertex {vertex_id} {
@@ -348,9 +502,12 @@ proc rewire_select_for_tech { select } {
 	}
 }
 
-proc convert_diagram { name diagram_id } {
+proc convert_diagram { name diagram_id exported} {
 	rewire_selects_for_tech $diagram_id
 	set diagram [ dict create type [type_str drakon] ]
+	if {$exported} {
+		dict set diagram keywords [type_obj [dict create export [type_bool 1]]]
+	}
 	set items [dict create]
 	set params ""
 	# puts "---------------------"
@@ -404,22 +561,7 @@ proc convert_diagram { name diagram_id } {
 			continue
 		}
 		# puts "$item_id $vertex_id $type $parent $right"
-
-		if {$type == "select"} {
-			set links [gdb eval {
-				select ordinal
-				from links	
-				where src = :vertex_id
-			}]
-			foreach ordinal $links {
-				lassign [ gdb eval {
-					select src, dst, direction, constant
-					from links
-					where src = :vertex_id and ordinal = :ordinal
-				}] src dst direction constant
-				puts "  >>>>>>>>>>>>>> $src $ordinal $dst $direction $constant"
-			}	
-		}	
+	
 		if { $type != "" && $vertex_id != $start } {
 			if {$item_id > $max_id} {
 				set max_id $item_id
@@ -566,6 +708,15 @@ proc type_obj {value} {
 	return [list obj $value]
 }
 
+proc type_bool {value} {
+	if {$value} {
+		set bool_value true
+	} else {
+		set bool_value false
+	}
+	return [list bool $bool_value]
+}
+
 proc get_branch_ordinal { vertex_id } {
 	set dst_vertex [ gdb onecolumn {
 		select dst
@@ -634,6 +785,9 @@ proc toJson {value} {
         str {
             return [json::write string $data]
         }
+		bool {
+			return $data
+		}
         num {
             if {
                 ![string is integer -strict $data] &&
