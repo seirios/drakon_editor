@@ -239,7 +239,7 @@ proc generate_drakon_tech { db filename } {
 		file delete -force $outputFolder
 		file mkdir $outputFolder
 		set exported_functions [get_exported_functions]
-		convert_folder $db 0 $outputFolder $exported_functions
+		convert_folder $db 0 $outputFolder $exported_functions $language
 
 		write_module $outputFolder	
 	}
@@ -394,7 +394,7 @@ proc create_module {lines} {
 }
 
 
-proc convert_folder { db parent parentFolder exported_functions} {
+proc convert_folder { db parent parentFolder exported_functions language} {
 	set nodes [ $db eval {
 		select node_id from tree_nodes where parent = :parent} ]
 	foreach node_id $nodes {
@@ -404,10 +404,14 @@ proc convert_folder { db parent parentFolder exported_functions} {
 		if { $type == "folder" } {
 			set outputFolder [file join $parentFolder $name]
 			file mkdir $outputFolder
-			convert_folder $db $node_id $outputFolder $exported_functions
+			convert_folder $db $node_id $outputFolder $exported_functions $language
 		} else {
 			lassign [ $db eval { select name from diagrams where diagram_id = :diagram_id}] name
 			set exported [ dict exists $exported_functions $name ]
+			if {$language == "DrakonLua"} {
+		    	set keys {"=" "" "end"}
+				gen::rewrite_clean gdb $diagram_id $keys
+			}
 			set content [convert_diagram $name $diagram_id $exported]
 			set outputFilename [file join $parentFolder "${name}.drakon"]
 			write_file $outputFilename $content
@@ -566,7 +570,7 @@ proc convert_diagram { name diagram_id exported} {
 			if {$item_id > $max_id} {
 				set max_id $item_id
 			}
-			set item [ build_dt_item $item_id $vertex_id $type $parent ]
+			set item [ build_dt_item $item_id $vertex_id $type $parent $text]
 			if {$item == ""} {
 				continue
 			}
@@ -647,14 +651,14 @@ proc insert_arrow_loops { items after_arrow max_id to_arrow} {
 	return $items
 }
 
-proc build_dt_item { item_id vertex_id type parent } {
+proc build_dt_item { item_id vertex_id type parent text} {
 	lassign [
 		gdb eval {
-			select b, text
+			select b
 			from items
 			where item_id = :item_id
 		}
-	] b text
+	] b
 	set one [ get_link $vertex_id 1 ]
 	set two [ get_link $vertex_id 2 ]
 	set item [ dict create type [type_str $type] content [type_str $text] ]
