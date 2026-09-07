@@ -103,7 +103,7 @@ proc try_open { filename } {
 
 proc intro.open { } {
   set filename [ ds::requestopath main .intro ]
-  if { $filename == "" } { exit }
+  if { $filename == "" } { return }
   try_open $filename
 }
 
