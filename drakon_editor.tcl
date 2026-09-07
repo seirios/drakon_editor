@@ -56,8 +56,8 @@ if { $tk_version < 8.6 || $tcl_version < 8.6 } {
 
 namespace import ::msgcat::mc
 
-# Russian hard-coded.
-::msgcat::mclocale ru
+# English hard-coded.
+::msgcat::mclocale en
 
 ## And eventually load the actual message catalog
 ::msgcat::mcload [ file join [ file dirname [ info script ] ] msgs ]
