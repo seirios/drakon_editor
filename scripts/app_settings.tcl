@@ -3,8 +3,13 @@ namespace eval app_settings {
   proc p.path { app } {
     global env
     set name $app.settings
-    set home $env(HOME)
-    set path [ file join $home $name ]
+    set cfgroot {}
+    if { [ info exists ::env(XDG_CONFIG_HOME) ] } {
+        set cfgroot [ file join $env(XDG_CONFIG_HOME) $app ]
+    } else {
+        set cfgroot $env(HOME)
+    }
+    set path [ file join $cfgroot $name ]
     return $path  
   }
 
