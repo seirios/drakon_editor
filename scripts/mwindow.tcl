@@ -1101,7 +1101,7 @@ proc update_menu { } {
 	}
 }
 
-proc add_insert_item { menu name text } {
+proc add_insert_item { menu name text accel } {
 	global script_path
 	set image .ins.$name
 	set file $script_path/images/$name.gif
@@ -1109,7 +1109,7 @@ proc add_insert_item { menu name text } {
 
 
 	set command [ list mwc::do_create_item $name ]
-	$menu add command -label $text -command $command -image $image -compound left
+	$menu add command -label $text -command $command -image $image -compound left -accelerator $accel
 }
 
 proc canvas_popup { window x_world y_world x y } {
@@ -1136,21 +1136,23 @@ proc canvas_popup { window x_world y_world x y } {
 	.canvaspop add cascade -label [ mc2 "Insert" ] -underline 0 -menu .canvaspop.inserts
 	.canvaspop add cascade -label [ mc2 "Insert more" ] -underline 0 -menu .canvaspop.more
 	
+	# Create 'Insert' menu items
 	foreach insert $inserts {
-		lassign $insert type icon_type text
+		lassign $insert type icon_type text accel
 		if { $type == "separator" } {
 			.canvaspop.inserts add separator
 		} else {
-			add_insert_item .canvaspop.inserts $icon_type $text
+			add_insert_item .canvaspop.inserts $icon_type $text $accel
 		}		
 	}
 
+	# Create 'Insert more' menu items
 	foreach insert $more {
-		lassign $insert type icon_type text
+		lassign $insert type icon_type text accel
 		if { $type == "separator" } {
 			.canvaspop.more add separator
 		} else {
-			add_insert_item .canvaspop.more $icon_type $text
+			add_insert_item .canvaspop.more $icon_type $text $accel
 		}		
 	}
 
@@ -1392,8 +1394,44 @@ proc canvas_rect { } {
 }
 
 proc canvas_shift_key_press { window k n code } {
+	set items {
+		c commentout
+		o output
+		i input
+		p parallel
+		r process
+		u pause
+		t timer
+	}
+
+	set items_eril {
+		c commentout
+		w up_white_arrow
+		a left_white_arrow
+		s down_white_arrow
+		d right_white_arrow
+	}
+
+	set low [ string tolower $k ]
+
+	set db $mwc::db
+	set diagram_id [ mwc::editor_state $db current_dia ]
+	if { [ mwc::is_drakon $diagram_id ] } {
+		if { [ dict exists $items $low ] } {
+			set command [ dict get $items $low ]
+			mwc::do_create_item $command
+			return
+		}
+	} else {
+		if { [ dict exists $items_eril $low ] } {
+			set command [ dict get $items_eril $low ]
+			mwc::do_create_item $command
+			return
+		}
+	}
+
+
 	array set codes [ ui::key_codes ]
-	
 	if { $code == $codes(Up) } {
 
 	} elseif { $code == $codes(Down) } {
@@ -1406,7 +1444,6 @@ proc canvas_shift_key_press { window k n code } {
 }
 
 proc canvas_key_press { window k n code } {
-	
 	set items {
 		a action
 		n insertion
@@ -1421,18 +1458,46 @@ proc canvas_key_press { window k n code } {
 		c case
 		b branch
 		d address
+		slash commentin
 		f shelf
 	}
-	
-	set low [ string tolower $k ]
-	
-	if { [ dict exists $items $low ] } {
-		set command [ dict get $items $low ]
-		mwc::do_create_item $command
-		return
+
+	set items_eril {
+		e action
+		f shelf
+		t beginend
+		v vertical
+		h horizontal
+		i up_paw
+		k down_paw
+		j left_paw
+		l right_paw
+		w up_arrow
+		a left_arrow
+		s down_arrow
+		d right_arrow
+		slash commentin
 	}
-	
-	
+
+	set low [ string tolower $k ]
+
+	set db $mwc::db
+	set diagram_id [ mwc::editor_state $db current_dia ]
+	if { [ mwc::is_drakon $diagram_id ] } {
+		if { [ dict exists $items $low ] } {
+			set command [ dict get $items $low ]
+			mwc::do_create_item $command
+			return
+		}
+	} else {
+		if { [ dict exists $items_eril $low ] } {
+			set command [ dict get $items_eril $low ]
+			mwc::do_create_item $command
+			return
+		}
+	}
+
+
 	array set codes [ ui::key_codes ]
 	if { $k == "Delete" } {
 		mwc::delete foo
@@ -1453,13 +1518,6 @@ proc canvas_key_press { window k n code } {
 			mwc::request_text_change 0
 		} elseif { $code == $codes(space) } {
 
-		}
-		
-		foreach { shortcut command } $items {
-			if { $code == $codes($shortcut) } {
-				mwc::do_create_item $command
-				return
-			}
 		}
 	}
 }
