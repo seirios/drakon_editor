@@ -3069,6 +3069,8 @@ proc change_current_dia { old_id new_id hard record } {
 		if { $record } {
 			back::record $new_id
 		}
+	} else {
+		mw::update_description foo foo
 	}
 	
 	commit_transaction change_current_dia
