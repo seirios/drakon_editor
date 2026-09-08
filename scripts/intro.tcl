@@ -91,10 +91,10 @@ proc good_close { } {
   destroy .intro
 }
 
-proc try_open { filename } {
+proc try_open { name } {
   
-  if { ![ ds::openfile $filename ] } { 
-    tk_messageBox -message [ mc2 "Error opening file: \$filename" ] -parent .intro
+  if { ![ ds::openfile $name ] } { 
+    tk_messageBox -message [ mc2 "Error opening file: \$name" ] -parent .intro
     return
   }
   

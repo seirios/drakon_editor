@@ -56,8 +56,8 @@ if { $tk_version < 8.6 || $tcl_version < 8.6 } {
 
 namespace import ::msgcat::mc
 
-# English hard-coded.
-::msgcat::mclocale en
+# Russian hard-coded.
+::msgcat::mclocale ru
 
 ## And eventually load the actual message catalog
 ::msgcat::mcload [ file join [ file dirname [ info script ] ] msgs ]
@@ -321,10 +321,23 @@ proc localize_texts {} {
 	}	
 }
 
+proc setlocale {} {
+	set lang [ texts::get "language" ]
+	if {$lang == "English"} {
+		::msgcat::mclocale en
+	} elseif {$lang == "Español"} {
+		::msgcat::mclocale es
+	} else {
+		::msgcat::mclocale ru
+	}
+
+}
+
 ### main ###
 
 texts::init
 localize_texts
+setlocale
 gprops::load_from_settings
 
 mw::create_ui

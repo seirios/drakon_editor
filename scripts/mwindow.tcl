@@ -294,7 +294,7 @@ proc create_ui { } {
 	
 	command_button .root.pnd.left.nav.descr description.gif mwc::file_description [ mc2 "File description" ]
 	ttk::button .root.pnd.left.nav.dia -text [ mc2 "New diagram" ] -command mwc::new_dia
-	ttk::button .root.pnd.left.nav.folder -text [ mc2 "Folder" ] -command mwc::new_folder
+	ttk::button .root.pnd.left.nav.folder -text [ mc2 "New folder" ] -command mwc::new_folder
 	pack .root.pnd.left.nav.dia -side left
 	pack .root.pnd.left.nav.folder -side left
 
@@ -331,7 +331,7 @@ proc create_ui { } {
 	pack $errors_main.list -side top -fill both -expand 1
 	
 	ttk::button $errors_info.verify -text [ mc2 "Verify" ] -command mw::verify
-	ttk::button $errors_info.verify_all -text [ mc2 "Verify All" ] -command mw::verify_all
+	ttk::button $errors_info.verify_all -text [ mc2 "Verify all" ] -command mw::verify_all
 	ttk::button $errors_info.hide -text [ mc2 "Hide" ] -command mw::hide_errors
 	set error_label [ label $errors_info.message -textvariable mw::error_message ]
 	pack $errors_info.verify -side left
@@ -358,8 +358,8 @@ proc create_ui { } {
 	set replace_entry [ ttk::entry $search_main.criteria.replace_entry -textvariable mw::s_replace ]
 	bind $replace_entry <Escape> mw::hide_search
 	
-	set find_button [ ttk::button $search_main.criteria.find_button -text [ mc2 "Find All" ] -command mw::find_all ]
-	set replace_all_button [ ttk::button $search_main.criteria.replace_all_button -text [ mc2 "Replace All" ] \
+	set find_button [ ttk::button $search_main.criteria.find_button -text [ mc2 "Find all" ] -command mw::find_all ]
+	set replace_all_button [ ttk::button $search_main.criteria.replace_all_button -text [ mc2 "Replace all" ] \
 		-command mw::replace_all ]
 	
 	set case_check [ ttk::checkbutton $search_main.criteria.case_check -text [ mc2 "Case sensitive" ] -variable mw::s_case ]
@@ -496,7 +496,7 @@ proc create_ui { } {
 
 	# DRAKON submenu
 	.mainmenu.drakon add command -label [ mc2 "Verify" ] -underline 0 -command mw::verify -accelerator [ acc R ]
-	.mainmenu.drakon add command -label [ mc2 "Verify All" ] -underline 7 -command mw::verify_all
+	.mainmenu.drakon add command -label [ mc2 "Verify all" ] -underline 7 -command mw::verify_all
 	.mainmenu.drakon add separator		
 	.mainmenu.drakon add command -label [ mc2 "Generate code" ] -underline 0 -command gen::generate -accelerator [ acc B ]
 

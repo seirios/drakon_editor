@@ -41,7 +41,8 @@ variable scheme_list {
 
 variable language_list {
 	"English"
-	"Russian"
+	"Русский"
+	"Español"
 }
 
 variable strict {
@@ -269,10 +270,14 @@ proc on_language { } {
 		set yes_entry "Yes"
 		set no_entry "No"
 		set end_entry "End"
+	} elseif {$language_combo == "Español"} {
+		set yes_entry "Sí"
+		set no_entry "No"
+		set end_entry "Fin"
 	} else {
 		set yes_entry "Да"
 		set no_entry "Нет"
-		set end_entry "Конец"		
+		set end_entry "Конец"
 	}
 }
 
@@ -290,7 +295,7 @@ proc init { win data } {
 	set root [ ttk::frame $win.root -padding "5 5 5 5" ]
 
 	set language_frame [ ttk::frame $root.language_frame ]
-	set language_label [ ttk::label $language_frame.lang_label -text "Language:" -width 30 ]
+	set language_label [ ttk::label $language_frame.lang_label -text [ mc2 "Language:" ] -width 30 ]
 	set language_entry [ ttk::combobox $language_frame.lang_combo -values [lsort $language_list ] -state readonly -textvariable gprops::language_combo ]
 
 	set yes_frame [ ttk::frame $root.yes_frame ]
@@ -412,13 +417,15 @@ proc ok { } {
 	
 	set old_language [ texts::get "language" ]
 	set restart_required 0
+        set restart_message ""
 	if {$old_language != $language_combo} {
 		set restart_required 1
+		set restart_message [ mc2 "Please restart the application" ]
 	}
 	
 	
 	texts::put "language" $language_combo
-	
+
 	app_settings::set_prop drakon_editor "yes" $yes_entry
 	app_settings::set_prop drakon_editor "no" $no_entry
 	app_settings::set_prop drakon_editor "end" $end_entry
@@ -429,8 +436,7 @@ proc ok { } {
 	destroy $window
 	
 	if {$restart_required} {
-		set message [ mc2 "Please restart the application" ]
-		tk_messageBox -parent . -message $message -type ok
+		tk_messageBox -parent . -message $restart_message -type ok
 	}
 }
 
