@@ -2819,77 +2819,93 @@ proc paste { ignored } {
 }
 
 proc get_context_inserts {} {
-	set result {}
-	set more {}
-	
-	set diagram_id [ get_current_dia ]
-	if { [ is_drakon $diagram_id ] } {
-		# 'Insert' menu
-		#                     kind     icon_type  text                         accel
-		lappend result [ list command  action     [ mc2 "Action" ]             "a" ]
-		lappend result [ list command  if         [ mc2 "If" ]                 "i" ]
-		lappend result [ list command  vertical   [ mc2 "Vertical line" ]      "v" ]
-		lappend result [ list command  horizontal [ mc2 "Horizontal line" ]    "h" ]
-		lappend result [ list command  select     [ mc2 "Select" ]             "s" ]
-		lappend result [ list command  case       [ mc2 "Case" ]               "c" ]
-		lappend result { separator }
-		lappend result [ list command  loopstart  [ mc2 "Loop" ]               "l" ]	
-		lappend result [ list command  loopend    [ mc2 "Loop end" ]           "e" ]	
-		lappend result [ list command  arrow      [ mc2 "Arrow" ]              "r" ]
-		lappend result { separator }
-		lappend result [ list command  beginend   [ mc2 "Begin/End" ]          "g" ]
-		lappend result [ list command  branch     [ mc2 "Branch header" ]      "b" ]
-		lappend result [ list command  address    [ mc2 "Branch footer" ]      "d" ]
-		lappend result { separator }
-		lappend result [ list command  commentin  [ mc2 "Inline comment" ]     "/" ]
-		lappend result [ list command  commentout [ mc2 "Standalone comment" ] "C" ]
-	
+    # We use these as 'static' variables
+    global _proc_get_context_inserts_insert
+    global _proc_get_context_inserts_more
+    global _proc_get_context_inserts_insert_eril
+    global _proc_get_context_inserts_more_eril
 
-		# 'Insert more' menu
-		#                   kind     icon_type    text                 accel
-		lappend more [ list command  insertion    [ mc2 "Insertion" ]  "n" ]
-		lappend more [ list command  shelf        [ mc2 "Shelf" ]      "f" ]
-		lappend more { separator }
-		lappend more [ list command  output       [ mc2 "Output" ]     "O" ]
-		lappend more [ list command  input        [ mc2 "Input" ]      "I" ]	
-		lappend more { separator }
-		lappend more [ list command  parallel     [ mc2 "Parallel" ]   "P" ]
-		lappend more [ list command  process      [ mc2 "Process" ]    "R" ]	
-		lappend more [ list command  pause        [ mc2 "Pause" ]      "U" ]
-		lappend more [ list command  timer        [ mc2 "Timer" ]      "T" ]
-	} else {
-		# 'Insert' menu
-		#                     kind     icon_type   text                                 accel
-		lappend result [ list command  action      [ mc2 "Entity" ]                     "e" ]
-		lappend result [ list command  shelf       [ mc2 "Entity with fields" ]         "f" ]
-		lappend result [ list command  beginend    [ mc2 "Attribute" ]                  "t" ]		
-		lappend result { separator }
-		lappend result [ list command  vertical    [ mc2 "Vertical line" ]              "v" ]
-		lappend result [ list command  horizontal  [ mc2 "Horizontal line" ]            "h" ]
-		lappend result { separator }
-		lappend result [ list command  up_paw      [ mc2 "One-to-many \(\\\"many\\\" at the top\)" ]    "i" ]
-		lappend result [ list command  down_paw    [ mc2 "One-to-many \(\\\"many\\\" at the bottom\)" ] "k" ]
-		lappend result [ list command  left_paw    [ mc2 "One-to-many \(\\\"many\\\" on the left\)" ]   "j" ]
-		lappend result [ list command  right_paw   [ mc2 "One-to-many \(\\\"many\\\" on the right\)" ]  "l" ]
-		lappend result { separator }
-		lappend result [ list command  up_arrow    [ mc2 "Directed link up" ]           "w" ]
-		lappend result [ list command  left_arrow  [ mc2 "Directed link to the left" ]  "a" ]
-		lappend result [ list command  down_arrow  [ mc2 "Directed link down" ]         "s" ]
-		lappend result [ list command  right_arrow [ mc2 "Directed link to the right" ] "d" ]
-		
-		lappend result { separator }
-		lappend result [ list command  commentin   [ mc2 "Inline comment" ]             "/" ]
-		lappend result [ list command  commentout  [ mc2 "Standalone comment" ]         "C" ]
+    set diagram_id [ get_current_dia ]
+    if { [ is_drakon $diagram_id ] } {
+        if {![info exists _proc_get_context_inserts_insert]} {
+            set result {}
+            # 'Insert' menu
+            #                     kind     icon_type  text                         accel
+            lappend result [ list command  action     [ mc2 "Action" ]             "a" ]
+            lappend result [ list command  if         [ mc2 "If" ]                 "i" ]
+            lappend result [ list command  vertical   [ mc2 "Vertical line" ]      "v" ]
+            lappend result [ list command  horizontal [ mc2 "Horizontal line" ]    "h" ]
+            lappend result [ list command  select     [ mc2 "Select" ]             "s" ]
+            lappend result [ list command  case       [ mc2 "Case" ]               "c" ]
+            lappend result { separator }
+            lappend result [ list command  loopstart  [ mc2 "Loop" ]               "l" ]
+            lappend result [ list command  loopend    [ mc2 "Loop end" ]           "e" ]
+            lappend result [ list command  arrow      [ mc2 "Arrow" ]              "r" ]
+            lappend result { separator }
+            lappend result [ list command  beginend   [ mc2 "Begin/End" ]          "g" ]
+            lappend result [ list command  branch     [ mc2 "Branch header" ]      "b" ]
+            lappend result [ list command  address    [ mc2 "Branch footer" ]      "d" ]
+            lappend result { separator }
+            lappend result [ list command  commentin  [ mc2 "Inline comment" ]     "/" ]
+            lappend result [ list command  commentout [ mc2 "Standalone comment" ] "C" ]
+            set _proc_get_context_inserts_insert $result
+        }
+        if {![info exists _proc_get_context_inserts_more]} {
+            set result {}
+            # 'Insert more' menu
+            #                     kind     icon_type  text                 accel
+            lappend result [ list command  insertion  [ mc2 "Insertion" ]  "n" ]
+            lappend result [ list command  shelf      [ mc2 "Shelf" ]      "f" ]
+            lappend result { separator }
+            lappend result [ list command  output     [ mc2 "Output" ]     "O" ]
+            lappend result [ list command  input      [ mc2 "Input" ]      "I" ]
+            lappend result { separator }
+            lappend result [ list command  parallel   [ mc2 "Parallel" ]   "P" ]
+            lappend result [ list command  process    [ mc2 "Process" ]    "R" ]
+            lappend result [ list command  pause      [ mc2 "Pause" ]      "U" ]
+            lappend result [ list command  timer      [ mc2 "Timer" ]      "T" ]
+            set _proc_get_context_inserts_more $result
+        }
+        return [ list $_proc_get_context_inserts_insert $_proc_get_context_inserts_more ]
+    } else {
+        if {![info exists _proc_get_context_inserts_insert_eril]} {
+            set result {}
+            # 'Insert' menu
+            #                     kind     icon_type   text                                 accel
+            lappend result [ list command  action      [ mc2 "Entity" ]                     "e" ]
+            lappend result [ list command  shelf       [ mc2 "Entity with fields" ]         "f" ]
+            lappend result [ list command  beginend    [ mc2 "Attribute" ]                  "t" ]
+            lappend result { separator }
+            lappend result [ list command  vertical    [ mc2 "Vertical line" ]              "v" ]
+            lappend result [ list command  horizontal  [ mc2 "Horizontal line" ]            "h" ]
+            lappend result { separator }
+            lappend result [ list command  up_paw      [ mc2 "One-to-many \(\\\"many\\\" at the top\)" ]    "i" ]
+            lappend result [ list command  down_paw    [ mc2 "One-to-many \(\\\"many\\\" at the bottom\)" ] "k" ]
+            lappend result [ list command  left_paw    [ mc2 "One-to-many \(\\\"many\\\" on the left\)" ]   "j" ]
+            lappend result [ list command  right_paw   [ mc2 "One-to-many \(\\\"many\\\" on the right\)" ]  "l" ]
+            lappend result { separator }
+            lappend result [ list command  up_arrow    [ mc2 "Directed link up" ]           "w" ]
+            lappend result [ list command  left_arrow  [ mc2 "Directed link to the left" ]  "a" ]
+            lappend result [ list command  down_arrow  [ mc2 "Directed link down" ]         "s" ]
+            lappend result [ list command  right_arrow [ mc2 "Directed link to the right" ] "d" ]
 
-
-		# 'Insert more' menu
-		lappend more [ list command  up_white_arrow    [ mc2 "Inheritance link up" ]           "W" ]
-		lappend more [ list command  left_white_arrow  [ mc2 "Inheritance link to the left" ]  "A" ]
-		lappend more [ list command  down_white_arrow  [ mc2 "Inheritance link down" ]         "S" ]
-		lappend more [ list command  right_white_arrow [ mc2 "Inheritance link to the right" ] "D" ]
-	}
-	
-	return [ list $result $more ]
+            lappend result { separator }
+            lappend result [ list command  commentin   [ mc2 "Inline comment" ]             "/" ]
+            lappend result [ list command  commentout  [ mc2 "Standalone comment" ]         "C" ]
+            set _proc_get_context_inserts_insert_eril $result
+        }
+        if {![info exists _proc_get_context_inserts_more_eril]} {
+            set result {}
+            # 'Insert more' menu
+            #                     kind     icon_type         text                                    accel
+            lappend result [ list command  up_white_arrow    [ mc2 "Inheritance link up" ]           "W" ]
+            lappend result [ list command  left_white_arrow  [ mc2 "Inheritance link to the left" ]  "A" ]
+            lappend result [ list command  down_white_arrow  [ mc2 "Inheritance link down" ]         "S" ]
+            lappend result [ list command  right_white_arrow [ mc2 "Inheritance link to the right" ] "D" ]
+            set _proc_get_context_inserts_more_eril $result
+        }
+        return [ list $_proc_get_context_inserts_insert_eril $_proc_get_context_inserts_more_eril ]
+    }
 }
 
 proc is_url { text } {
