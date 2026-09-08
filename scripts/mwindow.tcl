@@ -455,7 +455,7 @@ proc create_ui { } {
 	.mainmenu.file add command -label [ mc2 "Export to PDF..." ] -underline 0 -command export_pdf::export
 	.mainmenu.file add command -label [ mc2 "Export to PNG..." ] -underline 12 -command export_png::export
 	.mainmenu.file add separator	
-	.mainmenu.file add command -label [ mc2 "Quit" ] -underline 0 -command exit
+	.mainmenu.file add command -label [ mc2 "Quit" ] -underline 0 -command exit -accelerator [ acc Q ]
 	
 	# Edit submenu
 	.mainmenu.edit add command -label [ mc2 "Undo" ] -underline 0 -command mwc::undo  -accelerator [ acc Z ]
@@ -899,7 +899,9 @@ proc shift_ctrl_handler { code } {
 proc shortcut_handler { window code key } {
 	set key [ string tolower $key ]
 	array set codes [ ui::key_codes ]
-	if { $code == $codes(y) || $key == "y"} {
+	if { $code == $codes(q) || $key == "q"} {
+		exit
+	} elseif { $code == $codes(y) || $key == "y"} {
 		mwc::redo
 	} elseif { $code == $codes(z) || $key == "z" } {
 		mwc::undo
