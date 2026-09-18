@@ -37,6 +37,7 @@ variable scheme_list {
 	Black
 	Night
 	"Colored night"
+	HiContrast
 }
 
 variable language_list {
@@ -135,6 +136,24 @@ variable colored_night {
 	syntax_operator "#6CCC88"
 }
 
+variable hi_contrast {
+	background 		"#303030"
+	line 			"#c0c0c0"
+	text 			"#ffffff"
+	action			"#000000"
+	if 			"#252500"
+	switch			"#250000"
+	loop			"#002500"
+	comment			"#000099"
+	comment_s		"#000099"
+	syntax_identifier	"#ffffff"
+	syntax_string		"#ff00ff"
+	syntax_keyword		"#ffff00"
+	syntax_number		"#ff00ff"
+	syntax_comment		"#00ffff"
+	syntax_operator		"#ffff00"
+}
+
 #	syntax_identifier "#EBD9C0"
 #	syntax_string "#CC8623"
 #	syntax_keyword "#6CCC88"
@@ -215,13 +234,13 @@ proc element_changed {} {
 		"Comment primary" { set color_text [ color comment ] }
 		"Comment secondary" { set color_text [ color comment_s ] }
 		"Background"	{ set color_text [ color background ] }
-		"Text"	{ set color_text [ color text ] }		
+		"Text"	{ set color_text [ color text ] }
 		"Code: identifier" { set color_text [ color syntax_identifier ] }
 		"Code: string" { set color_text [ color syntax_string ] }
 		"Code: keyword" { set color_text [ color syntax_keyword ] }
 		"Code: number" { set color_text [ color syntax_number ] }
 		"Code: comment" { set color_text [ color syntax_comment ] }
-		"Code: operator" { set color_text [ color syntax_operator ] }		
+		"Code: operator" { set color_text [ color syntax_operator ] }
 	}
 	set color_entry $color_text
 }
@@ -252,7 +271,7 @@ proc color_changed { color } {
 		"Code: keyword" { color_set syntax_keyword $color }
 		"Code: number" { color_set syntax_number $color }
 		"Code: comment" { color_set syntax_comment $color }
-		"Code: operator" { color_set syntax_operator $color }		
+		"Code: operator" { color_set syntax_operator $color }
 	}
 	
 	draw_sample_picture
@@ -525,6 +544,7 @@ proc theme_changed {} {
 	variable white
 	variable night
 	variable colored_night
+	variable hi_contrast
 	variable glamour
 	variable is
 	
@@ -539,6 +559,7 @@ proc theme_changed {} {
 		White { array set colors $white }
 		Night { array set colors $night }
 		"Colored night" { array set colors $colored_night }
+		HiContrast { array set colors $hi_contrast }
 	}
 	
 	draw_sample_picture
