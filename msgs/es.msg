@@ -343,3 +343,7 @@
 ::msgcat::mcset es "Links" "Enlaces"
 
 ::msgcat::mcset es "Please restart the application" "Por favor reinicie la aplicación"
+
+::msgcat::mcset es "Font:" "Tipo de letra:"
+::msgcat::mcset es "Font size:" "Tamaño de letra:"
+::msgcat::mcset es "Font size is not a number" "El tamaño de letra debe ser un número"

@@ -3,6 +3,8 @@ namespace eval gprops {
 variable yes_entry
 variable no_entry
 variable end_entry
+variable font_entry
+variable fontsize_entry
 variable scheme_combo
 variable language_combo
 variable element_combo
@@ -185,6 +187,9 @@ proc color_safe { color_dict name } {
 }
 
 proc load_from_settings {} {
+        global main_font_family
+        global main_font_size
+
 	set colors_dict [ app_settings::get_prop drakon_editor colors ]
 	
 	set colors::canvas_bg [ color_safe $colors_dict background ]
@@ -204,6 +209,9 @@ proc load_from_settings {} {
 	set colors::syntax_number [ color_safe $colors_dict syntax_number ]
 	set colors::syntax_comment [ color_safe $colors_dict syntax_comment ]
 	set colors::syntax_operator [ color_safe $colors_dict syntax_operator ]
+
+        set main_font_family [ app_settings::get_prop drakon_editor font ]
+        set main_font_size [ app_settings::get_prop drakon_editor fontsize ]
 }
 
 proc save_to_settings {} {
@@ -339,6 +347,13 @@ proc init { win data } {
 	set end_label [ ttk::label $end_frame.lang_label -text [ mc2 "Text for \\\"End\\\" icon:" ] -width 30 ]
 	set end_entry [ ttk::entry $end_frame.end_entry -textvariable gprops::end_entry -width 20 ]	
 
+        set font_frame [ ttk::frame $root.font_frame ]
+        set font_label [ ttk::label $font_frame.font_label -text [ mc2 "Font:" ] -width 30 ]
+        set font_entry [ ttk::entry $font_frame.font_entry -textvariable gprops::font_entry -width 20 ]
+
+        set fontsize_frame [ ttk::frame $root.fontsize_frame ]
+        set fontsize_label [ ttk::label $fontsize_frame.size_label -text [ mc2 "Font size:" ] -width 30 ]
+        set fontsize_entry [ ttk::entry $fontsize_frame.fontsize_entry -textvariable gprops::fontsize_entry -width 20 ]
 
 	set scheme_frame [ ttk::frame $root.scheme_frame ]
 	set scheme_label [ ttk::label $scheme_frame.lang_label -text [ mc2 "Theme:" ] -width 30 ]
@@ -368,6 +383,8 @@ proc init { win data } {
 	pack $yes_frame -fill x
 	pack $no_frame -fill x
 	pack $end_frame -fill x
+        pack $font_frame -fill x
+        pack $fontsize_frame -fill x
 	pack $scheme_frame -fill x
 	pack $element_frame -fill x
 	pack $color_frame -fill x
@@ -390,6 +407,12 @@ proc init { win data } {
 
 	pack $end_label -side left
 	pack $end_entry -side left -padx 10
+
+	pack $font_label -side left
+	pack $font_entry -side left -padx 10
+
+	pack $fontsize_label -side left
+	pack $fontsize_entry -side left -padx 10
 
 	pack $scheme_label -side left
 	pack $scheme_combo -side left -padx 10
@@ -416,10 +439,15 @@ proc init { win data } {
 
 
 proc show_dialog { } {
+        global main_font_family
+        global main_font_size
+
 	variable window
 	variable yes_entry
 	variable no_entry
 	variable end_entry
+        variable font_entry
+        variable fontsize_entry
 	variable language_combo
 	
 	set window .gprops
@@ -429,17 +457,34 @@ proc show_dialog { } {
 	set end_entry [ texts::get "end" ]
 	set language_combo [ texts::get "language" ]
 
+        set font_entry $main_font_family
+        set fontsize_entry $main_font_size
+
 	ui::modal_window $window gprops::init foo
 }
 
+proc complain { message } {
+    tk_messageBox -parent .gprops -message $message -title Error
+}
+
 proc ok { } {
+        global main_font_family
+        global main_font_size
+
 	variable window
 	
 	variable yes_entry
 	variable no_entry
 	variable end_entry
 	variable language_combo
+        variable font_entry
+        variable fontsize_entry
 	
+	if { ![ string is double $fontsize_entry ] } {
+            complain [ mc2 "Font size is not a number" ]
+            return
+        }
+
 	texts::put "yes" $yes_entry
 	texts::put "no" $no_entry
 	texts::put "end" $end_entry
@@ -455,10 +500,19 @@ proc ok { } {
 	
 	texts::put "language" $language_combo
 
+        if {($main_font_family != $font_entry)
+            || ($main_font_size != $fontsize_entry)} {
+		set restart_required 1
+		set restart_message [ mc2 "Please restart the application" ]
+        }
+
 	app_settings::set_prop drakon_editor "yes" $yes_entry
 	app_settings::set_prop drakon_editor "no" $no_entry
 	app_settings::set_prop drakon_editor "end" $end_entry
 	app_settings::set_prop drakon_editor "language" $language_combo
+
+        app_settings::set_prop drakon_editor "font" $font_entry
+        app_settings::set_prop drakon_editor "fontsize" $fontsize_entry
 	
 	save_colors
 	

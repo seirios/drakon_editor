@@ -343,3 +343,7 @@
 ::msgcat::mcset ru "Links" "Ссылки"
 
 ::msgcat::mcset ru "Please restart the application" "Пожалуйста, перезапустите приложение"
+
+::msgcat::mcset ru "Font:" "Шрифт:"
+::msgcat::mcset ru "Font size:" "Размер шрифта:"
+::msgcat::mcset ru "Font size is not a number" "Размер шрифта должен быть числом"
