@@ -26,6 +26,7 @@ variable element_list {
 	"Code: identifier"
 	"Code: string"
 	"Code: keyword"
+	"Code: type"
 	"Code: number"
 	"Code: comment"
 	"Code: operator"
@@ -59,6 +60,7 @@ variable strict {
 	syntax_identifier "#000000"
 	syntax_string "#d00000"
 	syntax_keyword "#0000cB"
+	syntax_type "#0000cB"
 	syntax_number "#d00000"
 	syntax_comment "#228B22"
 	syntax_operator "#a000a0"
@@ -77,6 +79,7 @@ variable parrot {
 	syntax_identifier "#000000"
 	syntax_string "#d00000"
 	syntax_keyword "#0000cB"
+	syntax_type "#0000cB"
 	syntax_number "#d00000"
 	syntax_comment "#228B22"
 	syntax_operator "#a000a0"
@@ -95,6 +98,7 @@ variable black {
 	syntax_identifier "#c0c0c0"
 	syntax_string "#909090"
 	syntax_keyword "#b0b0b0"
+	syntax_type "#b0b0b0"
 	syntax_number "#ffffff"
 	syntax_comment "#505050"
 	syntax_operator "#ffffff"  
@@ -113,6 +117,7 @@ variable night {
 	syntax_identifier "#BCD5FF"
 	syntax_string "#6882aF"
 	syntax_keyword "#70A5FF"
+	syntax_type "#70A5FF"
 	syntax_number "#ffffff"
 	syntax_comment "#808080"
 	syntax_operator "#ffffff"  
@@ -131,6 +136,7 @@ variable colored_night {
 	syntax_identifier "#FBF9C0"
 	syntax_string "#dC8623"
 	syntax_keyword "#ABFFCF"
+	syntax_type "#ABFFCF"
 	syntax_number "#ffffff"
 	syntax_comment "#808080"
 	syntax_operator "#6CCC88"
@@ -149,6 +155,7 @@ variable hi_contrast {
 	syntax_identifier	"#ffffff"
 	syntax_string		"#ff00ff"
 	syntax_keyword		"#ffff00"
+	syntax_type		"#00ff00"
 	syntax_number		"#ff00ff"
 	syntax_comment		"#00ffff"
 	syntax_operator		"#ffff00"
@@ -193,6 +200,7 @@ proc load_from_settings {} {
 	set colors::syntax_identifier [ color_safe $colors_dict syntax_identifier ]
 	set colors::syntax_string [ color_safe $colors_dict syntax_string ]
 	set colors::syntax_keyword [ color_safe $colors_dict syntax_keyword ]
+	set colors::syntax_type [ color_safe $colors_dict syntax_type ]
 	set colors::syntax_number [ color_safe $colors_dict syntax_number ]
 	set colors::syntax_comment [ color_safe $colors_dict syntax_comment ]
 	set colors::syntax_operator [ color_safe $colors_dict syntax_operator ]
@@ -238,6 +246,7 @@ proc element_changed {} {
 		"Code: identifier" { set color_text [ color syntax_identifier ] }
 		"Code: string" { set color_text [ color syntax_string ] }
 		"Code: keyword" { set color_text [ color syntax_keyword ] }
+		"Code: type" { set color_text [ color syntax_type ] }
 		"Code: number" { set color_text [ color syntax_number ] }
 		"Code: comment" { set color_text [ color syntax_comment ] }
 		"Code: operator" { set color_text [ color syntax_operator ] }
@@ -269,6 +278,7 @@ proc color_changed { color } {
 		"Code: identifier" { color_set syntax_identifier $color }
 		"Code: string" { color_set syntax_string $color }
 		"Code: keyword" { color_set syntax_keyword $color }
+		"Code: type" { color_set syntax_type $color }
 		"Code: number" { color_set syntax_number $color }
 		"Code: comment" { color_set syntax_comment $color }
 		"Code: operator" { color_set syntax_operator $color }
@@ -477,6 +487,7 @@ proc load_colors {} {
 	color_set syntax_identifier $colors::syntax_identifier
 	color_set syntax_string  $colors::syntax_string
 	color_set syntax_keyword  $colors::syntax_keyword
+	color_set syntax_type  $colors::syntax_type
 	color_set syntax_number $colors::syntax_number
 	color_set syntax_comment  $colors::syntax_comment
 	color_set syntax_operator  $colors::syntax_operator	
@@ -497,6 +508,7 @@ proc save_colors {} {
 	set colors::syntax_identifier [ color syntax_identifier ]
 	set colors::syntax_string  [ color syntax_string ]
 	set colors::syntax_keyword  [ color syntax_keyword ]
+	set colors::syntax_type  [ color syntax_type ]
 	set colors::syntax_number [ color syntax_number ]
 	set colors::syntax_comment  [ color syntax_comment ]
 	set colors::syntax_operator  [ color syntax_operator ]

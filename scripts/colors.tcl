@@ -25,6 +25,7 @@ namespace eval colors {
 	variable syntax_identifier "#000000"
 	variable syntax_string "#d00000"
 	variable syntax_keyword "#00008B"
+	variable syntax_type "#00008B"
 	variable syntax_number "#d00000"
 	variable syntax_comment "#228B22"
 	variable syntax_operator "#800080"
