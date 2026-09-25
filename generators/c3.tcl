@@ -7,6 +7,8 @@ gen::add_generator "C3" gen_c3::generate
 
 namespace eval gen_c3 {
 
+variable src_file ""
+
 variable c3_keywords {
     _Alignof
     _Generic
@@ -189,9 +191,8 @@ proc generate { db gdb filename } {
         set filenames [ list $h_filename $c_filename ]
         lassign [ open_files $filenames "w" ] hfile cfile
         catch {
-            gen_cpp::print_header $h_filename $hfile \
-            $free_funs $ctrs $dtrs $methods $signals $slots \
-            $h_header $h_footer $class $copying $class_name \
+            print_header $h_filename $hfile $free_funs \
+            $h_header $h_footer \
             $language $sm_header $g_header
             
             gen_cpp::print_cpp $h_filename $cfile \
@@ -430,6 +431,44 @@ proc or { left right } {
 
 proc pass { } {
     return ""
+}
+
+proc print_header { filename fhandle functions header footer language structure globals } {
+    gen_cpp::put_credits $fhandle
+    set guard [ gen_c::guard_name $filename ]
+    puts $fhandle "#ifndef $guard"
+    puts $fhandle "#define $guard"
+    puts $fhandle ""
+    puts $fhandle $header
+    variable src_file
+    set module_name [ \
+    gen_cpp::take_module_name $src_file ]
+    init_current_file $fhandle
+    gen_c_t::generate_h $module_name
+    puts $fhandle ""
+    puts $fhandle $structure
+    puts $fhandle ""
+    puts $fhandle $globals
+    foreach function [ gen_cpp::filter_functions $functions 0 public ] {
+        lassign $function diagram_id name signature body
+        if {$name == "main"} {
+            
+        } else {
+            gen_cpp::print_function \
+            $fhandle $function 1 "" $language
+        }
+    }
+    foreach function [ gen_cpp::filter_functions $functions 1 public ] {
+        gen_cpp::print_function \
+        $fhandle $function 1 "" $language
+    }
+    foreach function [ gen_cpp::filter_functions $functions 1 public ] {
+        gen_cpp::print_function \
+        $fhandle $function 0 "" $language
+    }
+    puts $fhandle $footer
+    puts $fhandle "#endif"
+    puts $fhandle ""
 }
 
 proc return_none { } {
