@@ -63,7 +63,7 @@ proc commentin.icons { text text2 color x y w h a b } {
 	set rect1 [ make_prim main rectangle $rect1_coords "" $fg $colors::comment_bg $cdbox ]
 	set screen [ make_prim screen polygon $coords "" $fg $bg $cdbox ]
 	
-	set text_prim [ create_text_left $x $y $w $h $text $tc ]
+	set text_prim [ create_text $x $y $text $tc ]
 	return [ list $rect1 $screen $text_prim ]
 }
 
