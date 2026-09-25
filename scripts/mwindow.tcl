@@ -530,6 +530,7 @@ proc create_ui { } {
 
 	bind $canvas <KeyPress> { mw::canvas_key_press %W %K %N %k }
 	bind $canvas <Shift-KeyPress> { mw::canvas_shift_key_press %W %K %N %k }
+	bind $canvas <Alt-KeyPress> { }
 	bind $canvas <Double-ButtonPress-1> { mw::canvas_dclick %W %x %y }
 	if { [ ui::is_mac ] } {
 		bind $canvas <Double-ButtonPress-3> { mw::zoom_see_all }
