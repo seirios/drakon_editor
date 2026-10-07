@@ -288,16 +288,23 @@ proc createfile { filename } {
 }
 
 
-proc complain_file { file } {
-	set message "Cannot open file $file."
+proc complain_file { file complaint } {
+	set message "Cannot ${complaint} file $file."
 	ui::complain $message .
 }
 
 
 proc usefile { filename } {
 	if { ![ openfile $filename ] } {
-		complain_file $filename
-		ui::show_intro
+		if { [ string match "*.drn" $filename ] } {
+			if { ![ createfile $filename ] } {
+				complain_file $filename create
+				ui::show_intro
+			}
+		} else {
+			complain_file $filename open
+			ui::show_intro
+		}
 	}
 }
 
