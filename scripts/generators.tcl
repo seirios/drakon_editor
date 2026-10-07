@@ -1903,11 +1903,7 @@ proc indent { lines depth } {
 	return [ join $result "\n" ]
 }
 
-proc scan_file_description { db section_names } {
-	set description [ $db onecolumn {
-		select description
-		from state
-		where row = 1 } ]
+proc scan_description { description section_names } {
 	array set sections [ extract_sections $description ]
 	
 	set result {}
@@ -1922,6 +1918,21 @@ proc scan_file_description { db section_names } {
 	return $result
 }
 
+proc scan_file_description { db section_names } {
+	set description [ $db onecolumn {
+		select description
+		from state
+		where row = 1 } ]
+	return [ scan_description $description $section_names ]
+}
+
+proc scan_diagram_description { db diagram_id section_names } {
+	set description [ $db onecolumn {
+		select description
+		from diagrams
+		where diagram_id = $diagram_id } ]
+	return [ scan_description $description $section_names ]
+}
 
 proc get_diagram_start { gdb diagram_id } {
 	return [ $gdb eval {
