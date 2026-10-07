@@ -42,6 +42,10 @@ require Img {
 	"Consider installing libtk-img."
 }
 
+require cmdline {
+	"This script requires cmdline package."
+}
+
 
 if { $tk_version < 8.6 || $tcl_version < 8.6 } {
 	puts "tcl version: $tcl_version"
@@ -267,7 +271,15 @@ proc reload { filename } {
 	set g_loaded 1
 }
 
-proc createfile { filename } {
+proc compose_sections { sections } {
+	set result {}
+	foreach section $sections {
+		lappend result "=== $section ==="
+	}
+	return [ join $result "\n" ]
+}
+
+proc createfile { filename language } {
 	global script_path
 	variable db
 	set init_script [ read_all_text $script_path/scripts/schema.sql ]
@@ -280,10 +292,18 @@ proc createfile { filename } {
 		return 0
 	}
 
-
-
 	reload $filename
 	mwc::do_create_dia "Untitled" 1 0 drakon
+
+	if { $language != "" } {
+		mwc::set_file_properties [ list language $language ]
+
+		lassign $gen::generators($language) generator extension
+		set gen_namespace [ namespace tail [ namespace qualifiers $generator ] ]
+		set sections [ eval "${gen_namespace}::get_sections" ]
+		mwc::do_file_description "" [ compose_sections $sections ]
+	}
+
 	return 1
 }
 
@@ -294,10 +314,11 @@ proc complain_file { file complaint } {
 }
 
 
-proc usefile { filename } {
+proc usefile { filename language } {
 	if { ![ openfile $filename ] } {
 		if { [ string match "*.drn" $filename ] } {
-			if { ![ createfile $filename ] } {
+			log "Creating file $filename"
+			if { ![ createfile $filename $language ] } {
 				complain_file $filename create
 				ui::show_intro
 			}
@@ -312,10 +333,30 @@ proc usefile { filename } {
 }
 
 proc start_up { argc argv } {
+	set options {
+		{lang.arg	""	"New file language"}
+	}
+	set usage ": \[options] filename\noptions:"
 	
+	try {
+		array set params [::cmdline::getoptions argv $options $usage]
+	} trap {CMDLINE USAGE} {msg o} {
+		puts $msg
+		exit 1
+	}
+	set argc [ llength $argv ]
+
+	set language $params(lang)
+	if { $language != "" } {
+		if { ![ info exists gen::generators($language) ] } {
+			puts "No generator for language '$language'."
+			exit 1
+		}
+	}
+
 	if { $argc > 0 } {
 		set filename [ lindex $argv 0 ]
-		ds::usefile $filename
+		ds::usefile $filename $language
 	} else {
 		ui::show_intro
 	}
