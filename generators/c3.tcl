@@ -165,12 +165,9 @@ proc generate { db gdb filename } {
     if {[ graph::errors_occured ]} {
         return
     }
-    set sections { 
-      h_header h_footer c_header c_footer class options
-      structure globals
-    }
+    set sections [ get_sections ]
     lassign [ gen::scan_file_description $db $sections ] \
-      h_header h_footer c_header c_footer class options \
+      h_header h_footer c_header c_footer options \
       structure globals
     lassign \
     [gen_cpp::build_globals $globals] \
@@ -184,8 +181,7 @@ proc generate { db gdb filename } {
         set class_name ""
         set functions [ gen_cpp::update_returns $gdb $functions ]
         lassign [ gen_cpp::sort_functions $functions $language $class_name ] \
-        free_funs \
-        ctrs dtrs methods signals slots
+        free_funs ctrs dtrs methods signals slots
         set h_filename [ replace_extension $filename "h" ]
         set c_filename [ replace_extension $filename $language ]
         set filenames [ list $h_filename $c_filename ]
@@ -215,6 +211,13 @@ proc generate_body { gdb diagram_id start_item node_list items incoming } {
     generate_body_goto \
     $gdb $diagram_id $start_item $node_list $items $incoming \
     $callbacks
+}
+
+proc get_sections { } {
+    return {
+      h_header h_footer c_header c_footer options
+      structure globals
+    }
 }
 
 proc highlight { tokens } {
