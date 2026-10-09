@@ -604,9 +604,8 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract returns
         append line " return $returns"
     }
     lappend result $line
-    set line ""
     if {$abstract} {
-        append line " is abstract"
+        lappend result "is abstract"
     } else {
         if {$print_body} {
             set body [ handle_is result $body ]
