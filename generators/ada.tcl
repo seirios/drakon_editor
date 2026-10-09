@@ -21,7 +21,7 @@ proc block_close { output depth } {
     return ""
 }
 
-proc check { keywords args } {
+proc check_keywords { keywords args } {
     foreach arg $args {
         upvar 1 $arg keyword
         if {[ contains $keywords $arg ]} {
@@ -34,8 +34,9 @@ proc check { keywords args } {
 
 proc classify_keywords { keywords name } {
     set errors {}
-    check $keywords \
-    	abstract inline protected tagged
+    check_keywords $keywords \
+    	abstract inline protected tagged \
+    	ord-1 ord+1
     set access [ find_keywords \
      $keywords { private public } ]
     set _sw2540000_ [ llength $access ]
@@ -49,25 +50,37 @@ proc classify_keywords { keywords name } {
              "$name: inconsistent access: $access"
         }
     }
-    set subtype [ find_keywords $keywords \
+    set etype [ find_keywords $keywords \
       { type } ]
-    set _sw4470000_ [ llength $subtype ]
+    set _sw4470000_ [ llength $etype ]
     if {$_sw4470000_ == 0} {
-        set subtype "subprogram"
+        set etype "subprogram"
     } else {
         if {$_sw4470000_ == 1} {
             
         } else {
             lappend errors \
-             "$name: inconsistent type: $subtype"
+             "$name: inconsistent type: $etype"
         }
     }
     if {($inline) && ($abstract)} {
         lappend errors \
         "$name: both inline and abstract is not allowed"
     }
-    if {($subtype == "subprogram") || ($subtype == "type")} {
+    if {(${ord-1}) && (${ord+1})} {
+        lappend errors \
+        "$name: both ord-1 and ord+1 is not allowed"
+    }
+    if {($etype == "subprogram") || ($etype == "type")} {
         
+    }
+    set order 0
+    if {${ord-1}} {
+        set order -1
+    } else {
+        if {${ord+1}} {
+            set order +1
+        }
     }
     array set props {}
     set props(abstract) $abstract
@@ -75,7 +88,8 @@ proc classify_keywords { keywords name } {
     set props(protected) $protected
     set props(tagged) $tagged
     set props(access) $access
-    set props(subtype) $subtype
+    set props(subtype) $etype
+    set props(order) $order
     set proplist [ array get props ]
     set error_message [ join $errors "\n" ]
     return [ list $error_message $proplist ]
@@ -122,6 +136,7 @@ proc extract_signature { text name } {
     array set props { abstract 0 \
     	access public \
     	inline 0 \
+    	order 0 \
     	subtype procedure \
     	tagged 0 }
     set error_message ""
@@ -144,6 +159,8 @@ proc extract_signature { text name } {
         set keywords { 
         	abstract \
         	inline \
+        	ord-1 \
+        	ord+1 \
         	public \
         	private \
         	protected \
@@ -252,13 +269,14 @@ proc filter_subprograms { components inline access } {
     return $result
 }
 
-proc filter_types { components } {
+proc filter_types { components order } {
     set result {}
     foreach component $components {
         lassign $component diagram_id name signature body
         lassign $signature type prop_list parameters returns
         array set props $prop_list
-        if {$type == "type"} {
+        if {$type == "type" \
+	&& $props(order) == $order} {
             lappend result $component
         }
     }
@@ -381,38 +399,6 @@ proc generate_subprograms_core { db gdb callbacks } {
     return $result
 }
 
-proc generate_type { gdb diagram_id callbacks } {
-    set extract_signature [ \
-    	gen::get_callback $callbacks signature ]
-    set start_info [ gen::get_start_info $gdb $diagram_id ]
-    lassign $start_info \
-    	start_icon params_icon name params_text start_item
-    set signature [ $extract_signature $params_text $name ]
-    lassign $signature errorMessage real_sign
-    if {$errorMessage == ""} {
-        
-    } else {
-        gen::report_error $diagram_id {} $errorMessage
-    }
-    return $name
-}
-
-proc generate_types_core { db gdb callbacks } {
-    set result {}
-    $gdb eval {
-    	select diagram_id
-    	from diagrams
-    	order by name
-    } {
-    	if { [ mwc::is_drakon $diagram_id ] && \
-    	[ gen::has_branches $gdb $diagram_id ] } {
-    		lappend result [ generate_type \
-    			$gdb $diagram_id $callbacks ]
-    	}
-    }
-    return $result
-}
-
 proc get_sections { } {
     return { spec_header spec_footer body_header body_footer }
 }
@@ -515,7 +501,13 @@ proc print_body { db filename fhandle components header footer } {
 proc print_spec { db filename fhandle components header footer } {
     put_credits $fhandle
     puts $fhandle $header
-    foreach type [ filter_types $components ] {
+    foreach type [ filter_types $components -1 ] {
+        print_type $fhandle $type
+    }
+    foreach type [ filter_types $components 0 ] {
+        print_type $fhandle $type
+    }
+    foreach type [ filter_types $components +1 ] {
         print_type $fhandle $type
     }
     foreach subprogram [ filter_subprograms $components 1 public ] {
@@ -542,9 +534,7 @@ proc print_subprogram { db fhandle component in_header } {
     lassign $component diagram_id name signature body
     lassign $signature type prop_list parameters returns
     array set props $prop_list
-    set sections { 
-      spec_header spec_footer body_header body_footer
-    }
+    set sections [ get_sections ]
     lassign [ gen::scan_diagram_description $db $diagram_id $sections ] \
       spec_header spec_footer body_header body_footer
     if {$props(abstract) && !$in_header} {
@@ -617,8 +607,6 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract returns
     set line ""
     if {$abstract} {
         append line " is abstract"
-        append line ";"
-        lappend result $line
     } else {
         if {$print_body} {
             set body [ handle_is result $body ]
@@ -626,10 +614,7 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract returns
             foreach line $body {
                 lappend result "   $line"
             }
-            lappend result "end $name;"
-        } else {
-            append line ";"
-            lappend result $line
+            lappend result "end $name"
         }
     }
     if {$print_body} {
@@ -640,9 +625,22 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract returns
         	result $spec_footer
     }
     set space [ make_indent $depth ]
-    foreach line $result {
+    set nline [ llength $result ]
+    set i 0
+    while { 1 } {
+        if {$i < $nline} {
+            
+        } else {
+            break
+        }
         puts -nonewline $fhandle $space
-        puts $fhandle $line
+        if {$i == $nline - 1} {
+            puts -nonewline $fhandle [ lindex $result $i ]
+            puts $fhandle ";"
+        } else {
+            puts $fhandle [ lindex $result $i ]
+        }
+        incr i
     }
     puts $fhandle ""
 }
