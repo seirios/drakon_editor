@@ -442,6 +442,7 @@ proc make_callbacks { } {
     gen::put_callback callbacks while_start         gen_ada::while_start
     	
     gen::put_callback callbacks signature           gen_ada::extract_signature
+    gen::put_callback callbacks tab_convert         gen_ada::tab_convert
     return $callbacks
 }
 
@@ -742,6 +743,10 @@ proc shelf { primary secondary } {
         }
     }
     return $result
+}
+
+proc tab_convert { } {
+    return "   "
 }
 
 proc while_start { } {

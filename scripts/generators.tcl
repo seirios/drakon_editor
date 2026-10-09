@@ -2350,6 +2350,7 @@ proc print_node_core { texts node callback depth break_var } {
 	set commentator [ get_callback $callback comment ]
 	set break_str [ get_callback $callback break ]
 	set native_foreach [ get_optional_callback $callback native_foreach ]
+	set tab_convert [ get_optional_callback $callback tab_convert ]
 	#set continue_cb [ get_callback $callback continue ]
 	#set continue_str [ $continue_cb ]
 	
@@ -2376,6 +2377,9 @@ proc print_node_core { texts node callback depth break_var } {
 			set iteration [ newfor::get $current ]
 
 			set text [ get_text_lines $texts $current ]
+			if { $tab_convert != "" } {
+				regsub -all \t $text [ $tab_convert ] text
+			}
 			set was_return 0
 			if { $iteration == "" } {
 				set parts [ split $text "\n" ]
@@ -2677,6 +2681,7 @@ proc p.keywords { } {
 		can_glue
 		exit_door
 		if_block_end
+		tab_convert
 	}
 }
 
