@@ -676,19 +676,29 @@ proc print_type_kernel { fhandle depth type abstract tagged name body has_body }
     if {$tagged} {
         append line " tagged"
     }
+    lappend result $line
     if {$has_body} {
-        lappend result $line
         foreach line $body {
             lappend result "   $line"
         }
-    } else {
-        append line ";"
-        lappend result $line
     }
     set space [ make_indent $depth ]
-    foreach line $result {
+    set nline [ llength $result ]
+    set i 0
+    while { 1 } {
+        if {$i < $nline} {
+            
+        } else {
+            break
+        }
         puts -nonewline $fhandle $space
-        puts $fhandle $line
+        if {$i == $nline - 1} {
+            puts -nonewline $fhandle [ lindex $result $i ]
+            puts $fhandle ";"
+        } else {
+            puts $fhandle [ lindex $result $i ]
+        }
+        incr i
     }
     puts $fhandle ""
 }
@@ -704,13 +714,13 @@ proc shelf { primary secondary } {
     set plines [ split $primary "\n" ]
     if {$secondary == "record"} {
         if {[ lindex $plines 0 ] == "null"} {
-            set result "null record;"
+            set result "null record"
         } else {
             lappend lines "record"
             foreach line $plines {
                 lappend lines "   $line;"
             }
-            lappend lines "end record;"
+            lappend lines "end record"
             set result [ join $lines "\n" ]
         }
     } else {
