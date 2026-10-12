@@ -300,8 +300,8 @@ proc createfile { filename language } {
 
 		lassign $gen::generators($language) generator extension
 		set gen_namespace [ namespace tail [ namespace qualifiers $generator ] ]
-		if { [ namespace which "${gen_namespace}::get_sections" ] != "" } {
-			set sections [ eval "${gen_namespace}::get_sections" ]
+		if { [ namespace which "${gen_namespace}::init_sections" ] != "" } {
+			set sections [ eval "${gen_namespace}::init_sections" ]
 			mwc::do_file_description "" [ compose_sections $sections ]
 		}
 	}

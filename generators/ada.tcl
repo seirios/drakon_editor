@@ -104,8 +104,9 @@ proc compare { variable value } {
 }
 
 proc create_tree { prefix tree } {
-    lassign $tree \
-    	id type header text children
+    lassign \
+    $tree \
+    id type header text children
     set lcase [ string tolower $text ]
     set basename [ string cat $prefix $lcase ]
     set bfile [ string cat $basename ".adb" ]
@@ -206,8 +207,9 @@ proc extract_signature { text name } {
             set alien_keywords \
              [ find_not_belonging $first $keywords ]
             if {[ llength $alien_keywords ] == 0} {
-                lassign [ classify_keywords $found_keywords $name ] \
-                	error_message prop_list
+                lassign \
+                [ classify_keywords $found_keywords $name ] \
+                error_message prop_list
                 if {$error_message == ""} {
                     array unset props
                     array set props $prop_list
@@ -259,8 +261,12 @@ proc extract_signature { text name } {
 proc filter_subprograms { components inline access } {
     set result {}
     foreach component $components {
-        lassign $component diagram_id name signature body
-        lassign $signature type prop_list parameters returns
+        lassign \
+        $component \
+        diagram_id name signature body
+        lassign \
+        $signature \
+        type prop_list parameters returns
         array set props $prop_list
         if {(($type == "subprogram") && ($props(inline) == $inline)) && ($props(access) == $access)} {
             lappend result $component
@@ -272,8 +278,12 @@ proc filter_subprograms { components inline access } {
 proc filter_types { components order } {
     set result {}
     foreach component $components {
-        lassign $component diagram_id name signature body
-        lassign $signature type prop_list parameters returns
+        lassign \
+        $component \
+        diagram_id name signature body
+        lassign \
+        $signature \
+        type prop_list parameters returns
         array set props $prop_list
         if {$type == "type" \
 	&& $props(order) == $order} {
@@ -323,17 +333,23 @@ proc generate { db gdb filename } {
             	$gdb $callbacks $append_semicolon $diagram_id
         }
     }
-    set sections [ get_sections ]
-    lassign [ gen::scan_file_description $db $sections ] \
-      spec_header spec_footer body_header body_footer
+    set sections \
+    	{ spec_header spec_footer body_header body_footer }
+    lassign \
+    [ gen::scan_file_description $db $sections ] \
+    spec_header spec_footer body_header body_footer
     set components [ generate_subprograms_core \
     	$db $gdb $callbacks ]
     if {[ graph::errors_occured ]} {
         
     } else {
         foreach component $components {
-            lassign $component diagram_id name signature body
-            lassign $signature type prop_list parameters returns
+            lassign \
+            $component \
+            diagram_id name signature body
+            lassign \
+            $signature \
+            type prop_list parameters returns
             array set props $prop_list
             if {$type == "subprogram" \
 	&& $props(abstract) \
@@ -346,7 +362,9 @@ proc generate { db gdb filename } {
             set spec_filename [ replace_extension $filename "ads" ]
             set body_filename [ replace_extension $filename "adb" ]
             set filenames [ list $spec_filename $body_filename ]
-            lassign [ open_files $filenames "w" ] sfile bfile
+            lassign \
+            [ open_files $filenames "w" ] \
+            sfile bfile
             catch {
                 print_spec $db $spec_filename $sfile $components \
             	$spec_header $spec_footer
@@ -371,11 +389,15 @@ proc generate { db gdb filename } {
 proc generate_subprogram { gdb diagram_id callbacks } {
     set extract_signature [ gen::get_callback $callbacks signature ]
     set start_info [ gen::get_start_info $gdb $diagram_id ]
-    lassign $start_info start_icon params_icon name params_text start_item
+    lassign \
+    $start_info \
+    start_icon params_icon name params_text start_item
     set signature [ $extract_signature $params_text $name ]
-    lassign $signature errorMessage real_sign
-    if { $errorMessage != "" } {
-    	gen::report_error $diagram_id {} $errorMessage
+    lassign \
+    $signature \
+    errorMessage real_sign
+    if {$errorMessage != ""} {
+        gen::report_error $diagram_id {} $errorMessage
     }
     set body [ gen::tree_nogoto $gdb $diagram_id $callbacks $name ]
     set declares [ gen::p.get_declares $gdb $diagram_id 0 ]
@@ -399,10 +421,6 @@ proc generate_subprograms_core { db gdb callbacks } {
     return $result
 }
 
-proc get_sections { } {
-    return { spec_header spec_footer body_header body_footer }
-}
-
 proc handle_is { list_result body } {
     upvar 1 $list_result result
     lappend result "is"
@@ -420,6 +438,10 @@ proc handle_is { list_result body } {
         set body [lrange $body $lcnt+1 end]
     }
     return $body
+}
+
+proc init_sections { } {
+    return { spec_header spec_footer body_header body_footer }
 }
 
 proc make_callbacks { } {
@@ -532,12 +554,18 @@ proc print_spec { db filename fhandle components header footer } {
 }
 
 proc print_subprogram { db fhandle component in_header } {
-    lassign $component diagram_id name signature body
-    lassign $signature type prop_list parameters returns
+    lassign \
+    $component \
+    diagram_id name signature body
+    lassign \
+    $signature \
+    type prop_list parameters returns
     array set props $prop_list
-    set sections [ get_sections ]
-    lassign [ gen::scan_diagram_description $db $diagram_id $sections ] \
-      spec_header spec_footer body_header body_footer
+    set sections \
+    	{ spec_header spec_footer body_header body_footer }
+    lassign \
+    [ gen::scan_diagram_description $db $diagram_id $sections ] \
+    spec_header spec_footer body_header body_footer
     if {$props(abstract) && !$in_header} {
         
     } else {
@@ -646,8 +674,12 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract returns
 }
 
 proc print_type { fhandle component } {
-    lassign $component diagram_id name signature body
-    lassign $signature type prop_list parameters returns
+    lassign \
+    $component \
+    diagram_id name signature body
+    lassign \
+    $signature \
+    type prop_list parameters returns
     array set props $prop_list
     set depth 1
     set has_body 1
