@@ -120,7 +120,7 @@ proc classify_keywords { keywords name } {
     set errors {}
     check_keywords $keywords \
     	abstract inline protected tagged \
-    	ord-1 ord+1
+    	ord-1 ord-2
     set access [ find_keywords \
      $keywords { private public } ]
     set _sw2540000_ [ llength $access ]
@@ -151,9 +151,9 @@ proc classify_keywords { keywords name } {
         lappend errors \
         "$name: both inline and abstract is not allowed"
     }
-    if {(${ord-1}) && (${ord+1})} {
+    if {(${ord-1}) && (${ord-2})} {
         lappend errors \
-        "$name: both ord-1 and ord+1 is not allowed"
+        "$name: both ord-1 and ord-2 is not allowed"
     }
     if {($etype == "subprogram") || ($etype == "type")} {
         
@@ -161,8 +161,8 @@ proc classify_keywords { keywords name } {
     if {${ord-1}} {
         set order -1
     } else {
-        if {${ord+1}} {
-            set order +1
+        if {${ord-2}} {
+            set order -2
         } else {
             set order 0
         }
@@ -210,12 +210,6 @@ proc else_start { } {
     return ""
 }
 
-proc extract_return_type { text } {
-    set skip [ string length "returns " ]
-    set raw [ string range $text $skip end ]
-    return [ string trim $raw ]
-}
-
 proc extract_signature { text name } {
     array set props { abstract 0 \
     	access public \
@@ -244,7 +238,7 @@ proc extract_signature { text name } {
         	abstract \
         	inline \
         	ord-1 \
-        	ord+1 \
+        	ord-2 \
         	public \
         	private \
         	protected \
@@ -268,7 +262,7 @@ proc extract_signature { text name } {
                 if {[ string match "returns *" $stripped ]} {
                     if {$i == $last} {
                         set returns [ \
-                        	extract_return_type $stripped ]
+                        	gen::extract_return_type $stripped ]
                     } else {
                         set error_message \
                         "$name: 'returns' can only be the last line."
@@ -311,7 +305,7 @@ proc extract_signature { text name } {
                         if {[ string match "returns *" $stripped ]} {
                             if {$i == $last} {
                                 set returns [ \
-                                	extract_return_type $stripped ]
+                                	gen::extract_return_type $stripped ]
                             } else {
                                 set error_message \
                                 "$name: 'returns' can only be the last line."
@@ -448,38 +442,33 @@ proc generate { db gdb filename } {
     lassign \
     [ gen::scan_file_description $db $sections ] \
     spec_header spec_footer body_header body_footer
-    set components [ generate_subprograms_core \
-    	$db $gdb $callbacks ]
+    set components [ gen::generate_functions \
+    	$db $gdb $callbacks 1 ]
     if {[ graph::errors_occured ]} {
         
     } else {
-        if {$error_message == ""} {
-            set spec_filename [ replace_extension $filename "ads" ]
-            set body_filename [ replace_extension $filename "adb" ]
-            set filenames [ list $spec_filename $body_filename ]
-            lassign \
-            [ open_files $filenames "w" ] \
-            sfile bfile
-            catch {
-                print_spec $db $spec_filename $sfile $components \
-            	$spec_header $spec_footer
-            
-                print_body $db $body_filename $bfile $components \
-            	$body_header $body_footer
-            } error_message
-            close_files [ list $sfile $bfile ]
-            if {$error_message == ""} {
-                
-            } else {
-                puts $::errorInfo
-                error $error_message
-            }
-        } else {
-            puts $::errorInfo
-            error $error_message
-        }
+        set spec_filename [ replace_extension $filename "ads" ]
+        set body_filename [ replace_extension $filename "adb" ]
+        set filenames [ list $spec_filename $body_filename ]
+        lassign \
+        [ open_files $filenames "w" ] \
+        sfile bfile
+        catch {
+            print_spec $db $spec_filename $sfile $components \
+        	$spec_header $spec_footer
+        
+            print_body $db $body_filename $bfile $components \
+        	$body_header $body_footer
+        } error_message
+        close_files [ list $sfile $bfile ]
     }
     undo_monkey_patch
+    if {$error_message == ""} {
+        
+    } else {
+        puts $::errorInfo
+        error $error_message
+    }
 }
 
 proc generate_body { gdb diagram_id start_item node_list sorted incoming } {
@@ -514,57 +503,6 @@ proc generate_item { db item_id parent_loop } {
             	$db $item_id ]
         }
     }
-}
-
-proc generate_subprogram { gdb callbacks diagram_id } {
-    set extract_signature [ gen::get_callback $callbacks signature ]
-    set generate_body [ gen::get_callback $callbacks body ]
-    set commentator [ gen::get_callback $callbacks comment ]
-    set start_info [ gen::get_start_info $gdb $diagram_id ]
-    lassign \
-    $start_info \
-    start_icon params_icon name params_text start_item
-    set signature [ $extract_signature $params_text $name ]
-    lassign \
-    $signature \
-    errorMessage real_sign
-    if {$errorMessage != ""} {
-        gen::report_error $diagram_id {} $errorMessage
-    }
-    set tree ""
-    set body ""
-    set has_iterators 0
-    set body [ gen::try_nogoto $gdb $diagram_id $callbacks $name ]
-    if {$body == ""} {
-        set node_list [ gen::generate_nodes \
-        	$gdb $diagram_id $commentator ]
-        lassign \
-        [ gen::sort_items $node_list $start_item ] \
-        sorted incoming
-        set body [ generate_body $gdb $diagram_id \
-        	$start_item $node_list $sorted $incoming ]
-        set has_iterators 1
-    }
-    set declares [ gen::p.get_declares $gdb $diagram_id \
-    	$has_iterators ]
-    set body [ concat $declares $body ]
-    return [ list $diagram_id $name $real_sign $body ]
-}
-
-proc generate_subprograms_core { db gdb callbacks } {
-    set result {}
-    $gdb eval {
-    	select diagram_id
-    	from diagrams
-    	order by name
-    } {
-    	if { [ mwc::is_drakon $diagram_id ] && \
-    	[ gen::has_branches $gdb $diagram_id ] } {
-    		lappend result [ generate_subprogram \
-    			$gdb $callbacks $diagram_id ]
-    	}
-    }
-    return $result
 }
 
 proc handle_is { list_result body } {
@@ -1120,13 +1058,13 @@ proc print_node_core { texts node callbacks depth break_var } {
 proc print_spec { db filename fhandle components header footer } {
     put_credits $fhandle
     puts $fhandle $header
+    foreach type [ filter_types $components -2 ] {
+        print_type $fhandle $type
+    }
     foreach type [ filter_types $components -1 ] {
         print_type $fhandle $type
     }
     foreach type [ filter_types $components 0 ] {
-        print_type $fhandle $type
-    }
-    foreach type [ filter_types $components +1 ] {
         print_type $fhandle $type
     }
     foreach subprogram [ filter_subprograms $components 1 public ] {
@@ -1293,9 +1231,9 @@ proc print_type { fhandle component } {
 proc print_type_kernel { fhandle depth type abstract tagged name body has_body } {
     set result {}
     set line ""
-    append line "$type "
-    append line "$name "
-    append line "is"
+    append line "$type"
+    append line " $name"
+    append line " is"
     if {$abstract} {
         append line " abstract"
     }
@@ -1332,7 +1270,7 @@ proc print_type_kernel { fhandle depth type abstract tagged name body has_body }
 proc put_credits { fhandle } {
     set version [ version_string ]
     puts $fhandle \
-        "--  Autogenerated with DRAKON Editor $version"
+        [ comment "Autogenerated with DRAKON Editor $version" ]
 }
 
 proc shelf { primary secondary } {
