@@ -158,12 +158,13 @@ proc classify_keywords { keywords name } {
     if {($etype == "subprogram") || ($etype == "type")} {
         
     }
-    set order 0
     if {${ord-1}} {
         set order -1
     } else {
         if {${ord+1}} {
             set order +1
+        } else {
+            set order 0
         }
     }
     array set props {}
@@ -418,9 +419,9 @@ proc gen_loop { db item_id } {
         lappend result $subtree
         set current $next
     }
-    # Remove dummy conditional
     set result [ lindex $item 0 ]
     set result [ lremove $result 1 ]
+    set result [ if_break_to_exit_when $result ]
     set item [ list $result [ lindex $item 1 ] ]
     return $item
 }
@@ -452,21 +453,6 @@ proc generate { db gdb filename } {
     if {[ graph::errors_occured ]} {
         
     } else {
-        foreach component $components {
-            lassign \
-            $component \
-            diagram_id name signature body
-            lassign \
-            $signature \
-            type prop_list parameters returns
-            array set props $prop_list
-            if {$type == "subprogram" \
-	&& $props(abstract) \
-	&& $body != {{}}} {
-                set error_message \
-                	"$name: abstract subprogram cannot have body"
-            }
-        }
         if {$error_message == ""} {
             set spec_filename [ replace_extension $filename "ads" ]
             set body_filename [ replace_extension $filename "adb" ]
@@ -730,6 +716,27 @@ proc idle_default { keywords kw_types result_name type text } {
     return $state
 }
 
+proc if_break_to_exit_when { orig } {
+    set result {}
+    foreach elem $orig {
+        set type [ lindex $elem 0 ]
+        if {$type == "if"} {
+            lassign \
+            $elem \
+            type cond_part else_part then_part
+            if {$else_part == "seq" &&
+	$then_part == {seq break}} {
+                lappend result [ list "exit" $cond_part ]
+            } else {
+                lappend result $elem
+            }
+        } else {
+            lappend result $elem
+        }
+    }
+    return $result
+}
+
 proc init_description { filename } {
     set result {}
     set pkgname [ package_name $filename ]
@@ -790,7 +797,7 @@ proc make_callbacks { } {
     	
     gen::put_callback callbacks body                gen_ada::generate_body
     gen::put_callback callbacks signature           gen_ada::extract_signature
-    gen::put_callback callbacks tab_convert         gen_ada::tab_convert
+    gen::put_callback callbacks tab_convert         gen_ada::three_spaces
     	
     #gen::put_callback callbacks inspect_tree        gen_ada::inspect_tree
     return $callbacks
@@ -825,8 +832,8 @@ proc monkey_patch { direction fnames } {
 
 proc monkey_patch_gen { direction } {
     set functions [ list \
-    	::gen::p.rewire_loop \
     	::gen::make_indent \
+    	::gen::p.rewire_loop \
     	::gen::print_node_core ]
     monkey_patch $direction $functions
 }
@@ -890,13 +897,24 @@ proc p.rewire_loop { gdb start callbacks } {
     set end [ gen::p.find_end $gdb $diagram_id $start ]
     set text [ gen::p.vertex_text $gdb $start ]
     set item_id [ gen::p.vertex_item $gdb $start ]
-    set type ""
-    set parts ""
-    if { $text == "" } {
-    	set type "infinite"
+    set parts [ split $text ";" ]
+    set scheme [ lindex $parts 0 ]
+    set ident [ lindex $parts 1 ]
+    if {$scheme == ""} {
+        set type "loop"
+    } else {
+        if {[ string first "for " $scheme ] != -1} {
+            set type "for"
+        } else {
+            if {[ string first "while " $scheme ] != -1} {
+                set type "while"
+            } else {
+                set type ""
+            }
+        }
     }
-    if {$type == "infinite"} {
-        p.rewire_loop_infinite $gdb $start $end
+    if {(($type == "loop") || ($type == "for")) || ($type == "while")} {
+        p.rewire_loop_any $gdb $start $end $scheme $ident
     } else {
         graph::p.error $diagram_id [ list $item_id ] \
         	"Error in loop statement: $text"
@@ -905,13 +923,13 @@ proc p.rewire_loop { gdb start callbacks } {
     }
 }
 
-proc p.rewire_loop_infinite { gdb start end } {
+proc p.rewire_loop_any { gdb start end scheme ident } {
     set diagram_id [ gen::p.vertex_diagram $gdb $start ]
     set item_id [ gen::p.vertex_item $gdb $start ]
     set loop_id [ \
     	gen::p.insert_vertex $gdb $diagram_id [ \
     		gen::append_digits $item_id 0001 ] \
-    	"action" "" "" 0 ]
+    	"action" $scheme "" 0 ]
     set check_id [ \
     	gen::p.insert_vertex $gdb $diagram_id [ \
     		gen::append_digits $item_id 0002 ] \
@@ -1011,10 +1029,8 @@ proc print_node_core { texts node callbacks depth break_var } {
         }
         set current [ lindex $node $i ]
         if {[ string is integer $current ]} {
-            set text [ gen::get_text_lines $texts $current ]
-            if { $tab_convert != "" } {
-            	regsub -all \t $text [ $tab_convert ] text
-            }
+            set text [ tab_convert $tab_convert \
+            	[ gen::get_text_lines $texts $current ] ]
             set parts [ split $text "\n" ]
             if {[ llength $parts ] == 0} {
                 
@@ -1029,10 +1045,8 @@ proc print_node_core { texts node callbacks depth break_var } {
             set _sw17540000_ [ lindex $current 0 ]
             if {$_sw17540000_ == "if"} {
                 set cond_item [ lindex $current 1 ]
-                set cond_text [ gen::get_text_lines $texts $cond_item ]
-                if { $tab_convert != "" } {
-                	regsub -all \t $cond_text [ $tab_convert ] cond_text
-                }
+                set cond_text [ tab_convert $tab_convert \
+                	[ gen::get_text_lines $texts $cond_item ] ]
                 set cond [ gen::condition_line $callbacks $cond_text ]
                 lappend result $indent$cond
                 set then_node [ lindex $current 3 ]
@@ -1058,10 +1072,39 @@ proc print_node_core { texts node callbacks depth break_var } {
                     set result [ concat $result $body ]
                     lappend result "${indent}end loop;"
                 } else {
-                    if {($_sw17540000_ == "sel") || ($_sw17540000_ == "break")} {
-                        
+                    if {$_sw17540000_ == "exit"} {
+                        set cond_item [ lindex $current 1 ]
+                        set cond_text [ tab_convert $tab_convert \
+                        	[ gen::get_text_lines $texts $cond_item ] ]
+                        set cond_lines [ split $cond_text "\n" ]
+                        set nline [ llength $cond_lines ]
+                        set first_cond [ lindex $cond_lines 0 ]
+                        set line "${indent}exit when $first_cond"
+                        if {$nline == 1} {
+                            append line ";"
+                        }
+                        lappend result $line
+                        set ili 1
+                        while { 1 } {
+                            if {$ili < $nline} {
+                                
+                            } else {
+                                break
+                            }
+                            set current [ lindex $cond_lines $ili ]
+                            set line "$indent$current"
+                            if {$ili == $nline - 1} {
+                                append line ";"
+                            }
+                            lappend result $line
+                            incr ili
+                        }
                     } else {
-                        error "Unexpected switch value: $_sw17540000_"
+                        if {$_sw17540000_ == "sel"} {
+                            
+                        } else {
+                            error "Unexpected switch value: $_sw17540000_"
+                        }
                     }
                 }
             }
@@ -1354,7 +1397,15 @@ proc standard_color { keywords kw_types type text } {
     }
 }
 
-proc tab_convert { } {
+proc tab_convert { convert_cb text } {
+    if {$convert_cb == ""} {
+        return $text
+    } else {
+        return [ regsub -all \t $text [ $convert_cb ] ]
+    }
+}
+
+proc three_spaces { } {
     return "   "
 }
 
@@ -1371,12 +1422,12 @@ proc while_start { } {
 }
 
 namespace eval gen {
-	proc p.rewire_loop_ada { gdb start callbacks append_semicolon } {
-		gen_ada::p.rewire_loop $gdb $start $callbacks
-	}
-
 	proc make_indent_ada { depth } {
 		gen_ada::make_indent $depth
+	}
+
+	proc p.rewire_loop_ada { gdb start callbacks append_semicolon } {
+		gen_ada::p.rewire_loop $gdb $start $callbacks
 	}
 
 	proc print_node_core_ada { texts node callbacks depth break_var } {
