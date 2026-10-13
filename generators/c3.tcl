@@ -385,10 +385,14 @@ proc if_start { } {
     return "if \("
 }
 
-proc init_sections { } {
-    return {
-      h_header h_footer c_header c_footer
+proc init_description { filename } {
+    set result {}
+    set sections {
+    	h_header h_footer c_header c_footer }
+    foreach section $sections {
+        lappend result "=== $section ==="
     }
+    return [ join $result "\n" ]
 }
 
 proc make_callbacks { } {

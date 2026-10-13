@@ -730,8 +730,14 @@ proc idle_default { keywords kw_types result_name type text } {
     return $state
 }
 
-proc init_sections { } {
-    return { spec_header spec_footer body_header body_footer }
+proc init_description { filename } {
+    set result {}
+    set sections {
+    	spec_header spec_footer body_header body_footer }
+    foreach section $sections {
+        lappend result "=== $section ==="
+    }
+    return [ join $result "\n" ]
 }
 
 proc inspect_tree { node name } {

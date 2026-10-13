@@ -271,14 +271,6 @@ proc reload { filename } {
 	set g_loaded 1
 }
 
-proc compose_sections { sections } {
-	set result {}
-	foreach section $sections {
-		lappend result "=== $section ==="
-	}
-	return [ join $result "\n" ]
-}
-
 proc createfile { filename language } {
 	global script_path
 	variable db
@@ -296,13 +288,14 @@ proc createfile { filename language } {
 	mwc::do_create_dia "Untitled" 1 0 drakon
 
 	if { $language != "" } {
+		hl::reset
 		mwc::set_file_properties [ list language $language ]
 
 		lassign $gen::generators($language) generator extension
 		set gen_namespace [ namespace tail [ namespace qualifiers $generator ] ]
-		if { [ namespace which "${gen_namespace}::init_sections" ] != "" } {
-			set sections [ eval "${gen_namespace}::init_sections" ]
-			mwc::do_file_description "" [ compose_sections $sections ]
+		set init_description "${gen_namespace}::init_description"
+		if { [ namespace which $init_description ] != "" } {
+			mwc::do_file_description "" [ eval "$init_description $filename" ]
 		}
 	}
 
