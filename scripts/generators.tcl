@@ -2642,6 +2642,7 @@ proc p.keywords { } {
 		elseif_start
 		if_end
 		else_start
+		if_close
 		pass
 		continue
 		return_none
