@@ -732,11 +732,17 @@ proc idle_default { keywords kw_types result_name type text } {
 
 proc init_description { filename } {
     set result {}
-    set sections {
-    	spec_header spec_footer body_header body_footer }
-    foreach section $sections {
-        lappend result "=== $section ==="
-    }
+    set pkgname [ package_name $filename ]
+    lappend result "=== spec_header ==="
+    lappend result "package $pkgname is"
+    lappend result ""
+    lappend result "=== spec_footer ==="
+    lappend result "end $pkgname;"
+    lappend result "=== body_header ==="
+    lappend result "package body $pkgname is"
+    lappend result ""
+    lappend result "=== body_footer ==="
+    lappend result "end $pkgname;"
     return [ join $result "\n" ]
 }
 
@@ -786,7 +792,7 @@ proc make_callbacks { } {
     gen::put_callback callbacks signature           gen_ada::extract_signature
     gen::put_callback callbacks tab_convert         gen_ada::tab_convert
     	
-    gen::put_callback callbacks inspect_tree        gen_ada::inspect_tree
+    #gen::put_callback callbacks inspect_tree        gen_ada::inspect_tree
     return $callbacks
 }
 
@@ -876,7 +882,7 @@ proc p.or { left right } {
 }
 
 proc p.pass { } {
-    return ""
+    return "null;"
 }
 
 proc p.rewire_loop { gdb start callbacks } {
@@ -927,6 +933,34 @@ proc p.rewire_loop_infinite { gdb start end } {
     	delete from links where src = :start;
     	delete from vertices where vertex_id in (:start, :end);
     }
+}
+
+proc package_name { filename } {
+    set name [ string tolower $filename ]
+    set name [ string replace $name [ string last .drn $name ] end ]
+    set name [ string toupper $name 0 ]
+    set index [ string first _ $name]
+    while { 1 } {
+        if {$index != -1} {
+            
+        } else {
+            break
+        }
+        set name [ string toupper $name $index+1 ]
+        set index [ string first _ $name $index+1 ]
+    }
+    set index [ string first - $name]
+    while { 1 } {
+        if {$index != -1} {
+            
+        } else {
+            break
+        }
+        set name [ string toupper $name $index+1 ]
+        set name [ string replace $name $index $index . ]
+        set index [ string first - $name $index+1 ]
+    }
+    return $name
 }
 
 proc print_body { db filename fhandle components header footer } {
@@ -1080,8 +1114,8 @@ proc print_subprogram { db fhandle component in_header } {
     $signature \
     type prop_list parameters returns
     array set props $prop_list
-    set sections \
-    	{ spec_header spec_footer body_header body_footer }
+    set sections {
+    	spec_header spec_footer body_header body_footer }
     lassign \
     [ gen::scan_diagram_description $db $diagram_id $sections ] \
     spec_header spec_footer body_header body_footer
@@ -1120,13 +1154,13 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract returns
         append_notempty \
         	result $spec_header
     }
-    append line "$type "
-    append line "$name "
+    append line "$type"
+    append line " $name"
     set param_count [ llength $parameters ]
     if {$param_count == 0} {
         
     } else {
-        append line "\("
+        append line " \("
         lappend result $line
         set i 0
         while { 1 } {
