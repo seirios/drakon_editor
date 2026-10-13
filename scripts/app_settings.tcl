@@ -9,6 +9,7 @@ namespace eval app_settings {
     } else {
         set cfgroot $env(HOME)
     }
+    file mkdir $cfgroot
     set path [ file join $cfgroot $name ]
     return $path  
   }
