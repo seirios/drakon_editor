@@ -155,8 +155,13 @@ proc classify_keywords { keywords name } {
         lappend errors \
         "$name: both ord-1 and ord-2 is not allowed"
     }
-    if {($etype == "subprogram") || ($etype == "type")} {
+    if {($etype == "subprogram") || (!($etype == "type"))} {
         
+    } else {
+        variable ada_types
+        if {[ lsearch -exact $ada_types $name ] == -1} {
+            lappend ada_types $name
+        }
     }
     if {${ord-1}} {
         set order -1
