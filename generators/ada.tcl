@@ -123,11 +123,11 @@ proc classify_keywords { keywords name } {
     	ord-1 ord-2
     set access [ find_keywords \
      $keywords { private public } ]
-    set _sw2540000_ [ llength $access ]
-    if {$_sw2540000_ == 0} {
+    set _sw21400000_ [ llength $access ]
+    if {$_sw21400000_ == 0} {
         set access "static"
     } else {
-        if {$_sw2540000_ == 1} {
+        if {$_sw21400000_ == 1} {
             
         } else {
             lappend errors \
@@ -136,11 +136,11 @@ proc classify_keywords { keywords name } {
     }
     set etype [ find_keywords $keywords \
       { type } ]
-    set _sw4470000_ [ llength $etype ]
-    if {$_sw4470000_ == 0} {
+    set _sw21760000_ [ llength $etype ]
+    if {$_sw21760000_ == 0} {
         set etype "subprogram"
     } else {
-        if {$_sw4470000_ == 1} {
+        if {$_sw21760000_ == 1} {
             
         } else {
             lappend errors \
@@ -217,7 +217,7 @@ proc else_start { } {
 
 proc extract_signature { text name } {
     array set props { abstract 0 \
-    	access public \
+    	access static \
     	inline 0 \
     	order 0 \
     	subtype procedure \
@@ -452,20 +452,29 @@ proc generate { db gdb filename } {
     if {[ graph::errors_occured ]} {
         
     } else {
-        set spec_filename [ replace_extension $filename "ads" ]
-        set body_filename [ replace_extension $filename "adb" ]
-        set filenames [ list $spec_filename $body_filename ]
-        lassign \
-        [ open_files $filenames "w" ] \
-        sfile bfile
-        catch {
-            print_spec $db $spec_filename $sfile $components \
-        	$spec_header $spec_footer
-        
-            print_body $db $body_filename $bfile $components \
-        	$body_header $body_footer
-        } error_message
-        close_files [ list $sfile $bfile ]
+        if {[ is_empty_spec \
+	$components $spec_header $spec_footer ]} {
+            
+        } else {
+            set spec_filename [ replace_extension $filename "ads" ]
+            set sfile \
+            [open_files [ list $spec_filename ] "w"]
+            catch {
+                print_spec $db $spec_filename $sfile $components \
+            	$spec_header $spec_footer
+            } error_message
+            close_files [ list $sfile ]
+        }
+        if {$error_message == ""} {
+            set body_filename [ replace_extension $filename "adb" ]
+            set bfile \
+            [open_files [ list $body_filename ] "w"]
+            catch {
+                print_body $db $body_filename $bfile $components \
+            	$body_header $body_footer
+            } error_message
+            close_files [ list $bfile ]
+        }
     }
     undo_monkey_patch
     if {$error_message == ""} {
@@ -685,12 +694,10 @@ proc init_description { filename } {
     set pkgname [ package_name $filename ]
     lappend result "=== spec_header ==="
     lappend result "package $pkgname is"
-    lappend result ""
     lappend result "=== spec_footer ==="
     lappend result "end $pkgname;"
     lappend result "=== body_header ==="
     lappend result "package body $pkgname is"
-    lappend result ""
     lappend result "=== body_footer ==="
     lappend result "end $pkgname;"
     return [ join $result "\n" ]
@@ -710,6 +717,15 @@ proc inspect_tree { node name } {
         puts $current
         incr i
     }
+}
+
+proc is_empty_spec { components header footer } {
+    set publics \
+    	[ filter_subprograms $components 0 public ]
+    if {(([ llength $publics ] == 0) && ($header == "")) && ($footer == "")} {
+        return 1
+    }
+    return 0
 }
 
 proc lremove { l p } {
@@ -926,7 +942,8 @@ proc package_name { filename } {
 
 proc print_body { db filename fhandle components header footer } {
     put_credits $fhandle
-    puts $fhandle $header
+    puts_notempty \
+    	$fhandle $header
     foreach subprogram [ filter_subprograms $components 1 static ] {
         print_subprogram $db $fhandle $subprogram 0
     }
@@ -939,7 +956,8 @@ proc print_body { db filename fhandle components header footer } {
     foreach subprogram [ filter_subprograms $components 0 private ] {
         print_subprogram $db $fhandle $subprogram 0
     }
-    puts $fhandle $footer
+    puts_notempty \
+    	$fhandle $footer
 }
 
 proc print_node_core { texts node callbacks depth break_var } {
@@ -1062,7 +1080,8 @@ proc print_node_core { texts node callbacks depth break_var } {
 
 proc print_spec { db filename fhandle components header footer } {
     put_credits $fhandle
-    puts $fhandle $header
+    puts_notempty \
+    	$fhandle $header
     foreach type [ filter_types $components -2 ] {
         print_type $fhandle $type
     }
@@ -1089,7 +1108,8 @@ proc print_spec { db filename fhandle components header footer } {
             print_subprogram $db $fhandle $subprogram 1
         }
     }
-    puts $fhandle $footer
+    puts_notempty \
+    	$fhandle $footer
 }
 
 proc print_subprogram { db fhandle component in_header } {
@@ -1140,6 +1160,7 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract returns
         append_notempty \
         	result $spec_header
     }
+    puts $fhandle ""
     append line "$type"
     append line " $name"
     set param_count [ llength $parameters ]
@@ -1209,7 +1230,6 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract returns
         }
         incr i
     }
-    puts $fhandle ""
 }
 
 proc print_type { fhandle component } {
@@ -1236,6 +1256,7 @@ proc print_type { fhandle component } {
 proc print_type_kernel { fhandle depth type abstract tagged name body has_body } {
     set result {}
     set line ""
+    puts $fhandle ""
     append line "$type"
     append line " $name"
     append line " is"
@@ -1269,13 +1290,20 @@ proc print_type_kernel { fhandle depth type abstract tagged name body has_body }
         }
         incr i
     }
-    puts $fhandle ""
 }
 
 proc put_credits { fhandle } {
     set version [ version_string ]
     puts $fhandle \
         [ comment "Autogenerated with DRAKON Editor $version" ]
+}
+
+proc puts_notempty { fhandle text } {
+    if {$text == ""} {
+        
+    } else {
+        puts $fhandle $text
+    }
 }
 
 proc shelf { primary secondary } {
