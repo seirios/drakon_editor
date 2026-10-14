@@ -211,10 +211,6 @@ proc do_monkey_patch { } {
     monkey_patch_nogoto $direction
 }
 
-proc else_start { } {
-    return ""
-}
-
 proc extract_signature { text name } {
     array set props { abstract 0 \
     	access static \
@@ -397,6 +393,40 @@ proc find_not_belonging { list keywords } {
     return $result
 }
 
+proc gen_case { db item_id parent_loop } {
+    set next0 [ nogoto::get_next_node $db $item_id 0 ]
+    set next1 [ nogoto::get_next_node $db $item_id 1 ]
+    set if_stop [ nogoto::get_node_if_stop $db $item_id ]
+    set loop_break [ nogoto::get_node_loop_break $db $item_id ]
+    set loop_id [ nogoto::get_node_loop_id $db $item_id ]
+    if {($loop_id == {}) || ($parent_loop == $loop_id)} {
+        set result [ list "case" $item_id ]
+        lassign \
+        [ nogoto::generate_if_seq $db $next0 $if_stop $loop_break $parent_loop ] \
+        then_block after_then
+        lassign \
+        [ nogoto::generate_if_seq $db $next1 $if_stop $loop_break $parent_loop ] \
+        else_block after_else
+        if {($then_block == {}) || ($else_block == {})} {
+            return {}
+        } else {
+            lappend result $then_block $else_block
+            if {$after_then == ""} {
+                set next $after_else
+            } else {
+                set next $after_then
+            }
+            return [ list $result $next ]
+        }
+    } else {
+        complain [ list \
+         "gen_if" \
+         "if is not inside its loop" \
+         "$item_id, $parent_loop, $loop_id" ]
+        return {}
+    }
+}
+
 proc gen_loop { db item_id } {
     set start [ nogoto::get_next_node $db $item_id 0 ]
     set loop_break [ nogoto::get_node_loop_break $db $item_id ]
@@ -509,12 +539,17 @@ proc generate_item { db item_id parent_loop } {
             	$db $item_id $parent_loop ]
         } else {
             if {$type == "loop"} {
-                
+                return [ gen_loop \
+                	$db $item_id ]
             } else {
-                error "Unexpected switch value: $type"
+                if {$type == "case"} {
+                    
+                } else {
+                    error "Unexpected switch value: $type"
+                }
+                return [ gen_case \
+                	$db $item_id $parent_loop ]
             }
-            return [ gen_loop \
-            	$db $item_id ]
         }
     }
 }
@@ -714,7 +749,7 @@ proc inspect_tree { node name } {
             break
         }
         set current [ lindex $node $i ]
-        puts $current
+        puts "   $current"
         incr i
     }
 }
@@ -741,24 +776,27 @@ proc make_callbacks { } {
     gen::put_callback callbacks assign              gen_ada::p.assign
     gen::put_callback callbacks declare             gen_ada::p.declare
     gen::put_callback callbacks compare             gen_ada::p.compare
-    gen::put_callback callbacks shelf               gen_ada::shelf
+    gen::put_callback callbacks shelf               gen_ada::p.shelf
     gen::put_callback callbacks comment             gen_ada::comment
     	
     gen::put_callback callbacks break               "break"
     gen::put_callback callbacks pass                gen_ada::p.pass
-    	
+    
+    gen::put_callback callbacks bad_case            gen_ada::p.bad_case	
     gen::put_callback callbacks block_close         gen_ada::p.block_close
-    gen::put_callback callbacks else_start          gen_ada::else_start
-    gen::put_callback callbacks while_start         gen_ada::while_start
+    gen::put_callback callbacks else_start          gen_ada::p.else_start
+    gen::put_callback callbacks elseif_start        gen_ada::p.elseif_start
+    gen::put_callback callbacks while_start         gen_ada::p.while_start
     gen::put_callback callbacks if_start            gen_ada::p.if_start
     gen::put_callback callbacks if_end              gen_ada::p.if_end
     gen::put_callback callbacks if_close            gen_ada::p.if_close
+    gen::put_callback callbacks case_close          gen_ada::p.case_close
     	
     gen::put_callback callbacks body                gen_ada::generate_body
     gen::put_callback callbacks signature           gen_ada::extract_signature
     gen::put_callback callbacks tab_convert         gen_ada::three_spaces
     	
-    #gen::put_callback callbacks inspect_tree        gen_ada::inspect_tree
+    gen::put_callback callbacks inspect_tree        gen_ada::inspect_tree
     return $callbacks
 }
 
@@ -793,6 +831,7 @@ proc monkey_patch_gen { direction } {
     set functions [ list \
     	::gen::make_indent \
     	::gen::p.rewire_loop \
+    	::gen::p.replace_select_ifs \
     	::gen::print_node_core ]
     monkey_patch $direction $functions
 }
@@ -808,6 +847,10 @@ proc p.and { left right } {
 }
 
 proc p.assign { variable value } {
+    return "$variable := $value;"
+}
+
+proc p.bad_case { } {
     return ""
 }
 
@@ -815,12 +858,28 @@ proc p.block_close { output depth } {
     return ""
 }
 
+proc p.case_close { output depth } {
+    upvar 1 $output result
+    set line \
+    [ gen::make_indent $depth ]
+    append line "end case;"
+    lappend result $line
+}
+
 proc p.compare { variable value } {
-    return ""
+    return "$variable = $value"
 }
 
 proc p.declare { type name value } {
     return ""
+}
+
+proc p.else_start { } {
+    return "else"
+}
+
+proc p.elseif_start { } {
+    return "elsif"
 }
 
 proc p.if_close { output depth } {
@@ -849,6 +908,63 @@ proc p.or { left right } {
 
 proc p.pass { } {
     return "null;"
+}
+
+proc p.replace_select_ifs { gdb select ordinals callbacks } {
+    set diagram_id \
+    	[ gen::p.vertex_diagram $gdb $select ]
+    set select_item \
+    	[ gen::p.vertex_item $gdb $select ]
+    set select_icon_number $select_item
+    set select_text \
+    	[ gen::p.vertex_text $gdb $select ]
+    set select_item \
+    	[ expr { $select_item * 1000 } ]
+    set parent ""
+    set count [ llength $ordinals ]
+    set last [ expr { $count - 1 } ]
+    set i 0
+    while { 1 } {
+        if {$i < $count} {
+            
+        } else {
+            break
+        }
+        incr select_item
+        set ordinal [ lindex $ordinals $i ]
+        set const \
+        	[ gen::p.link_const $gdb $select $ordinal ]
+        set dst \
+        	[ gen::p.link_dst $gdb $select $ordinal ]
+        if {$i == $last && \
+	($const == "" || $const == "others")} {
+            gen::p.link $gdb $parent 1 $dst
+        } else {
+            set comp_text "$const"
+            set case_id [ gen::p.insert_vertex \
+            	$gdb $diagram_id $select_item case $comp_text "" 0 ]
+            if {$i == $last} {
+                set others_text "others"
+                incr select_item
+                set others_id [ gen::p.insert_vertex \
+                	$gdb $diagram_id $select_item action $others_text "" 0 ]
+                gen::p.link $gdb $case_id 2 $dst
+                gen::p.link $gdb $case_id 1 $others_id
+                gen::p.link $gdb $others_id 1 $dst
+            } else {
+                gen::p.link $gdb $case_id 2 $dst
+            }
+            if {$parent == ""} {
+                gen::p.relink $gdb $select $case_id
+            } else {
+                gen::p.link $gdb $parent 1 $case_id
+            }
+            set parent $case_id
+        }
+        incr i
+    }
+    gen::p.unlink $gdb $select
+    gen::p.delete_vertex $gdb $select
 }
 
 proc p.rewire_loop { gdb start callbacks } {
@@ -900,16 +1016,60 @@ proc p.rewire_loop_any { gdb start end scheme ident } {
     set loop_body [ gen::p.get_next $gdb $start 2 ]
     set after_loop [ gen::p.get_next $gdb $start 1 ]
     gen::p.relink $gdb $start $loop_id
-    gen::p.link $gdb $loop_id 1 $check_id
     gen::p.relink $gdb $end $endloop_id
-    gen::p.link $gdb $endloop_id 1 $check_id
     
+    gen::p.link $gdb $loop_id 1 $check_id
     gen::p.link $gdb $check_id 1 $after_loop
     gen::p.link $gdb $check_id 2 $loop_body
+    
+    # loop!
+    gen::p.link $gdb $endloop_id 1 $check_id
     $gdb eval {
     	delete from links where src = :start;
     	delete from vertices where vertex_id in (:start, :end);
     }
+}
+
+proc p.shelf { primary secondary } {
+    set lines {}
+    set plines [ split $primary "\n" ]
+    if {$secondary == "record"} {
+        if {[ lindex $plines 0 ] == "null"} {
+            set result "null record"
+        } else {
+            lappend lines "record"
+            foreach line $plines {
+                lappend lines "   $line;"
+            }
+            lappend lines "end record"
+            set result [ join $lines "\n" ]
+        }
+    } else {
+        if {$secondary == "is"} {
+            lappend lines "##@@BEGIN_IS@@##"
+            foreach line $plines {
+                lappend lines "   $line"
+            }
+            lappend lines "##@@END_IS@@##"
+            set result [ join $lines "\n" ]
+        } else {
+            if {$secondary == "with"} {
+                lappend lines "##@@BEGIN_WITH@@##"
+                foreach line $plines {
+                    lappend lines "   $line"
+                }
+                lappend lines "##@@END_WITH@@##"
+                set result [ join $lines "\n" ]
+            } else {
+                set result $primary
+            }
+        }
+    }
+    return $result
+}
+
+proc p.while_start { } {
+    return ""
 }
 
 proc package_name { filename } {
@@ -960,7 +1120,7 @@ proc print_body { db filename fhandle components header footer } {
     	$fhandle $footer
 }
 
-proc print_node_core { texts node callbacks depth break_var } {
+proc print_node_core { texts node callbacks depth level } {
     set line_end [ gen::get_optional_callback $callbacks line_end ]
     set commentator [ gen::get_callback $callbacks comment ]
     set break_str [ gen::get_callback $callbacks break ]
@@ -969,6 +1129,7 @@ proc print_node_core { texts node callbacks depth break_var } {
     
     set block_close [ gen::get_callback $callbacks block_close ]
     set if_close [ gen::get_optional_callback $callbacks if_close ]
+    set case_close [ gen::get_optional_callback $callbacks case_close ]
     set while_start [ gen::get_callback $callbacks while_start ]
     set else_start [ gen::get_callback $callbacks else_start ]
     set pass [ gen::get_callback $callbacks pass ]
@@ -981,6 +1142,7 @@ proc print_node_core { texts node callbacks depth break_var } {
     set was_return 0
     set indent [ gen::make_indent $depth ]
     set next_depth [ expr { $depth + 1 } ]
+    set next_level [ expr { $level + 1 } ]
     set i 1
     while { 1 } {
         if {$i < $length} {
@@ -1013,22 +1175,21 @@ proc print_node_core { texts node callbacks depth break_var } {
                 set then_node [ lindex $current 3 ]
                 set else_node [ lindex $current 2 ]
                 set then [ print_node_core \
-                	$texts $then_node $callbacks $next_depth $break_var ]
+                	$texts $then_node $callbacks $next_depth $next_level ]
                 set result [ concat $result $then ]
                 if {$else_node == "seq"} {
                     
                 } else {
                     lappend result "$indent[ $else_start ]"
                     set else [ print_node_core \
-                    	$texts $else_node $callbacks $next_depth $break_var ]
+                    	$texts $else_node $callbacks $next_depth $next_level ]
                     set result [ concat $result $else ]
                 }
                 $if_close result $depth
             } else {
                 if {$_sw17540000_ == "loop"} {
-                    set early_var ""
-                    set body [ gen::print_node_core \
-                    	$texts $current $callbacks $next_depth $early_var ]
+                    set body [ print_node_core \
+                    	$texts $current $callbacks $next_depth $next_level ]
                     lappend result "${indent}loop"
                     set result [ concat $result $body ]
                     lappend result "${indent}end loop;"
@@ -1061,10 +1222,33 @@ proc print_node_core { texts node callbacks depth break_var } {
                             incr ili
                         }
                     } else {
-                        if {$_sw17540000_ == "sel"} {
+                        if {$_sw17540000_ == "case"} {
                             
                         } else {
                             error "Unexpected switch value: $_sw17540000_"
+                        }
+                        if {$level == 0} {
+                            lappend result "case  is"
+                        }
+                        set cond_item [ lindex $current 1 ]
+                        set cond_text [ tab_convert $tab_convert \
+                        	[ gen::get_text_lines $texts $cond_item ] ]
+                        set cond [ when_line $callbacks $cond_text ]
+                        lappend result $indent$cond
+                        set then_node [ lindex $current 3 ]
+                        set else_node [ lindex $current 2 ]
+                        set then [ print_node_core \
+                        	$texts $then_node $callbacks $next_depth $next_level ]
+                        set result [ concat $result $then ]
+                        if {$else_node == "seq"} {
+                            
+                        } else {
+                            set else [ print_node_core \
+                            	$texts $else_node $callbacks $depth $next_level ]
+                            set result [ concat $result $else ]
+                        }
+                        if {$level == 0} {
+                            $case_close result $depth
                         }
                     }
                 }
@@ -1306,44 +1490,6 @@ proc puts_notempty { fhandle text } {
     }
 }
 
-proc shelf { primary secondary } {
-    set lines {}
-    set plines [ split $primary "\n" ]
-    if {$secondary == "record"} {
-        if {[ lindex $plines 0 ] == "null"} {
-            set result "null record"
-        } else {
-            lappend lines "record"
-            foreach line $plines {
-                lappend lines "   $line;"
-            }
-            lappend lines "end record"
-            set result [ join $lines "\n" ]
-        }
-    } else {
-        if {$secondary == "is"} {
-            lappend lines "##@@BEGIN_IS@@##"
-            foreach line $plines {
-                lappend lines "   $line"
-            }
-            lappend lines "##@@END_IS@@##"
-            set result [ join $lines "\n" ]
-        } else {
-            if {$secondary == "with"} {
-                lappend lines "##@@BEGIN_WITH@@##"
-                foreach line $plines {
-                    lappend lines "   $line"
-                }
-                lappend lines "##@@END_WITH@@##"
-                set result [ join $lines "\n" ]
-            } else {
-                set result $primary
-            }
-        }
-    }
-    return $result
-}
-
 proc standard_color { keywords kw_types type text } {
     if {$type == "op"} {
         return $colors::syntax_operator
@@ -1380,14 +1526,29 @@ proc three_spaces { } {
     return "   "
 }
 
+proc traverse_links { gdb id } {
+    if {$id == ""} {
+        
+    } else {
+        set d1 [ gen::p.link_dst $gdb $id 1 ]
+        set d2 [ gen::p.link_dst $gdb $id 2 ]
+        puts "$id -> d1: $d1; d2: $d2"
+        traverse_links $gdb $d1
+        traverse_links $gdb $d2
+    }
+}
+
 proc undo_monkey_patch { } {
     set direction "reverse"
     monkey_patch_gen $direction
     monkey_patch_nogoto $direction
 }
 
-proc while_start { } {
-    return ""
+proc when_line { callbacks cond_text } {
+    set when_start "when "
+    set when_end " =>"
+    set cond "${when_start}$cond_text${when_end}"
+    return $cond
 }
 
 }
@@ -1401,8 +1562,16 @@ namespace eval gen {
 		gen_ada::p.rewire_loop $gdb $start $callbacks
 	}
 
+	proc p.rewire_select_ada { gdb select callbacks } {
+		gen_ada::p.rewire_select $gdb $select $callbacks
+	}
+
+	proc p.replace_select_ifs_ada { gdb select ordinals callbacks } {
+		gen_ada::p.replace_select_ifs $gdb $select $ordinals $callbacks
+	}
+
 	proc print_node_core_ada { texts node callbacks depth break_var } {
-		gen_ada::print_node_core $texts $node $callbacks $depth $break_var
+		gen_ada::print_node_core $texts $node $callbacks $depth 0
 	}
 }
 

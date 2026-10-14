@@ -2648,6 +2648,7 @@ proc p.keywords { } {
 		return_none
 		block_close
 		comment
+		case_close
 		bad_case
 		for_init
 		for_check
