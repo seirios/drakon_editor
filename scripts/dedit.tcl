@@ -3238,8 +3238,8 @@ proc create_file { } {
 	set filename [ ds::requestspath main .drn ]
 	if { $filename != "" } {
 		mod::close $db
-		if { ![ ds::createfile $filename ] } { 
-			ds::complain_file $filename
+		if { ![ ds::createfile $filename "" ] } { 
+			ds::complain_file $filename create
 			exit
 		}
 	}
@@ -3252,7 +3252,7 @@ proc open_file { } {
 	if { $filename != "" } {
 		mod::close $db
 		if { ![ ds::openfile $filename ] } { 
-			ds::complain_file $filename
+			ds::complain_file $filename open
 			exit
 		}
 	}
@@ -3262,7 +3262,7 @@ proc save_as { } {
 	set filename [ ds::requestspath main .drn ]
 	if { $filename != "" } {
 		if { ![ ds::saveasfile $filename ] } { 
-			ds::complain_file $filename
+			ds::complain_file $filename save
 			exit
 		}
 	}

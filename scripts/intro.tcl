@@ -128,7 +128,7 @@ proc intro.get_selected { } {
 proc intro.create { } {
   set filename [ ds::requestspath main .drn .intro ]
   if { $filename == "" } { exit }
-  if { ![ ds::createfile $filename ] } { 
+  if { ![ ds::createfile $filename "" ] } { 
     tk_messageBox -message [ mc2 "Error creating file: \$filename" ] -parent .intro
     return
   }
