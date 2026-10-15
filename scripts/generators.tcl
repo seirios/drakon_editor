@@ -2642,13 +2642,11 @@ proc p.keywords { } {
 		elseif_start
 		if_end
 		else_start
-		if_close
 		pass
 		continue
 		return_none
 		block_close
 		comment
-		case_close
 		bad_case
 		for_init
 		for_check
@@ -2677,7 +2675,6 @@ proc p.keywords { } {
 		case_else
 		case_end
 		select_end
-		bad_case
 		select_gen_default
 		native_foreach
 		can_glue

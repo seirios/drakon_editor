@@ -185,8 +185,14 @@ proc classify_keywords { keywords name } {
     return [ list $error_message $proplist ]
 }
 
-proc comment { line } {
-    return "--  $line"
+proc complain_dia { name message } {
+    variable tdb
+    set id \
+    [ $tdb onecolumn {
+        select diagram_id
+        from diagrams
+        where name = :name } ]
+    graph::p.error $id {} $message
 }
 
 proc create_tree { prefix tree } {
@@ -209,6 +215,11 @@ proc do_monkey_patch { } {
     set direction "forward"
     monkey_patch_gen $direction
     monkey_patch_nogoto $direction
+}
+
+proc enforce_nogoto { name } {
+    complain_dia $name \
+    "Could not generate code for function '$name'.\nTry splitting it into smaller parts."
 }
 
 proc extract_signature { text name } {
@@ -435,26 +446,8 @@ proc find_not_belonging { list keywords } {
 }
 
 proc gen_loop { db item_id } {
-    set start [ nogoto::get_next_node $db $item_id 0 ]
-    set loop_break [ nogoto::get_node_loop_break $db $item_id ]
-    set result [ list "loop" ]
-    set current $start
-    while { 1 } {
-        if {[ nogoto::is_link_up $db $current 0 ]} {
-            set item [ list $result $loop_break ]
-            break
-        }
-        lassign \
-        [ nogoto::generate_item \
-        	$db $current $item_id ] \
-        subtree next
-        if {$subtree == {}} {
-            set item {}
-            break
-        }
-        lappend result $subtree
-        set current $next
-    }
+    set item [ nogoto::gen_loop \
+    	$db $item_id "" ]
     set result [ lindex $item 0 ]
     set result [ lremove $result 1 ]
     set result [ if_break_to_exit_when $result ]
@@ -573,7 +566,7 @@ proc generate_item { db item_id parent_loop } {
     }
 }
 
-proc handle_is { list_result body } {
+proc handle_is_insertion { list_result body } {
     upvar 1 $list_result result
     lappend result "is"
     set lcnt 0
@@ -794,22 +787,6 @@ proc init_description { filename } {
     return [ join $result "\n" ]
 }
 
-proc inspect_tree { node name } {
-    set length [ llength $node ]
-    puts $name
-    set i 1
-    while { 1 } {
-        if {$i < $length} {
-            
-        } else {
-            break
-        }
-        set current [ lindex $node $i ]
-        puts "   $current"
-        incr i
-    }
-}
-
 proc is_empty_spec { components header footer } {
     set publics \
     	[ filter_subprograms $components 0 public ]
@@ -828,31 +805,28 @@ proc make_callbacks { } {
     gen::put_callback callbacks and                 gen_ada::p.and
     gen::put_callback callbacks or                  gen_ada::p.or
     gen::put_callback callbacks not                 gen_ada::p.not
-    	
+    
     gen::put_callback callbacks assign              gen_ada::p.assign
     gen::put_callback callbacks declare             gen_ada::p.declare
     gen::put_callback callbacks compare             gen_ada::p.compare
     gen::put_callback callbacks shelf               gen_ada::p.shelf
-    gen::put_callback callbacks comment             gen_ada::comment
-    	
-    gen::put_callback callbacks break               "break"
+    gen::put_callback callbacks comment             gen_ada::p.comment
     gen::put_callback callbacks pass                gen_ada::p.pass
     
-    gen::put_callback callbacks bad_case            gen_ada::p.bad_case	
     gen::put_callback callbacks block_close         gen_ada::p.block_close
     gen::put_callback callbacks else_start          gen_ada::p.else_start
     gen::put_callback callbacks elseif_start        gen_ada::p.elseif_start
     gen::put_callback callbacks while_start         gen_ada::p.while_start
     gen::put_callback callbacks if_start            gen_ada::p.if_start
     gen::put_callback callbacks if_end              gen_ada::p.if_end
-    gen::put_callback callbacks if_close            gen_ada::p.if_close
-    gen::put_callback callbacks case_close          gen_ada::p.case_close
-    	
+    gen::put_callback callbacks if_block_end        gen_ada::p.if_block_end
+    
     gen::put_callback callbacks body                gen_ada::generate_body
     gen::put_callback callbacks signature           gen_ada::extract_signature
-    gen::put_callback callbacks tab_convert         gen_ada::three_spaces
-    	
-    #gen::put_callback callbacks inspect_tree        gen_ada::inspect_tree
+    gen::put_callback callbacks enforce_nogoto      gen_ada::enforce_nogoto
+    gen::put_callback callbacks tab_convert         gen_ada::p.indentation
+    
+    #gen::put_callback callbacks inspect_tree        gen_ada::p.inspect_tree
     return $callbacks
 }
 
@@ -865,7 +839,7 @@ proc make_indent { depth } {
         } else {
             break
         }
-        append indent "   "
+        append indent [ p.indentation ]
         incr i
     }
     return $indent
@@ -900,27 +874,19 @@ proc monkey_patch_nogoto { direction } {
 }
 
 proc p.and { left right } {
-    return ""
+    return "and"
 }
 
 proc p.assign { variable value } {
     return "$variable := $value;"
 }
 
-proc p.bad_case { var item_id } {
-    return ""
-}
-
 proc p.block_close { output depth } {
     return ""
 }
 
-proc p.case_close { output depth } {
-    upvar 1 $output result
-    set line \
-    [ gen::make_indent $depth ]
-    append line "end case;"
-    lappend result $line
+proc p.comment { line } {
+    return "--  $line"
 }
 
 proc p.compare { variable value } {
@@ -939,7 +905,7 @@ proc p.elseif_start { } {
     return "elsif"
 }
 
-proc p.if_close { output depth } {
+proc p.if_block_end { output depth } {
     upvar 1 $output result
     set line \
     [ gen::make_indent $depth ]
@@ -955,12 +921,32 @@ proc p.if_start { } {
     return "if "
 }
 
+proc p.indentation { } {
+    return "   "
+}
+
+proc p.inspect_tree { node name } {
+    set length [ llength $node ]
+    puts $name
+    set i 1
+    while { 1 } {
+        if {$i < $length} {
+            
+        } else {
+            break
+        }
+        set current [ lindex $node $i ]
+        puts "   $current"
+        incr i
+    }
+}
+
 proc p.not { operand } {
-    return ""
+    return "not"
 }
 
 proc p.or { left right } {
-    return ""
+    return "or"
 }
 
 proc p.pass { } {
@@ -1127,7 +1113,7 @@ proc p.shelf { primary secondary } {
 }
 
 proc p.while_start { } {
-    return ""
+    return "loop"
 }
 
 proc package_name { filename } {
@@ -1179,22 +1165,11 @@ proc print_body { db filename fhandle components header footer } {
 }
 
 proc print_node_core { texts node callbacks depth } {
-    set line_end [ gen::get_optional_callback $callbacks line_end ]
-    set commentator [ gen::get_callback $callbacks comment ]
-    set break_str [ gen::get_callback $callbacks break ]
-    set native_foreach [ gen::get_optional_callback $callbacks native_foreach ]
     set tab_convert [ gen::get_optional_callback $callbacks tab_convert ]
     
-    set block_close [ gen::get_callback $callbacks block_close ]
-    set if_close [ gen::get_optional_callback $callbacks if_close ]
-    set case_close [ gen::get_optional_callback $callbacks case_close ]
-    set while_start [ gen::get_callback $callbacks while_start ]
+    set if_close [ gen::get_if_close $callbacks ]
     set else_start [ gen::get_callback $callbacks else_start ]
     set pass [ gen::get_callback $callbacks pass ]
-    
-    set assign [ gen::get_callback $callbacks assign ]
-    set compare [ gen::get_callback $callbacks compare ]
-    set declare [ gen::get_callback $callbacks declare ]
     set length [ llength $node ]
     set result {}
     set was_return 0
@@ -1212,11 +1187,6 @@ proc print_node_core { texts node callbacks depth } {
             set text [ tab_convert $tab_convert \
             	[ gen::get_text_lines $texts $current ] ]
             set parts [ split $text "\n" ]
-            if {[ llength $parts ] == 0} {
-                
-            } else {
-                gen::append_line_end result $i $line_end
-            }
             foreach part $parts {
                 set line $indent$part
                 lappend result $line
@@ -1436,7 +1406,8 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract returns
         lappend result "is abstract"
     } else {
         if {$print_body} {
-            set body [ handle_is result $body ]
+            set body [ handle_is_insertion \
+            	result $body ]
             lappend result "begin"
             foreach line $body {
                 lappend result "   $line"
@@ -1534,7 +1505,7 @@ proc print_type_kernel { fhandle depth type abstract tagged name body has_body }
 proc put_credits { fhandle } {
     set version [ version_string ]
     puts $fhandle \
-        [ comment "Autogenerated with DRAKON Editor $version" ]
+        [ p.comment "Autogenerated with DRAKON Editor $version" ]
 }
 
 proc puts_notempty { fhandle text } {
@@ -1575,10 +1546,6 @@ proc tab_convert { convert_cb text } {
     } else {
         return [ regsub -all \t $text [ $convert_cb ] ]
     }
-}
-
-proc three_spaces { } {
-    return "   "
 }
 
 proc traverse_links { gdb id } {
