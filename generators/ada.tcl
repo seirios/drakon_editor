@@ -105,6 +105,43 @@ proc append_notempty { list_var str } {
     }
 }
 
+proc case_tree_to_case_list { node others } {
+    set result {}
+    set _sw27190000_ [ lindex $node 0 ]
+    if {$_sw27190000_ == "case"} {
+        set cond_item [ lindex $node 1 ]
+        set then_node [ lindex $node 3 ]
+        set else_node [ lindex $node 2 ]
+        if {$then_node == "seq"} {
+            lappend result [ list "case" $cond_item \
+            	[ concat {seq} $others ] ]
+        } else {
+            lappend result [ list "case" $cond_item $then_node ]
+            set else [ case_tree_to_case_list \
+            	$else_node $others ]
+            set result [ concat $result $else ]
+        }
+    } else {
+        if {$_sw27190000_ == "seq"} {
+            
+        } else {
+            error "Unexpected switch value: $_sw27190000_"
+        }
+        set first_node [ lindex $node 1 ]
+        set other_nodes [ lrange $node 2 end ]
+        if {[ lindex $first_node 0 ] == "case"} {
+            set inner [ case_tree_to_case_list \
+            	$first_node $other_nodes ]
+            return $inner
+        } else {
+            set cond_item [ lindex $node 1 ]
+            lappend result [ list "case" $cond_item \
+            	[ concat {seq} $other_nodes ] ]
+        }
+    }
+    return $result
+}
+
 proc check_keywords { keywords args } {
     foreach arg $args {
         upvar 1 $arg keyword
@@ -406,7 +443,7 @@ proc find_if_end_impl { db parent_id ordinal path loops } {
                     set result [ find_if_end_impl \
                      $db $item_id 0 $path $loops ]
                 } else {
-                    if {$type == "if"} {
+                    if {($type == "if") || ($type == "case")} {
                         
                     } else {
                         error "Unexpected switch value: $type"
@@ -445,6 +482,33 @@ proc find_not_belonging { list keywords } {
     return $result
 }
 
+proc gen_case { db item_id } {
+    set next0 [ nogoto::get_next_node $db $item_id 0 ]
+    set next1 [ nogoto::get_next_node $db $item_id 1 ]
+    set if_stop [ nogoto::get_node_if_stop $db $item_id ]
+    set loop_break [ nogoto::get_node_loop_break $db $item_id ]
+    set result [ list "case" $item_id ]
+    lassign \
+    [ nogoto::generate_if_seq \
+    	$db $next0 $if_stop $loop_break "" ] \
+    then_block after_then
+    lassign \
+    [ nogoto::generate_if_seq \
+    	$db $next1 $if_stop $loop_break "" ] \
+    else_block after_else
+    if {($then_block == {}) || ($else_block == {})} {
+        return {}
+    } else {
+        lappend result $then_block $else_block
+        if {$after_then == ""} {
+            set next $after_else
+        } else {
+            set next $after_then
+        }
+        return [ list $result $next ]
+    }
+}
+
 proc gen_loop { db item_id } {
     set item [ nogoto::gen_loop \
     	$db $item_id "" ]
@@ -460,7 +524,7 @@ proc gen_sel { db item_id } {
     set inner [ generate_item $db $next0 "" ]
     set tree [ lindex $inner 0 ]
     set after [ lindex $inner 1 ]
-    set cases [ ifelse_tree_to_case_list $tree {} ]
+    set cases [ case_tree_to_case_list $tree {} ]
     set cases [ concat {seq} $cases ]
     set result [ list "sel" $item_id $cases ]
     set item [ list $result $after ]
@@ -554,13 +618,18 @@ proc generate_item { db item_id parent_loop } {
                 return [ gen_loop \
                 	$db $item_id ]
             } else {
-                if {$type == "sel"} {
-                    
+                if {$type == "case"} {
+                    return [ gen_case \
+                    	$db $item_id ]
                 } else {
-                    error "Unexpected switch value: $type"
+                    if {$type == "sel"} {
+                        
+                    } else {
+                        error "Unexpected switch value: $type"
+                    }
+                    return [ gen_sel \
+                    	$db $item_id ]
                 }
-                return [ gen_sel \
-                	$db $item_id ]
             }
         }
     }
@@ -736,43 +805,6 @@ proc if_break_to_exit_when { node } {
     return $result
 }
 
-proc ifelse_tree_to_case_list { node others } {
-    set result {}
-    set _sw27190000_ [ lindex $node 0 ]
-    if {$_sw27190000_ == "if"} {
-        set cond_item [ lindex $node 1 ]
-        set then_node [ lindex $node 3 ]
-        set else_node [ lindex $node 2 ]
-        if {$then_node == "seq"} {
-            lappend result [ list "case" $cond_item \
-            	[ concat {seq} $others ] ]
-        } else {
-            lappend result [ list "case" $cond_item $then_node ]
-            set else [ ifelse_tree_to_case_list \
-            	$else_node $others ]
-            set result [ concat $result $else ]
-        }
-    } else {
-        if {$_sw27190000_ == "seq"} {
-            
-        } else {
-            error "Unexpected switch value: $_sw27190000_"
-        }
-        set first_node [ lindex $node 1 ]
-        set other_nodes [ lrange $node 2 end ]
-        if {[ lindex $first_node 0 ] == "if"} {
-            set inner [ ifelse_tree_to_case_list \
-            	$first_node $other_nodes ]
-            return $inner
-        } else {
-            set cond_item [ lindex $node 1 ]
-            lappend result [ list "case" $cond_item \
-            	[ concat {seq} $other_nodes ] ]
-        }
-    }
-    return $result
-}
-
 proc init_description { filename } {
     set result {}
     set pkgname [ package_name $filename ]
@@ -805,6 +837,9 @@ proc make_callbacks { } {
     gen::put_callback callbacks and                 gen_ada::p.and
     gen::put_callback callbacks or                  gen_ada::p.or
     gen::put_callback callbacks not                 gen_ada::p.not
+    gen::put_callback callbacks case_and            gen_ada::p.case_and
+    gen::put_callback callbacks case_or             gen_ada::p.case_or
+    gen::put_callback callbacks case_not            gen_ada::p.case_not
     
     gen::put_callback callbacks assign              gen_ada::p.assign
     gen::put_callback callbacks declare             gen_ada::p.declare
@@ -860,7 +895,9 @@ proc monkey_patch { direction fnames } {
 proc monkey_patch_gen { direction } {
     set functions [ list \
     	::gen::make_indent \
+    	::gen::p.keywords \
     	::gen::p.rewire_loop \
+    	::gen::p.short_circuit \
     	::gen::p.replace_select_ifs \
     	::gen::print_node_core ]
     monkey_patch $direction $functions
@@ -869,12 +906,13 @@ proc monkey_patch_gen { direction } {
 proc monkey_patch_nogoto { direction } {
     set functions [ list \
     	::nogoto::generate_item \
+    	::nogoto::select_ifs \
     	::nogoto::find_if_end_impl ]
     monkey_patch $direction $functions
 }
 
 proc p.and { left right } {
-    return "and"
+    return "$left and $right"
 }
 
 proc p.assign { variable value } {
@@ -883,6 +921,20 @@ proc p.assign { variable value } {
 
 proc p.block_close { output depth } {
     return ""
+}
+
+proc p.case_and { left right } {
+    puts $::errorInfo
+    error "and: invalid case operation"
+}
+
+proc p.case_not { operand } {
+    puts $::errorInfo
+    error "not: invalid case operation"
+}
+
+proc p.case_or { left right } {
+    return "$left | $right"
 }
 
 proc p.comment { line } {
@@ -941,12 +993,67 @@ proc p.inspect_tree { node name } {
     }
 }
 
+proc p.keywords { } {
+    return {
+    	and
+    	assign
+    	bad_case
+    	block_close
+    	body
+    	break
+    	can_glue
+    	case_and
+    	case_else
+    	case_end
+    	case_not
+    	case_or
+    	case_value
+    	change_state
+    	comment
+    	compare
+    	compare2
+    	continue
+    	declare
+    	elseif_start
+    	else_start
+    	enforce_nogoto
+    	exit_door
+    	for_check
+    	for_current
+    	for_declare
+    	for_incr
+    	for_init
+    	fsm_merge
+    	goto
+    	if_block_end
+    	if_cond
+    	if_end
+    	if_start
+    	inspect_tree
+    	line_end
+    	native_foreach
+    	not
+    	or
+    	pass
+    	return_none
+    	select
+    	select_end
+    	select_gen_default
+    	shelf
+    	shutdown
+    	signature
+    	tab_convert
+    	tag
+    	while_start	
+    }
+}
+
 proc p.not { operand } {
-    return "not"
+    return "not $operand"
 }
 
 proc p.or { left right } {
-    return "or"
+    return "$left or $right"
 }
 
 proc p.pass { } {
@@ -991,7 +1098,7 @@ proc p.replace_select_ifs { gdb select ordinals callbacks } {
             set comp_text "$const"
             incr item_id
             set case_id [ gen::p.insert_vertex \
-            	$gdb $diagram_id $item_id if $comp_text "" 0 ]
+            	$gdb $diagram_id $item_id case $comp_text "" 0 ]
             if {$i == $last} {
                 incr item_id
                 set others_id [ gen::p.insert_vertex \
@@ -1107,6 +1214,93 @@ proc p.shelf { primary secondary } {
             } else {
                 set result $primary
             }
+        }
+    }
+    return $result
+}
+
+proc p.short_circuit { gdb callbacks diagram_id } {
+    p.short_circuit_elems \
+    	$gdb $callbacks $diagram_id "if"
+    p.short_circuit_elems \
+    	$gdb $callbacks $diagram_id "case"
+}
+
+proc p.short_circuit_elems { gdb callbacks diagram_id type } {
+    if {$type == "if"} {
+        set and [ gen::get_callback $callbacks and ]
+        set or [ gen::get_callback $callbacks or ]
+        set not [ gen::get_callback $callbacks not ]
+    } else {
+        set and [ gen::get_callback $callbacks case_and ]
+        set or [ gen::get_callback $callbacks case_or ]
+        set not [ gen::get_callback $callbacks case_not ]
+    }
+    set ifs [ $gdb eval {
+    	select vertex_id
+    	from vertices
+    	where type = :type
+    		and diagram_id = :diagram_id } ]
+    set result 0
+    foreach if_id $ifs {
+        set text [ gen::p.vertex_text $gdb $if_id ]
+        set one [ gen::p.link_dst $gdb $if_id 1 ]
+        set two [ gen::p.link_dst $gdb $if_id 2 ]
+        set one_type [ gen::p.v_type $gdb $one ]
+        if {$one != $if_id
+	&& $one_type == "$type"
+	&& [ gen::p.has_one_entry $gdb $one ]} {
+            set ctext [ gen::p.vertex_text $gdb $one ]
+            set cone [ gen::p.link_dst $gdb $one 1 ]
+            set ctwo [ gen::p.link_dst $gdb $one 2 ]
+            if {$ctwo == $two} {
+                set result 1
+                gen::p.set_link_dst $gdb $if_id 1 $cone
+                gen::p.unlink $gdb $one
+                $gdb eval { delete from vertices where vertex_id = :one }
+                set ntext [ $or $text $ctext ]
+                gen::p.set_vertex_text $gdb $if_id $ntext
+            } else {
+                if {$cone == $two} {
+                    set result 1
+                    gen::p.set_link_dst $gdb $if_id 1 $ctwo
+                    gen::p.unlink $gdb $one
+                    $gdb eval { delete from vertices where vertex_id = :one }
+                    set ntext [ $or $text [ $not $ctext ] ]
+                    gen::p.set_vertex_text $gdb $if_id $ntext
+                }
+            }
+        }
+        set text [ gen::p.vertex_text $gdb $if_id ]
+        set one [ gen::p.link_dst $gdb $if_id 1 ]
+        set two [ gen::p.link_dst $gdb $if_id 2 ]
+        set two_type [ gen::p.v_type $gdb $two ]
+        if {$two != $if_id
+	&& $two_type == "$type"
+	&& [ gen::p.has_one_entry $gdb $two ]} {
+            set ctext [ gen::p.vertex_text $gdb $two ]
+            set cone [ gen::p.link_dst $gdb $two 1 ]
+            set ctwo [ gen::p.link_dst $gdb $two 2 ]
+            if {$cone == $one} {
+                set result 1
+                gen::p.set_link_dst $gdb $if_id 2 $ctwo
+                gen::p.unlink $gdb $two
+                $gdb eval { delete from vertices where vertex_id = :two }
+                set ntext [ $and $text $ctext ]
+                gen::p.set_vertex_text $gdb $if_id $ntext
+            } else {
+                if {$ctwo == $one} {
+                    set result 1
+                    gen::p.set_link_dst $gdb $if_id 2 $cone
+                    gen::p.unlink $gdb $two
+                    $gdb eval { delete from vertices where vertex_id = :two }
+                    set ntext [ $and $text [ $not $ctext ] ]
+                    gen::p.set_vertex_text $gdb $if_id $ntext
+                }
+            }
+        }
+        if {$result} {
+            break
         }
     }
     return $result
@@ -1516,6 +1710,14 @@ proc puts_notempty { fhandle text } {
     }
 }
 
+proc select_ifs_and_cases { db } {
+    return [ $db eval {
+    	select item_id
+    	from nodes
+    	where type = 'if'
+    	   or type = 'case' } ]
+}
+
 proc standard_color { keywords kw_types type text } {
     if {$type == "op"} {
         return $colors::syntax_operator
@@ -1580,8 +1782,16 @@ namespace eval gen {
 		gen_ada::make_indent $depth
 	}
 
+	proc p.keywords_ada { } {
+		gen_ada::p.keywords
+	}
+
 	proc p.rewire_loop_ada { gdb start callbacks append_semicolon } {
 		gen_ada::p.rewire_loop $gdb $start $callbacks
+	}
+
+	proc p.short_circuit_ada { gdb callbacks diagram_id } {
+		gen_ada::p.short_circuit $gdb $callbacks $diagram_id
 	}
 
 	proc p.replace_select_ifs_ada { gdb select ordinals callbacks } {
@@ -1600,5 +1810,9 @@ namespace eval nogoto {
 
 	proc find_if_end_impl_ada { db parent_id ordinal path loops } {
 		gen_ada::find_if_end_impl $db $parent_id $ordinal $path $loops
+	}
+
+	proc select_ifs_ada { db } {
+		gen_ada::select_ifs_and_cases $db
 	}
 }
