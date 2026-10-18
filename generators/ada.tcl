@@ -2,6 +2,8 @@ gen::add_generator "Ada" gen_ada::generate
 
 namespace eval gen_ada {
 
+variable tdb ""
+
 variable ada_keywords {
 	abort
 	abs
@@ -259,6 +261,42 @@ proc enforce_nogoto { name } {
     "Could not generate code for function '$name'.\nTry splitting it into smaller parts."
 }
 
+proc exit_cond { cond_lines negate indent } {
+    set result {}
+    set nline [ llength $cond_lines ]
+    set first_cond [ lindex $cond_lines 0 ]
+    if {$negate} {
+        set first_cond "not ($first_cond"
+    }
+    set line "${indent}exit when $first_cond"
+    if {$nline == 1} {
+        if {$negate} {
+            append line ")"
+        }
+        append line ";"
+    }
+    lappend result $line
+    set ili 1
+    while { 1 } {
+        if {$ili < $nline} {
+            
+        } else {
+            break
+        }
+        set current [ lindex $cond_lines $ili ]
+        set line "$indent$current"
+        if {$ili == $nline - 1} {
+            if {$negate} {
+                append line ")"
+            }
+            append line ";"
+        }
+        lappend result $line
+        incr ili
+    }
+    return $result
+}
+
 proc extract_signature { text name } {
     array set props { abstract 0 \
     	access static \
@@ -513,8 +551,8 @@ proc gen_loop { db item_id } {
     set item [ nogoto::gen_loop \
     	$db $item_id "" ]
     set result [ lindex $item 0 ]
-    set result [ lremove $result 1 ]
     set result [ if_break_to_exit_when $result ]
+    set result [ remove_dummy_case $result ]
     set item [ list $result [ lindex $item 1 ] ]
     return $item
 }
@@ -532,8 +570,10 @@ proc gen_sel { db item_id } {
 }
 
 proc generate { db gdb filename } {
+    variable tdb
     do_monkey_patch
     set error_message ""
+    set tdb $gdb
     set prefix [ string cat [ \
     	file dirname $filename ] "/" ]
     set trees [ tab::generate_trees $gdb ]
@@ -794,9 +834,14 @@ proc if_break_to_exit_when { node } {
             type cond_part else_part then_part
             if {$else_part == "seq" &&
 	$then_part == {seq break}} {
-                lappend result [ list "exit" $cond_part ]
+                lappend result [ list "exit" $cond_part 0 ]
             } else {
-                lappend result $elem
+                if {$then_part == "seq" &&
+	$else_part == {seq break}} {
+                    lappend result [ list "exit" $cond_part 1 ]
+                } else {
+                    lappend result $elem
+                }
             }
         } else {
             lappend result $elem
@@ -834,6 +879,8 @@ proc lremove { l p } {
 
 proc make_callbacks { } {
     set callbacks {}
+    #gen::put_callback callbacks inspect_tree        gen_ada::p.inspect_tree
+    
     gen::put_callback callbacks and                 gen_ada::p.and
     gen::put_callback callbacks or                  gen_ada::p.or
     gen::put_callback callbacks not                 gen_ada::p.not
@@ -860,8 +907,6 @@ proc make_callbacks { } {
     gen::put_callback callbacks signature           gen_ada::extract_signature
     gen::put_callback callbacks enforce_nogoto      gen_ada::enforce_nogoto
     gen::put_callback callbacks tab_convert         gen_ada::p.indentation
-    
-    #gen::put_callback callbacks inspect_tree        gen_ada::p.inspect_tree
     return $callbacks
 }
 
@@ -1159,7 +1204,7 @@ proc p.rewire_loop_any { gdb start end scheme ident } {
     set check_id [ \
     	gen::p.insert_vertex $gdb $diagram_id [ \
     		gen::append_digits $item_id 0002 ] \
-    	"if" "" "" 0 ]
+    	"case" "" "" 0 ]
     set endloop_id [ \
     	gen::p.insert_vertex $gdb $diagram_id [ \
     		gen::append_digits $item_id 0003 ] \
@@ -1417,31 +1462,12 @@ proc print_node_core { texts node callbacks depth } {
                 } else {
                     if {$_sw17540000_ == "exit"} {
                         set cond_item [ lindex $current 1 ]
+                        set negate [ lindex $current 2 ]
                         set cond_text [ tab_convert $tab_convert \
                         	[ gen::get_text_lines $texts $cond_item ] ]
                         set cond_lines [ split $cond_text "\n" ]
-                        set nline [ llength $cond_lines ]
-                        set first_cond [ lindex $cond_lines 0 ]
-                        set line "${indent}exit when $first_cond"
-                        if {$nline == 1} {
-                            append line ";"
-                        }
-                        lappend result $line
-                        set ili 1
-                        while { 1 } {
-                            if {$ili < $nline} {
-                                
-                            } else {
-                                break
-                            }
-                            set current [ lindex $cond_lines $ili ]
-                            set line "$indent$current"
-                            if {$ili == $nline - 1} {
-                                append line ";"
-                            }
-                            lappend result $line
-                            incr ili
-                        }
+                        set body [ exit_cond $cond_lines $negate $indent ]
+                        set result [ concat $result $body ]
                     } else {
                         if {$_sw17540000_ == "sel"} {
                             set var_item [ lindex $current 1 ]
@@ -1708,6 +1734,14 @@ proc puts_notempty { fhandle text } {
     } else {
         puts $fhandle $text
     }
+}
+
+proc remove_dummy_case { node } {
+    set first [ lindex $node 1 ]
+    if {[ lindex $first 0 ] == "case"} {
+        set node [ lremove $node 1 ]
+    }
+    return $node
 }
 
 proc select_ifs_and_cases { db } {
