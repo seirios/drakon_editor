@@ -25,6 +25,7 @@ variable element_list {
 	"Comment secondary"
 	"Background"
 	"Text"
+	"Branch background"
 	"Code: identifier"
 	"Code: string"
 	"Code: keyword"
@@ -59,6 +60,7 @@ variable strict {
 	loop			"#ffffff"
 	comment		"#ffffa0"
 	comment_s		"#38BAC8"
+	branch		"#C3E7EF"
 	syntax_identifier "#000000"
 	syntax_string "#d00000"
 	syntax_keyword "#0000cB"
@@ -78,6 +80,7 @@ variable parrot {
 	loop			"#e8ffe8"
 	comment		"#ffff00"
 	comment_s		"#909090"
+	branch		"#C3E7EF"
 	syntax_identifier "#000000"
 	syntax_string "#d00000"
 	syntax_keyword "#0000cB"
@@ -97,6 +100,7 @@ variable black {
 	loop			"#000000"
 	comment		"#303030"
 	comment_s		"#303030"
+	branch		"#000000"
 	syntax_identifier "#c0c0c0"
 	syntax_string "#909090"
 	syntax_keyword "#b0b0b0"
@@ -116,6 +120,7 @@ variable night {
 	loop			"#000000"
 	comment		"#0000a0"
 	comment_s		"#0000a0"
+	branch	 	"#000040"
 	syntax_identifier "#BCD5FF"
 	syntax_string "#6882aF"
 	syntax_keyword "#70A5FF"
@@ -135,6 +140,7 @@ variable colored_night {
 	loop			"#002500"
 	comment		"#0000a0"
 	comment_s		"#0000a0"
+	branch		"#000040"
 	syntax_identifier "#FBF9C0"
 	syntax_string "#dC8623"
 	syntax_keyword "#ABFFCF"
@@ -154,6 +160,7 @@ variable hi_contrast {
 	loop			"#002500"
 	comment			"#000099"
 	comment_s		"#000099"
+	branch 			"#250025"
 	syntax_identifier	"#ffffff"
 	syntax_string		"#ff00ff"
 	syntax_keyword		"#ffff00"
@@ -201,6 +208,7 @@ proc load_from_settings {} {
 	set colors::line_fg [ color_safe $colors_dict line ]
 	set colors::comment_bg [ color_safe $colors_dict comment_s ]
 	set colors::comment_fg [ color_safe $colors_dict comment ]
+	set colors::branch_bg [ color_safe $colors_dict branch ]
 
 	set colors::syntax_identifier [ color_safe $colors_dict syntax_identifier ]
 	set colors::syntax_string [ color_safe $colors_dict syntax_string ]
@@ -251,6 +259,7 @@ proc element_changed {} {
 		"Comment secondary" { set color_text [ color comment_s ] }
 		"Background"	{ set color_text [ color background ] }
 		"Text"	{ set color_text [ color text ] }
+		"Branch background"	{ set color_text [ color branch ] }
 		"Code: identifier" { set color_text [ color syntax_identifier ] }
 		"Code: string" { set color_text [ color syntax_string ] }
 		"Code: keyword" { set color_text [ color syntax_keyword ] }
@@ -283,6 +292,7 @@ proc color_changed { color } {
 		"Comment secondary" { color_set comment_s $color }
 		"Background"	{ color_set background $color }
 		"Text"	{ color_set text $color }
+		"Branch background"	{ color_set branch $color }
 		"Code: identifier" { color_set syntax_identifier $color }
 		"Code: string" { color_set syntax_string $color }
 		"Code: keyword" { color_set syntax_keyword $color }
@@ -538,6 +548,7 @@ proc load_colors {} {
 	color_set line $colors::line_fg 
 	color_set comment_s $colors::comment_bg
 	color_set comment $colors::comment_fg
+	color_set branch $colors::branch_bg
 	color_set syntax_identifier $colors::syntax_identifier
 	color_set syntax_string  $colors::syntax_string
 	color_set syntax_keyword  $colors::syntax_keyword
@@ -558,6 +569,7 @@ proc save_colors {} {
 	set colors::line_fg [ color line ]
 	set colors::comment_bg [ color comment_s ]
 	set colors::comment_fg [ color comment ]
+	set colors::branch_bg [ color branch ]
 	
 	set colors::syntax_identifier [ color syntax_identifier ]
 	set colors::syntax_string  [ color syntax_string ]

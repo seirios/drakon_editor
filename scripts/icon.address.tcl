@@ -53,7 +53,7 @@ proc address.icons { text text2 color x y w h a b } {
 	set coords [ list $left $middle  $x $top  $right $middle  $right $bottom $left $bottom  $left $middle ]
 	set rect_coords [ make_rect $x $y $w $h ]
 	set cdbox [ add_handle_border $rect_coords ]
-	set rect [ make_prim main polygon $coords "" $fg $bg $cdbox ]
+	set rect [ make_prim main polygon $coords "" $fg $colors::branch_bg $cdbox ]
 	set ty [ expr { $bottom - ( $bottom - $middle ) / 2 } ]
 	set text_prim [ create_text $x $ty $text $tc ]
 	if { $b == 0 } {

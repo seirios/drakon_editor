@@ -21,6 +21,7 @@ namespace eval colors {
 	variable vertex_fg "#000000"
 	variable comment_bg "#e0e0e0"
 	variable comment_fg "#ffffc0"
+	variable branch_bg "#000000"
 	
 	variable syntax_identifier "#000000"
 	variable syntax_string "#d00000"

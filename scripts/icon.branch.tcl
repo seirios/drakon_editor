@@ -52,7 +52,7 @@ proc branch.icons { text text2 color x y w h a b } {
 	set coords [ list $left $middle  $left $top  $right $top  $right $middle  $x $bottom  $left $middle ]
 	set rect_coords [ make_rect $x $y $w $h ]
 	set cdbox [ add_handle_border $rect_coords ]
-	set rect [ make_prim main polygon $coords "" $fg $bg $cdbox ]
+	set rect [ make_prim main polygon $coords "" $fg $colors::branch_bg $cdbox ]
 	set ty [ expr { $top + ( $middle - $top ) / 2 } ]
 	set text_prim [ create_text $x $ty $text $tc ]
 	if { $b == 0 } {

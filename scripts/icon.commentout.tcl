@@ -97,7 +97,7 @@ proc commentout.icons { text text2 color x y w h a b } {
 	set cdbox [ add_handle_border $rect_coords ]
 	
 	set rect [ make_prim main polygon $coords "" $fg $bg $cdbox ]
-	set text_prim [ create_text_left $x $y $w $h $text $tc ]
+	set text_prim [ create_text_left $x $y $w $h $text $colors::syntax_comment ]
 	
 	return [ list $rect $text_prim ]
 }

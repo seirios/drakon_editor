@@ -163,7 +163,7 @@ proc create_prim { item_id layer role type coords text rect fore fill } {
 	variable canvas
   
   	set ordinal 0
-	set ids [ add_to_canvas $canvas $type $coords $text $fore $fill ]
+	set ids [ add_to_canvas $canvas $type $coords $text $fore $fill $item_id ]
 	foreach ext_id $ids {
 		set prim_id [ mod::next_key mb primitives prim_id ]
 		set insert [ wrap insert primitives prim_id $prim_id item_id $item_id \
@@ -220,24 +220,38 @@ proc update_prim { item_id role coords rect } {
 	}
 }
 
-proc add_prim_to_canvas { surface type coords text fore fill anchor } {
+proc add_prim_to_canvas { surface type coords text fore fill anchor no_hl } {
 
 	if { $mwc::zoom >= 40 } {
 		set font [ mwf::get_dia_font $mwc::zoom ]
-		#return [ $surface create text $coords -text $text -font $font -fill $fill -anchor $anchor ]
-		return [ hl::render_text $surface $coords $text $font $fill $anchor ]
+		if { $no_hl } {
+			return [ $surface create text $coords -text $text -font $font -fill $fill -anchor $anchor ]
+		} else {
+			return [ hl::render_text $surface $coords $text $font $fill $anchor ]
+		}
 	}
 	return {}
 }
 
-proc add_to_canvas { surface type coords text fore fill } {
+proc add_to_canvas { surface type coords text fore fill item_id } {
+	variable base
 	set result {}
 	set width [ expr { ceil($mwc::zoom / 130.0) } ]
 	set command [ list $surface create $type $coords ]
-	if { $type == "text" } {
-		return [ add_prim_to_canvas $surface $type $coords $text $fore $fill "center" ]
-	} elseif { $type == "text_left" } {
-		return [ add_prim_to_canvas $surface $type $coords $text $fore $fill "w" ]
+	set no_hl 0
+	set item_type [ lindex [ mod::fetch $base items item_id $item_id	type ] 0 ]
+	if { $type == "text" || $type == "text_left" } {
+		if { $type == "text_left" } {
+			set anchor "w"
+		} else {
+			set anchor "center"
+		}
+		# No syntax highlighting inside comments and branch header/footers
+		if { $item_type == "commentin" || $item_type == "commentout"
+			|| $item_type == "branch" || $item_type == "address" } {
+			set no_hl 1
+		}
+		return [ add_prim_to_canvas $surface $type $coords $text $fore $fill $anchor $no_hl ]
 	} elseif { $type == "line" } {	
 		lappend result [ $surface create line $coords -fill $fill -width $width ]
 	} else {
@@ -653,12 +667,12 @@ proc render_item { surface item_id } {
 	
     foreach line $lines {
 	lassign $line role type coords text fore fill
-	add_to_canvas $surface $type $coords $text $fore $fill
+	add_to_canvas $surface $type $coords $text $fore $fill $item_id
     }
     
     foreach icon $icons {
 	lassign $icon role type coords text fore fill
-	add_to_canvas $surface $type $coords $text $fore $fill
+	add_to_canvas $surface $type $coords $text $fore $fill $item_id
     }
   }
 }
