@@ -107,7 +107,7 @@ proc append_notempty { list_var str } {
     }
 }
 
-proc case_tree_to_case_list { node others } {
+proc case_tree_to_case_list { node extra } {
     set result {}
     set _sw27190000_ [ lindex $node 0 ]
     if {$_sw27190000_ == "case"} {
@@ -116,11 +116,14 @@ proc case_tree_to_case_list { node others } {
         set else_node [ lindex $node 2 ]
         if {$then_node == "seq"} {
             lappend result [ list "case" $cond_item \
-            	[ concat {seq} $others ] ]
+            	[ concat {seq} $extra ] ]
         } else {
-            lappend result [ list "case" $cond_item $then_node ]
+            set then_node \
+            	[ concat $then_node $extra ]
+            lappend result \
+            	[ list "case" $cond_item $then_node ]
             set else [ case_tree_to_case_list \
-            	$else_node $others ]
+            	$else_node $extra ]
             set result [ concat $result $else ]
         }
     } else {
@@ -131,6 +134,8 @@ proc case_tree_to_case_list { node others } {
         }
         set first_node [ lindex $node 1 ]
         set other_nodes [ lrange $node 2 end ]
+        set other_nodes \
+        	[ concat $other_nodes $extra ]
         if {[ lindex $first_node 0 ] == "case"} {
             set inner [ case_tree_to_case_list \
             	$first_node $other_nodes ]
@@ -174,7 +179,7 @@ proc classify_keywords { keywords name } {
         }
     }
     set etype [ find_keywords $keywords \
-      { type } ]
+      { type subtype } ]
     set _sw21760000_ [ llength $etype ]
     if {$_sw21760000_ == 0} {
         set etype "subprogram"
@@ -194,7 +199,7 @@ proc classify_keywords { keywords name } {
         lappend errors \
         "$name: both ord-1 and ord-2 is not allowed"
     }
-    if {($etype == "subprogram") || (!($etype == "type"))} {
+    if {($etype == "subprogram") || (!(($etype == "type") || ($etype == "subtype")))} {
         
     } else {
         variable ada_types
@@ -312,6 +317,18 @@ proc extract_signature { text name } {
             } else {
                 set props(subtype) "function"
             }
+        } else {
+            if {$type == "type"} {
+                set props(subtype) "type"
+            } else {
+                if {$type == "subtype"} {
+                    
+                } else {
+                    error "Unexpected switch value: $type"
+                }
+                set props(subtype) "subtype"
+            }
+            set type "type"
         }
     } else {
         set first_line [ lindex $lines 0 ]
@@ -324,6 +341,7 @@ proc extract_signature { text name } {
         	public \
         	private \
         	protected \
+        	subtype \
         	tagged \
         	type }
         set found_keywords \
@@ -360,6 +378,18 @@ proc extract_signature { text name } {
                 } else {
                     set props(subtype) "function"
                 }
+            } else {
+                if {$type == "type"} {
+                    set props(subtype) "type"
+                } else {
+                    if {$type == "subtype"} {
+                        
+                    } else {
+                        error "Unexpected switch value: $type"
+                    }
+                    set props(subtype) "subtype"
+                }
+                set type "type"
             }
         } else {
             set start_index 1
@@ -403,6 +433,18 @@ proc extract_signature { text name } {
                         } else {
                             set props(subtype) "function"
                         }
+                    } else {
+                        if {$type == "type"} {
+                            set props(subtype) "type"
+                        } else {
+                            if {$type == "subtype"} {
+                                
+                            } else {
+                                error "Unexpected switch value: $type"
+                            }
+                            set props(subtype) "subtype"
+                        }
+                        set type "type"
                     }
                 }
             } else {
@@ -681,7 +723,7 @@ proc handle_is { list_result body } {
             if {$line == "##@@END_IS@@##"} {
                 break
             }
-            lappend result "   $line"
+            lappend result $line
             incr lcnt
         }
         set body [lrange $body $lcnt+1 end]
@@ -763,7 +805,8 @@ proc highlight_generic { keywords kw_types tokens } {
                                             set state "idle"
                                         } else {
                                             if {$text == "("} {
-                                                lappend result $colors::syntax_operator
+                                                lappend result \
+                                                	$colors::syntax_operator
                                                 set state "idle"
                                             } else {
                                                 lappend result \
@@ -811,7 +854,8 @@ proc idle_default { keywords kw_types result_name type text } {
             if {$text == "-"} {
                 set state "comment start"
             } else {
-                lappend result [standard_color $keywords $kw_types $type $text]
+                lappend result \
+                	[standard_color $keywords $kw_types $type $text]
                 set state "idle"
             }
         }
@@ -1213,7 +1257,7 @@ proc p.rewire_loop_any { gdb start end scheme ident } {
     gen::p.link $gdb $check_id 1 $after_loop
     gen::p.link $gdb $check_id 2 $loop_body
     
-    # loop!
+    loop!
     gen::p.link $gdb $endloop_id 1 $check_id
     $gdb eval {
     	delete from links where src = :start;

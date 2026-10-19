@@ -1,4 +1,5 @@
 * Ada generator
+** TODO Allow overriding/not_overriding as keywords
 ** TODO Support named loops
 ** TODO Add test cases
 ** TODO Support different select modes (?)
@@ -36,6 +37,8 @@
 ** TODO Allow setting editor window tab size
 ** TODO Allow setting language when creating from dialog
 ** TODO Allow setting file kind (e.g. package, task, none, etc.)
+** TODO Add some facility to define boolean functions using truth tables
++ Output is a diagram implementing the boolean function (tree of ifs)
 ** DONE Allow setting file language from CLI
 + Preset headers/footers
 ** DONE Create file if not present
