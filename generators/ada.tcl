@@ -1224,8 +1224,10 @@ proc p.rewire_loop_any { gdb start end scheme ident } {
 proc p.shelf { primary secondary } {
     set lines {}
     set plines [ split $primary "\n" ]
+    set sterms [ split $secondary " " ]
     set indent [ gen::make_indent 1 ]
-    if {$secondary == "record"} {
+    set _sw11330000_ [ lindex $sterms 0 ]
+    if {$_sw11330000_ == "record"} {
         if {[ lindex $plines 0 ] == "null"} {
             set result "null record"
         } else {
@@ -1237,7 +1239,7 @@ proc p.shelf { primary secondary } {
             set result [ join $lines "\n" ]
         }
     } else {
-        if {$secondary == "is"} {
+        if {$_sw11330000_ == "is"} {
             lappend lines "##@@BEGIN_IS@@##"
             foreach line $plines {
                 lappend lines "${indent}$line"
@@ -1245,7 +1247,7 @@ proc p.shelf { primary secondary } {
             lappend lines "##@@END_IS@@##"
             set result [ join $lines "\n" ]
         } else {
-            if {$secondary == "with"} {
+            if {$_sw11330000_ == "with"} {
                 lappend lines "##@@BEGIN_WITH@@##"
                 foreach line $plines {
                     lappend lines "${indent}$line"
@@ -1253,7 +1255,12 @@ proc p.shelf { primary secondary } {
                 lappend lines "##@@END_WITH@@##"
                 set result [ join $lines "\n" ]
             } else {
-                if {$secondary == "declare"} {
+                if {$_sw11330000_ == "declare"} {
+                    set name \
+                    	[ lindex $sterms 1 ]
+                    if {$name != ""} {
+                        lappend lines "$name :"
+                    }
                     lappend lines "##@@BEGIN_DECLARE@@##"
                     foreach line $plines {
                         lappend lines "${indent}$line"
@@ -1261,8 +1268,10 @@ proc p.shelf { primary secondary } {
                     lappend lines "##@@END_DECLARE@@##"
                     set result [ join $lines "\n" ]
                 } else {
-                    if {$secondary == "end"} {
-                        lappend lines "##@@END@@##"
+                    if {$_sw11330000_ == "end"} {
+                        lappend lines "##@@BEGIN_END@@##"
+                        append_notempty lines $primary
+                        lappend lines "##@@END_END@@##"
                         set result [ join $lines "\n" ]
                     } else {
                         set result $primary
@@ -1395,6 +1404,7 @@ proc package_name { filename } {
 
 proc parse_body { body depth } {
     set result {}
+    set name ""
     set indent \
     	[ gen::make_indent $depth ]
     set nline [ llength $body ]
@@ -1423,11 +1433,21 @@ proc parse_body { body depth } {
             set indent \
             	[ gen::make_indent $depth ]
         } else {
-            if {$line == "##@@END@@##"} {
+            if {$line == "##@@BEGIN_END@@##"} {
+                incr i
+                set line [ lindex $body $i ]
+                while { 1 } {
+                    if {$line == "##@@END_END@@##"} {
+                        break
+                    }
+                    set name " $line";
+                    incr i
+                    set line [ lindex $body $i ]
+                }
                 incr depth -1
                 set indent \
                 	[ gen::make_indent $depth ]
-                lappend result "${indent}end;"
+                lappend result "${indent}end${name};"
             } else {
                 lappend result "${indent}$line"
             }
@@ -1565,13 +1585,13 @@ proc print_spec { db filename fhandle components header footer } {
     puts_notempty \
     	$fhandle $header
     foreach type [ filter_types $components -2 ] {
-        print_type $fhandle $type
+        print_type $db $fhandle $type
     }
     foreach type [ filter_types $components -1 ] {
-        print_type $fhandle $type
+        print_type $db $fhandle $type
     }
     foreach type [ filter_types $components 0 ] {
-        print_type $fhandle $type
+        print_type $db $fhandle $type
     }
     foreach subprogram [ filter_subprograms $components 1 public ] {
         print_subprogram $db $fhandle $subprogram 0
@@ -1699,7 +1719,6 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract returns
         append_notempty \
         	result $spec_footer
     }
-    set space [ gen::make_indent $depth ]
     set nline [ llength $result ]
     set i 0
     while { 1 } {
@@ -1708,7 +1727,7 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract returns
         } else {
             break
         }
-        puts -nonewline $fhandle $space
+        puts -nonewline $fhandle $indent
         if {$i == $nline - 1} {
             puts -nonewline \
             	$fhandle [ lindex $result $i ]
@@ -1720,7 +1739,7 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract returns
     }
 }
 
-proc print_type { fhandle component } {
+proc print_type { db fhandle component } {
     lassign \
     $component \
     diagram_id name signature body
@@ -1728,8 +1747,13 @@ proc print_type { fhandle component } {
     $signature \
     type prop_list parameters returns
     array set props $prop_list
+    set sections {
+    	spec_header spec_footer body_header body_footer }
+    lassign \
+    [ gen::scan_diagram_description $db $diagram_id $sections ] \
+    spec_header spec_footer body_header body_footer
     set depth 1
-    set has_body 1
+    set print_body 1
     print_type_kernel \
     $fhandle \
     $depth \
@@ -1738,12 +1762,25 @@ proc print_type { fhandle component } {
     $props(tagged) \
     $name \
     $body \
-    $has_body
+    $print_body \
+    $spec_header \
+    $spec_footer \
+    $body_header \
+    $body_footer
 }
 
-proc print_type_kernel { fhandle depth type abstract tagged name body has_body } {
+proc print_type_kernel { fhandle depth type abstract tagged name body print_body spec_header spec_footer body_header body_footer } {
     set result {}
     set line ""
+    set indent \
+    	[ gen::make_indent $depth ]
+    if {$print_body} {
+        append_notempty \
+        	result $body_header
+    } else {
+        append_notempty \
+        	result $spec_header
+    }
     puts $fhandle ""
     append line "$type"
     append line " $name"
@@ -1755,12 +1792,18 @@ proc print_type_kernel { fhandle depth type abstract tagged name body has_body }
         append line " tagged"
     }
     lappend result $line
-    if {$has_body} {
+    if {$print_body} {
         foreach line $body {
-            lappend result "   $line"
+            lappend result "${indent}$line"
+        }
+        if {$print_body} {
+            append_notempty \
+            	result $body_footer
+        } else {
+            append_notempty \
+            	result $spec_footer
         }
     }
-    set space [ gen::make_indent $depth ]
     set nline [ llength $result ]
     set i 0
     while { 1 } {
@@ -1769,9 +1812,10 @@ proc print_type_kernel { fhandle depth type abstract tagged name body has_body }
         } else {
             break
         }
-        puts -nonewline $fhandle $space
+        puts -nonewline $fhandle $indent
         if {$i == $nline - 1} {
-            puts -nonewline $fhandle [ lindex $result $i ]
+            puts -nonewline \
+            	$fhandle [ lindex $result $i ]
             puts $fhandle ";"
         } else {
             puts $fhandle [ lindex $result $i ]
