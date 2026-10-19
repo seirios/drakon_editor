@@ -1,0 +1,42 @@
+* Ada generator
+** TODO Support named blocks
+** TODO Support named loops
+** TODO Add test cases
+** TODO Support different select modes (?)
++ normal if-tree (if)
++ string (str)
++ select
+** DONE Use p.not in 'exit when' negate
+** DONE Use 'or else' and 'and then' in p.or, p.and
+** DONE Check order of Ada generated types
++ Must not be alphabetical!
++ Added keywords to manually order them
+** DONE Add highlighting for Ada! 
+* C3 generator
+** TODO Add C++ support
+** TODO Add test cases
+** TODO Native for/while switch
+* Canvas
+** TODO Allow enabling/disabling actions
+** TODO Allow enabling/disabling branches
+** TODO Show branches in order in 'go to branch...'
++ Problem is order not known until generation time
+** TODO Tab key goes to next branch
+** TODO Add command to add new branch
+** DONE Do not center text in standalone comments
+** DONE Allow tab to spaces conversion
++ In all generated text
+* General
+** TODO Embed terminal in editor window!
++ Need Tk terminal widget
++ Some are available for Tkinter in Python
++ Possible to embed urxvt/st too!
++ Run user-defined editor (vim, avoe, etc.)
+* Interface
+** TODO Allow setting editor window tab size
+** TODO Allow setting language when creating from dialog
+** TODO Allow setting file kind (e.g. package, task, none, etc.)
+** DONE Allow setting file language from CLI
++ Preset headers/footers
+** DONE Create file if not present
++ Only with .drn extension, to avoid mistakes
