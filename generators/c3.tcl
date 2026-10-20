@@ -422,12 +422,40 @@ proc make_callbacks { } {
     gen::put_callback callbacks block_close   gen_c3::block_close
     gen::put_callback callbacks return_none   gen_c3::return_none
     gen::put_callback callbacks shelf         gen_c3::shelf
+    gen::put_callback callbacks output        gen_c3::output_icon
     
     gen::put_callback callbacks while_start   gen_c3::while_start
     gen::put_callback callbacks pass          gen_c3::pass
     gen::put_callback callbacks comment       gen_c3::comment
     gen::put_callback callbacks break         "break;"
     return $callbacks
+}
+
+proc output_icon { primary secondary } {
+    set result {}
+    set lines [ split $primary "\n" ]
+    set nline [ llength $lines ]
+    if {$secondary == "debug"} {
+        lappend result "#if !NDEBUG"
+        set fp "stderr"
+    } else {
+        if {$secondary == ""} {
+            set fp "stdout"
+        } else {
+            set fp $secondary
+        }
+    }
+    if {$nline == 1} {
+        set prli [ lindex $lines 0 ]
+        lappend result "fputs($prli,$fp);"
+    } else {
+        set prli [ join $lines "," ]
+        lappend result "fprintf($fp,$prli);"
+    }
+    if {$secondary == "debug"} {
+        lappend result "#endif"
+    }
+    return [ join $result "\n" ]
 }
 
 proc p.and { left right } {
