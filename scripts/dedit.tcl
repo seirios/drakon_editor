@@ -271,6 +271,8 @@ proc next_skewer { dir } {
 	lassign [ $db eval { select item_id, type from items
 		where diagram_id = :diagram_id and selected = 1 } ] item_id type
 
+	if { $type != "case" && $type != "branch" } { return }
+
 	graph::verify_one $db $diagram_id
 	if { [ graph::errors_occured ] } { return }
 	set gdb "gdb"
@@ -279,47 +281,50 @@ proc next_skewer { dir } {
 		where item_id = :item_id } ]
 
 	set next_vertex ""
-	if { $type == "case" } {
-		set selects [ $gdb onecolumn {
-			select vertex_id from vertices
-			where diagram_id = :diagram_id and type = 'select' } ]
+	switch $type {
+		"case" {
+			set selects [ $gdb onecolumn {
+				select vertex_id from vertices
+				where diagram_id = :diagram_id and type = 'select' } ]
 
-		foreach select $selects {
-			set ordinals [ $gdb eval {
-				select ordinal from links where src = :select } ]
-			set ordlen [ llength $ordinals ]
+			foreach select $selects {
+				set ordinals [ $gdb eval {
+					select ordinal from links where src = :select } ]
+				set ordlen [ llength $ordinals ]
+				set i 0
+				while { $i < $ordlen } {
+					set ordinal [ lindex $ordinals $i ]
+					set dst [ gen::p.link_dst $gdb $select $ordinal ]
+					if { $dst == $vertex_id } {
+						break
+					}
+					incr i
+				}
+				if { $i < $ordlen } {
+					set inext [ expr { ( $i + ($dir) ) % $ordlen } ]
+					set next_ordinal [ lindex $ordinals $inext ]
+					set next_vertex [ gen::p.link_dst $gdb $select $next_ordinal ]
+					break
+				}
+			}
+		}
+		"branch" {
+			set branches [ $gdb eval {
+				select header_icon from branches
+				where diagram_id = :diagram_id } ]
+			set brlen [ llength $branches ]
 			set i 0
-			while { $i < $ordlen } {
-				set ordinal [ lindex $ordinals $i ]
-				set dst [ gen::p.link_dst $gdb $select $ordinal ]
-				if { $dst == $vertex_id } {
+			while { $i < $brlen } {
+				set branch [ lindex $branches $i ]
+				if { $branch == $vertex_id } {
 					break
 				}
 				incr i
 			}
-			if { $i < $ordlen } {
-				set inext [ expr { ( $i + ($dir) ) % $ordlen } ]
-				set next_ordinal [ lindex $ordinals $inext ]
-				set next_vertex [ gen::p.link_dst $gdb $select $next_ordinal ]
-				break
+			if { $i < $brlen } {
+				set inext [ expr { ( $i + ($dir) ) % $brlen } ]
+				set next_vertex [ lindex $branches $inext ]
 			}
-		}
-	} elseif { $type == "branch" } {
-		set branches [ $gdb eval {
-			select header_icon from branches
-			where diagram_id = :diagram_id } ]
-		set brlen [ llength $branches ]
-		set i 0
-		while { $i < $brlen } {
-			set branch [ lindex $branches $i ]
-			if { $branch == $vertex_id } {
-				break
-			}
-			incr i
-		}
-		if { $i < $brlen } {
-			set inext [ expr { ( $i + ($dir) ) % $brlen } ]
-			set next_vertex [ lindex $branches $inext ]
 		}
 	}
 
@@ -362,11 +367,7 @@ proc swap_selected { } {
 	lassign [ $db eval { select item_id, type from items
 		where diagram_id = :diagram_id and selected = 1 } ] item_id type
 
-	if { $type == "arrow" } {
-		mwc::swap_item $item_id
-	} elseif { $type == "if" } {
-		mwc::swap_item $item_id
-	}
+	mwc::swap_item $item_id
 }
 
 proc adjust_sizes { } {

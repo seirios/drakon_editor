@@ -19,7 +19,7 @@ proc make_vertex { role x y { fill "#00ff00" } } {
 }
 
 proc action.switch { } {
-	return ""
+	return [ mc2 "Toggle active" ]
 }
 
 proc action.box { x y w h a b } {
@@ -73,6 +73,12 @@ proc get_colors { item_data default_bg } {
 
 proc action.icons { text text2 color x y w h a b } {
 	lassign [ get_colors $color $colors::action_bg ] fg bg tc
+	# Disabled appearance
+	if { $b == 1 } {
+		set fg $colors::inactive_fg
+		set bg $colors::inactive_bg
+		set tc $fg
+	}
 	set coords [ make_rect $x $y $w $h ]
 	set cdbox [ add_handle_border $coords ]
 	set rect [ make_prim main rectangle $coords "" $fg $bg $cdbox ]

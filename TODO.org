@@ -18,11 +18,11 @@
 ** TODO Native for/while, switch (?)
 ** DONE Add C++ support
 * Canvas
-** TODO Allow enabling/disabling actions
 ** TODO Show branches in order in 'go to branch...' (?)
 + Problem is order not known until generation time
 ** TODO Allow enabling/disabling branches (?)
 ** TODO Add command to add new branch (?)
+** DONE Allow enabling/disabling actions
 ** DONE Tab key goes to next branch
 ** DONE Do not center text in standalone comments
 ** DONE Allow tab to spaces conversion

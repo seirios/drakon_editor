@@ -26,6 +26,8 @@ variable element_list {
 	"Background"
 	"Text"
 	"Branch background"
+	"Inactive text"
+	"Inactive background"
 	"Code: identifier"
 	"Code: call"
 	"Code: string"
@@ -63,6 +65,8 @@ variable strict {
 	comment		"#ffffa0"
 	comment_s		"#38BAC8"
 	branch		"#C3E7EF"
+	inactive	"#aaaaaa"
+	inactive_s	"#666666"
 	syntax_identifier "#000000"
 	syntax_call "#000000"
 	syntax_string "#d00000"
@@ -85,6 +89,8 @@ variable parrot {
 	comment		"#ffff00"
 	comment_s		"#909090"
 	branch		"#C3E7EF"
+	inactive	"#aaaaaa"
+	inactive_s	"#666666"
 	syntax_identifier "#000000"
 	syntax_call "#000000"
 	syntax_string "#d00000"
@@ -107,6 +113,8 @@ variable black {
 	comment		"#303030"
 	comment_s		"#303030"
 	branch		"#000000"
+	inactive	"#aaaaaa"
+	inactive_s	"#666666"
 	syntax_identifier "#c0c0c0"
 	syntax_call "#c0c0c0"
 	syntax_string "#909090"
@@ -129,6 +137,8 @@ variable night {
 	comment		"#0000a0"
 	comment_s		"#0000a0"
 	branch	 	"#000040"
+	inactive	"#aaaaaa"
+	inactive_s	"#666666"
 	syntax_identifier "#BCD5FF"
 	syntax_call "#BCD5FF"
 	syntax_string "#6882aF"
@@ -151,6 +161,8 @@ variable colored_night {
 	comment		"#0000a0"
 	comment_s		"#0000a0"
 	branch		"#000040"
+	inactive	"#aaaaaa"
+	inactive_s	"#666666"
 	syntax_identifier "#FBF9C0"
 	syntax_call "#FBF9C0"
 	syntax_string "#dC8623"
@@ -173,6 +185,8 @@ variable hi_contrast {
 	comment			"#000099"
 	comment_s		"#000099"
 	branch 			"#250025"
+	inactive		"#aaaaaa"
+	inactive_s		"#666666"
 	syntax_identifier	"#ffffff"
 	syntax_call		"#00ff00"
 	syntax_string		"#ff00ff"
@@ -223,6 +237,8 @@ proc load_from_settings {} {
 	set colors::comment_bg [ color_safe $colors_dict comment_s ]
 	set colors::comment_fg [ color_safe $colors_dict comment ]
 	set colors::branch_bg [ color_safe $colors_dict branch ]
+	set colors::inactive_fg [ color_safe $colors_dict inactive ]
+	set colors::inactive_bg [ color_safe $colors_dict inactive_s ]
 
 	set colors::syntax_identifier [ color_safe $colors_dict syntax_identifier ]
 	set colors::syntax_call [ color_safe $colors_dict syntax_call ]
@@ -276,6 +292,8 @@ proc element_changed {} {
 		"Background"	{ set color_text [ color background ] }
 		"Text"	{ set color_text [ color text ] }
 		"Branch background"	{ set color_text [ color branch ] }
+		"Inactive text"	{ set color_text [ color inactive ] }
+		"Inactive background"	{ set color_text [ color inactive_s ] }
 		"Code: identifier" { set color_text [ color syntax_identifier ] }
 		"Code: call" { set color_text [ color syntax_call ] }
 		"Code: string" { set color_text [ color syntax_string ] }
@@ -311,6 +329,8 @@ proc color_changed { color } {
 		"Background"	{ color_set background $color }
 		"Text"	{ color_set text $color }
 		"Branch background"	{ color_set branch $color }
+		"Inactive text"	{ color_set inactive $color }
+		"Inactive background"	{ color_set inactive_s $color }
 		"Code: identifier" { color_set syntax_identifier $color }
 		"Code: call" { color_set syntax_call $color }
 		"Code: string" { color_set syntax_string $color }
@@ -487,8 +507,8 @@ proc show_dialog { } {
 	set end_entry [ texts::get "end" ]
 	set language_combo [ texts::get "language" ]
 
-        set font_entry $main_font_family
-        set fontsize_entry $main_font_size
+	set font_entry $main_font_family
+	set fontsize_entry $main_font_size
 
 	ui::modal_window $window gprops::init foo
 }
@@ -511,9 +531,9 @@ proc ok { } {
         variable fontsize_entry
 	
 	if { ![ string is double $fontsize_entry ] } {
-            complain [ mc2 "Font size is not a number" ]
-            return
-        }
+		complain [ mc2 "Font size is not a number" ]
+		return
+	}
 
 	texts::put "yes" $yes_entry
 	texts::put "no" $no_entry
@@ -569,6 +589,9 @@ proc load_colors {} {
 	color_set comment_s $colors::comment_bg
 	color_set comment $colors::comment_fg
 	color_set branch $colors::branch_bg
+	color_set inactive $colors::inactive_fg
+	color_set inactive_s $colors::inactive_bg
+
 	color_set syntax_identifier $colors::syntax_identifier
 	color_set syntax_call $colors::syntax_call
 	color_set syntax_string  $colors::syntax_string
@@ -592,6 +615,8 @@ proc save_colors {} {
 	set colors::comment_bg [ color comment_s ]
 	set colors::comment_fg [ color comment ]
 	set colors::branch_bg [ color branch ]
+	set colors::inactive_fg [ color inactive ]
+	set colors::inactive_bg [ color inactive_s ]
 	
 	set colors::syntax_identifier [ color syntax_identifier ]
 	set colors::syntax_call [ color syntax_call ]

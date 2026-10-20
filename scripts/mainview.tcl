@@ -68,8 +68,8 @@ proc render_to { surface diagram_id  } {
 	$base eval {
 		select item_id
 		from items
-		where diagram_id = :diagram_id 
-    and (type = 'vertical' or type = 'horizontal' or type = 'parallel' )
+		where diagram_id = :diagram_id
+			and (type = 'vertical' or type = 'horizontal' or type = 'parallel' )
 		order by item_id } {
 
 		render_item $surface $item_id
@@ -78,8 +78,8 @@ proc render_to { surface diagram_id  } {
 	$base eval {
 		select item_id
 		from items
-		where diagram_id = :diagram_id 
-    and type != 'vertical' and type != 'horizontal' and type != 'parallel' 
+		where diagram_id = :diagram_id
+			and type != 'vertical' and type != 'horizontal' and type != 'parallel'
 		order by item_id } {
 
 		render_item $surface $item_id
@@ -225,6 +225,7 @@ proc add_prim_to_canvas { surface type coords text fore fill anchor no_hl } {
 	if { $mwc::zoom >= 40 } {
 		set font [ mwf::get_dia_font $mwc::zoom ]
 		if { $no_hl } {
+			regsub -all \t $text "    " text
 			return [ $surface create text $coords -text $text -font $font -fill $fill -anchor $anchor ]
 		} else {
 			return [ hl::render_text $surface $coords $text $font $fill $anchor ]
@@ -239,7 +240,9 @@ proc add_to_canvas { surface type coords text fore fill item_id } {
 	set width [ expr { ceil($mwc::zoom / 130.0) } ]
 	set command [ list $surface create $type $coords ]
 	set no_hl 0
-	set item_type [ lindex [ mod::fetch $base items item_id $item_id	type ] 0 ]
+	set item [ mod::fetch $base items item_id $item_id	type b ]
+	set item_type [ lindex $item 0 ]
+	set item_b [ lindex $item 1 ]
 	if { $type == "text" || $type == "text_left" } {
 		if { $type == "text_left" } {
 			set anchor "w"
@@ -247,8 +250,10 @@ proc add_to_canvas { surface type coords text fore fill item_id } {
 			set anchor "center"
 		}
 		# No syntax highlighting inside comments and branch header/footers
+		# Also not in inactive actions
 		if { $item_type == "commentin" || $item_type == "commentout"
-			|| $item_type == "branch" || $item_type == "address" } {
+			|| $item_type == "branch" || $item_type == "address"
+			|| ( $item_type == "action" && $item_b ) } {
 			set no_hl 1
 		}
 		return [ add_prim_to_canvas $surface $type $coords $text $fore $fill $anchor $no_hl ]
@@ -656,25 +661,25 @@ proc insert { item_id replay } {
 }
 
 proc render_item { surface item_id } {
-  variable base
-  $base eval { 
-    select text, text2, color, x, y, w, h, a, b, type
-    from items
-    where item_id = :item_id } {
-  
-    set lines [ $type.lines	 $x $y $w $h $a $b ]
-    set icons [ $type.icons $text $text2 $color $x $y $w $h $a $b ]
-	
-    foreach line $lines {
-	lassign $line role type coords text fore fill
-	add_to_canvas $surface $type $coords $text $fore $fill $item_id
-    }
-    
-    foreach icon $icons {
-	lassign $icon role type coords text fore fill
-	add_to_canvas $surface $type $coords $text $fore $fill $item_id
-    }
-  }
+	variable base
+	$base eval {
+		select text, text2, color, x, y, w, h, a, b, type
+		from items
+		where item_id = :item_id } {
+
+		set lines [ $type.lines	 $x $y $w $h $a $b ]
+		set icons [ $type.icons $text $text2 $color $x $y $w $h $a $b ]
+
+		foreach line $lines {
+			lassign $line role type coords text fore fill
+			add_to_canvas $surface $type $coords $text $fore $fill $item_id
+		}
+
+		foreach icon $icons {
+			lassign $icon role type coords text fore fill
+			add_to_canvas $surface $type $coords $text $fore $fill $item_id
+		}
+	}
 }
 
 proc delete { item_id replay } {

@@ -22,7 +22,10 @@ namespace eval colors {
 	variable comment_bg "#e0e0e0"
 	variable comment_fg "#ffffc0"
 	variable branch_bg "#000000"
-	
+
+	variable inactive_fg "#aaaaaa"
+	variable inactive_bg "#666666"
+
 	variable syntax_identifier "#000000"
 	variable syntax_call "#000000"
 	variable syntax_string "#d00000"

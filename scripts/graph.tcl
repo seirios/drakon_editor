@@ -17,6 +17,10 @@ proc copy_from { db } {
 		if { $type == "insertion" || $type == "input" || $type == "process" } {
 			set type "action"
 		}
+		# Inactive actions are considered empty
+		if { $type == "action" && $b == 1 } {
+			set text ""
+		}
 
 		gdb eval {
 			insert into items(item_id, diagram_id, type, text, text2, x, y, w, h, a, b)
