@@ -19,11 +19,11 @@
 ** DONE Add C++ support
 * Canvas
 ** TODO Allow enabling/disabling actions
-** TODO Allow enabling/disabling branches
-** TODO Show branches in order in 'go to branch...'
+** TODO Show branches in order in 'go to branch...' (?)
 + Problem is order not known until generation time
-** TODO Tab key goes to next branch
-** TODO Add command to add new branch
+** TODO Allow enabling/disabling branches (?)
+** TODO Add command to add new branch (?)
+** DONE Tab key goes to next branch
 ** DONE Do not center text in standalone comments
 ** DONE Allow tab to spaces conversion
 + In all generated text

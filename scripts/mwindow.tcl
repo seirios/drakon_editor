@@ -498,7 +498,7 @@ proc create_ui { } {
 	.mainmenu.drakon add command -label [ mc2 "Verify" ] -underline 0 -command mw::verify -accelerator [ acc R ]
 	.mainmenu.drakon add command -label [ mc2 "Verify all" ] -underline 7 -command mw::verify_all
 	.mainmenu.drakon add separator		
-	.mainmenu.drakon add command -label [ mc2 "Generate code" ] -underline 0 -command gen::generate -accelerator [ acc B ]
+	.mainmenu.drakon add command -label [ mc2 "Generate code" ] -underline 0 -command gen::generate -accelerator [ acc Return ]
 
 	. configure -menu .mainmenu
 
@@ -538,6 +538,9 @@ proc create_ui { } {
 		bind $canvas <Double-ButtonPress-2> { mw::zoom_see_all }	
 	}
 	bind $canvas <Leave> insp::reset
+	bind $canvas <KeyPress-Tab> { mwc::next_skewer 1; break }
+	bind $canvas <Shift-KeyPress-Tab> { mwc::next_skewer -1; break }
+	bind $canvas <<PrevWindow>> { mwc::next_skewer -1; break }
 	
 	bind_shortcut . mw::shortcut_handler
 	bind_shortcut $canvas mw::canvas_shortcut_handler
@@ -931,9 +934,11 @@ proc shortcut_handler { window code key } {
 	} elseif { $code == $codes(e) || $key == "e" } {
 		hie::show
 	} elseif { $code == $codes(b) || $key == "b" } {
-		gen::generate
+		mwc::go_to_branch
 	} elseif { $code == $codes(t) || $key == "t" } {
 		mwc::adjust_icon_sizes_current	
+	} elseif { $code == $codes(Return) || $key == "Return" } {
+		gen::generate
 	}
 }
 
@@ -1504,6 +1509,8 @@ proc canvas_key_press { window k n code } {
 		mwc::delete foo
 	} elseif { $k == "BackSpace" } {
 		mwc::delete foo
+	} elseif { $k == "Escape" } {
+		mwc::deselect_all
 	} else {
 		if { $code == $codes(Up) } {
 
@@ -1518,7 +1525,9 @@ proc canvas_key_press { window k n code } {
 		} elseif { $code == $codes(F3) } {
 			mwc::request_text_change 0
 		} elseif { $code == $codes(space) } {
-
+			mwc::center_on_selected
+		} elseif { $code == $codes(grave) } {
+			mwc::swap_selected
 		}
 	}
 }

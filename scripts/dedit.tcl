@@ -256,6 +256,119 @@ proc delete { ignored } {
 	commit_transaction delete
 }
 
+proc next_skewer { dir } {
+	variable db
+	set diagram_id [ editor_state $db current_dia ]
+	if { $diagram_id == "" } { return }
+	
+	if { ![ state is idle ] } { return }
+
+	set count [ $db onecolumn { select count(*) from items
+		where diagram_id = :diagram_id and selected = 1 } ]
+		
+	if { $count == 0 } { return }
+
+	lassign [ $db eval { select item_id, type from items
+		where diagram_id = :diagram_id and selected = 1 } ] item_id type
+
+	graph::verify_one $db $diagram_id
+	if { [ graph::errors_occured ] } { return }
+	set gdb "gdb"
+
+	set vertex_id [ $gdb onecolumn { select vertex_id from vertices
+		where item_id = :item_id } ]
+
+	set next_vertex ""
+	if { $type == "case" } {
+		set selects [ $gdb onecolumn {
+			select vertex_id from vertices
+			where diagram_id = :diagram_id and type = 'select' } ]
+
+		foreach select $selects {
+			set ordinals [ $gdb eval {
+				select ordinal from links where src = :select } ]
+			set ordlen [ llength $ordinals ]
+			set i 0
+			while { $i < $ordlen } {
+				set ordinal [ lindex $ordinals $i ]
+				set dst [ gen::p.link_dst $gdb $select $ordinal ]
+				if { $dst == $vertex_id } {
+					break
+				}
+				incr i
+			}
+			if { $i < $ordlen } {
+				set inext [ expr { ( $i + ($dir) ) % $ordlen } ]
+				set next_ordinal [ lindex $ordinals $inext ]
+				set next_vertex [ gen::p.link_dst $gdb $select $next_ordinal ]
+				break
+			}
+		}
+	} elseif { $type == "branch" } {
+		set branches [ $gdb eval {
+			select header_icon from branches
+			where diagram_id = :diagram_id } ]
+		set brlen [ llength $branches ]
+		set i 0
+		while { $i < $brlen } {
+			set branch [ lindex $branches $i ]
+			if { $branch == $vertex_id } {
+				break
+			}
+			incr i
+		}
+		if { $i < $brlen } {
+			set inext [ expr { ( $i + ($dir) ) % $brlen } ]
+			set next_vertex [ lindex $branches $inext ]
+		}
+	}
+
+	if { $next_vertex != "" } {
+		set next_item [ gen::p.vertex_item $gdb $next_vertex ]
+		switch_to_item $next_item
+	}
+}
+
+proc center_on_selected { } {
+	variable db
+	set diagram_id [ editor_state $db current_dia ]
+	if { $diagram_id == "" } { return }
+	
+	if { ![ state is idle ] } { return }
+
+	set count [ $db onecolumn { select count(*) from items
+		where diagram_id = :diagram_id and selected = 1 } ]
+		
+	if { $count == 0 } { return }
+
+	lassign [ $db eval { select item_id, type from items
+		where diagram_id = :diagram_id and selected = 1 } ] item_id type
+
+	center_on $item_id
+}
+
+proc swap_selected { } {
+	variable db
+	set diagram_id [ editor_state $db current_dia ]
+	if { $diagram_id == "" } { return }
+	
+	if { ![ state is idle ] } { return }
+
+	set count [ $db onecolumn { select count(*) from items
+		where diagram_id = :diagram_id and selected = 1 } ]
+		
+	if { $count == 0 } { return }
+
+	lassign [ $db eval { select item_id, type from items
+		where diagram_id = :diagram_id and selected = 1 } ] item_id type
+
+	if { $type == "arrow" } {
+		mwc::swap_item $item_id
+	} elseif { $type == "if" } {
+		mwc::swap_item $item_id
+	}
+}
+
 proc adjust_sizes { } {
 	variable db
 	
@@ -1064,6 +1177,20 @@ proc select_all { } {
 	}
 	
 	commit_transaction select_all
+}
+
+proc deselect_all { } {
+	variable db
+	set diagram_id [ editor_state $db current_dia ]
+	if { $diagram_id == "" } { return }
+	
+	if { ![ state is idle ] } { return }
+	
+	begin_transaction deselect_all
+	
+	push_unselect_items $diagram_id
+	
+	commit_transaction deselect_all
 }
 
 proc begin_transaction { procedure } {
@@ -1886,6 +2013,16 @@ proc push_unselect_items { diagram_id } {
 	if { $counter > 0 } {
 		com::push $db $unselect_do $unselect $unselect_undo $select
 	}
+}
+
+proc push_unselect_item { item_id } {
+	variable db
+
+	set deselect [ wrap update items item_id $item_id selected 0 ]
+	set select [ wrap update items item_id $item_id selected 1 ]
+	set do [ wrap mv::deselect $item_id ]
+	set undo [ wrap mv::select $item_id ]
+	com::push $db $do $deselect $undo $select
 }
 
 proc push_select_item { item_id } {
