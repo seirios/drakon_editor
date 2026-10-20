@@ -193,6 +193,27 @@ proc process_shelf { gdb item_id shelf_proc } {
 	}
 }
 
+proc process_output { gdb item_id output_proc } {
+	lassign [ $gdb eval {
+		select text, text2
+		from items
+		where item_id = :item_id
+	} ] text text2
+
+	if { $output_proc != "" } {
+		set new_text [ $output_proc $text $text2 ]
+	} else {
+		set new_text $text
+	}
+
+	$gdb eval {
+		update vertices
+		set text = :new_text,
+			type = 'action'
+		where item_id = :item_id
+	}
+}
+
 proc fix_graph_stage_1 { gdb callbacks append_semicolon diagram_id } {
 	fix_graph_stage_1_core $gdb $callbacks $append_semicolon $diagram_id 1
 }
@@ -391,6 +412,19 @@ proc fix_graph_stage_1_core { gdb callbacks append_semicolon diagram_id do_selec
 	
 	foreach shelv $shelves {
 		process_shelf $gdb $shelv $shelf_proc
+	}
+
+	set output_proc [ get_optional_callback $callbacks output ]
+
+	set output_icons [ $gdb eval {
+		select item_id
+		from items
+		where diagram_id = :diagram_id
+		and type = 'output'
+	} ]
+
+	foreach out $output_icons {
+		process_output $gdb $out $output_proc
 	}
 
 	if { $do_selects } {
@@ -2676,6 +2710,7 @@ proc p.keywords { } {
 		can_glue
 		exit_door
 		if_block_end
+		output
 	}
 }
 

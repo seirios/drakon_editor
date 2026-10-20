@@ -14,7 +14,7 @@ proc copy_from { db } {
 			set message [ mc2 "Elements of type '\$type' are not supported by the verifier yet." ]
 			p.error $diagram_id $item_id $message
 		}
-		if { $type == "insertion" || $type == "input" || $type == "output" || $type == "process" } {
+		if { $type == "insertion" || $type == "input" || $type == "process" } {
 			set type "action"
 		}
 

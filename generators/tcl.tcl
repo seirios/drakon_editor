@@ -191,6 +191,18 @@ proc native_foreach { for_it for_var } {
 	return "foreach $for_it $for_var \{"
 }
 
+proc output_icon { primary secondary } {
+	set result {}
+	if { $secondary != "" } {
+		append secondary " "
+	}
+	set lines [ split $primary "\n" ]
+	foreach line $lines {
+		lappend result "puts $secondary$line"
+	}
+	return [ join $result "\n" ]
+}
+
 proc foreach_init { item_id first second } {
 	set index_var "_ind$item_id"
 	set coll_var "_col$item_id"
@@ -258,6 +270,7 @@ proc make_callbacks { } {
 	gen::put_callback callbacks shelf			gen_tcl::shelf
 	gen::put_callback callbacks if_cond			gen_tcl::if_cond
 	gen::put_callback callbacks native_foreach		gen_tcl::native_foreach
+	gen::put_callback callbacks output		gen_tcl::output_icon
 
 
 	return $callbacks

@@ -270,6 +270,9 @@ proc s.down { src vertex_id is_primitive is_skewer loop_depth } {
 		"shelf" {
 			s.down $vertex_id $down $is_primitive $is_skewer $loop_depth
 		}
+		"output" {
+			s.down $vertex_id $down $is_primitive $is_skewer $loop_depth
+		}
 		"if" {
 			s.down $vertex_id $down $is_primitive $is_skewer $loop_depth
 			s.right $vertex_id $right $is_primitive 1 2
