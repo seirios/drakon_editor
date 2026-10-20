@@ -1,9 +1,10 @@
-# Custom C generation plugin (no gotos)
+# Custom C/C++ generation plugin (no gotos)
 # Author: SBP
 # Based on c.drn, cpp.drn, cs.drn, c2.tcl
 # Thanks to their respective authors!
 
 gen::add_generator "C3" gen_c3::generate
+gen::add_generator "C++3" gen_c3::generate_cpp
 
 namespace eval gen_c3 {
 
@@ -106,7 +107,7 @@ proc block_close { output depth } {
     lappend result $line
 }
 
-proc commentator { text } {
+proc comment { text } {
     return "//" $text
 }
 
@@ -131,74 +132,7 @@ proc elseif_start { } {
 }
 
 proc generate { db gdb filename } {
-    global errorInfo
-    variable callbacks
-    variable language
-    set language "c"
-    set callbacks [ make_callbacks ]
-    set machines [ sma::extract_many_machines \
-     $gdb $callbacks ]
-    set sm_header [ gen_cpp::build_sm_header $machines ]
-    set sm_body [ gen_cpp::build_sm_body $gdb $machines ]
-    gen_cpp::append_sm_names $gdb
-    gen_cpp::zap_cleanups $gdb
-    tab::generate_tables $gdb $callbacks 0
-    set diagrams [ $gdb eval {
-    	select diagram_id from diagrams } ]
-    foreach diagram_id $diagrams {
-        if {[ mwc::is_drakon $diagram_id ]} {
-            set append_semicolon 1
-            gen::fix_graph_for_diagram \
-            $gdb $callbacks $append_semicolon $diagram_id
-        }
-    }
-    if {[ graph::errors_occured ]} {
-        return
-    }
-    set sections { h_header h_footer c_header c_footer \
-    	options structure globals }
-    lassign \
-    [ gen::scan_file_description $db $sections ] \
-    h_header h_footer c_header c_footer options \
-      structure globals
-    lassign \
-    [gen_cpp::build_globals $globals] \
-    g_header g_body
-    set functions [ gen::generate_functions $db $gdb  \
-    	$callbacks 1 ]
-    if {[ graph::errors_occured ]} {
-        
-    } else {
-        set copying 0
-        set class_name ""
-        set functions [ gen_cpp::update_returns $gdb $functions ]
-        lassign \
-        [ gen_cpp::sort_functions $functions $language $class_name ] \
-        free_funs ctrs dtrs methods signals slots
-        set h_filename [ replace_extension $filename "h" ]
-        set c_filename [ replace_extension $filename $language ]
-        set filenames [ list $h_filename $c_filename ]
-        lassign \
-        [ open_files $filenames "w" ] \
-        hfile cfile
-        catch {
-            print_header $h_filename $hfile $free_funs \
-            $h_header $h_footer \
-            $language $sm_header $g_header
-            
-            gen_cpp::print_cpp $h_filename $cfile \
-            $free_funs $ctrs $dtrs $methods $slots \
-            $c_header $c_footer $class_name \
-            $language $sm_body $g_body
-        } error_message
-        close_files [ list $hfile $cfile ]
-        if {$error_message == ""} {
-            
-        } else {
-            puts $::errorInfo
-            error $error_message
-        }
-    }
+    p.generate $db $gdb $filename "c"
 }
 
 proc generate_body { gdb diagram_id start_item node_list items incoming } {
@@ -208,22 +142,37 @@ proc generate_body { gdb diagram_id start_item node_list items incoming } {
     $callbacks
 }
 
+proc generate_cpp { db gdb filename } {
+    p.generate $db $gdb $filename "cpp"
+}
+
 proc highlight { tokens } {
     variable c3_keywords
     variable c3_types
+    set tokens [ process_ops $tokens ]
     return [ highlight_generic $c3_keywords $c3_types $tokens ]
 }
 
 proc highlight_generic { keywords kw_types tokens } {
     set result {}
     set state "idle"
-    foreach token $tokens {
+    set ntok [ llength $tokens ]
+    set i 0
+    while { 1 } {
+        if {$i < $ntok} {
+            
+        } else {
+            break
+        }
+        set token [ lindex $tokens $i ]
+        set inext [ expr { $i + 1 } ]
+        set lookahead [ lindex $tokens $inext ]
         lassign \
         $token \
         type text
         if {$state == "idle"} {
-            set state \
-            [ idle_default $keywords $kw_types result $type $text ]
+            set state [ idle_default $keywords $kw_types \
+            	result $type $text $lookahead ]
         } else {
             if {$state == "string"} {
                 lappend result $colors::syntax_string
@@ -259,8 +208,8 @@ proc highlight_generic { keywords kw_types tokens } {
                                 	$colors::syntax_comment
                             } else {
                                 lappend result $colors::syntax_operator
-                                set state \
-                                [ idle_default $keywords $kw_types result $type $text ]
+                                set state [ idle_default $keywords $kw_types \
+                                	result $type $text $lookahead ]
                             }
                         }
                     } else {
@@ -312,8 +261,8 @@ proc highlight_generic { keywords kw_types tokens } {
                                                     set state "verbatim"
                                                 } else {
                                                     lappend result $colors::syntax_operator
-                                                    set state \
-                                                    [ idle_default $keywords $kw_types result $type $text ]
+                                                    set state [ idle_default $keywords $kw_types \
+                                                    	result $type $text $lookahead ]
                                                 }
                                             } else {
                                                 if {$state == "verbatim"} {
@@ -331,8 +280,8 @@ proc highlight_generic { keywords kw_types tokens } {
                                                         lappend result $colors::syntax_string
                                                         set state "verbatim"
                                                     } else {
-                                                        set state \
-                                                        [ idle_default $keywords $kw_types result $type $text ]
+                                                        set state [ idle_default $keywords $kw_types \
+                                                        	result $type $text $lookahead ]
                                                     }
                                                 }
                                             }
@@ -345,6 +294,7 @@ proc highlight_generic { keywords kw_types tokens } {
                 }
             }
         }
+        incr i
     }
     if {($state == "comment start") || ($state == "verbatim start")} {
         lappend result $colors::syntax_operator
@@ -352,8 +302,13 @@ proc highlight_generic { keywords kw_types tokens } {
     return $result
 }
 
-proc idle_default { keywords kw_types result_name type text } {
+proc idle_default { keywords kw_types result_name type text lookahead } {
     upvar 1 $result_name result
+    set delims {
+    	"(" ")" "\{" "\}"
+    	"[" "]" "<" ">" }
+    set consts {
+    	true false }
     if {$text == "\""} {
         lappend result $colors::syntax_string
         set state "string"
@@ -368,7 +323,58 @@ proc idle_default { keywords kw_types result_name type text } {
                 if {$text == "@"} {
                     set state "verbatim start"
                 } else {
-                    lappend result [standard_color $keywords $kw_types $type $text]
+                    if {$type == "token"} {
+                        if {[contains $kw_types $text]} {
+                            set type "type"
+                        } else {
+                            if {[contains $keywords $text]} {
+                                set type "keyword"
+                            } else {
+                                if {[contains $consts $text]} {
+                                    set type "const"
+                                } else {
+                                    lassign \
+                                    $lookahead \
+                                    lahtype lahtext
+                                    if {$lahtype == "op" &&
+	($lahtext == "::" ||
+	 $lahtext == "->" ||
+	 $lahtext == ".")} {
+                                        set type "access"
+                                    } else {
+                                        if {$lahtype == "op" &&
+	$lahtext == ">"} {
+                                            set type "type"
+                                        } else {
+                                            if {$lahtype == "op" &&
+	($lahtext == "(" ||
+	 $lahtext == "<")} {
+                                                set type "call"
+                                            } else {
+                                                if {[ regexp {^[0-9A-Z_]+$} $text ]} {
+                                                    set type "macro"
+                                                } else {
+                                                    if {$text == [mv::yes] ||
+	$text == [mv::no]} {
+                                                        set type "label"
+                                                    } else {
+                                                        set type "id"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        if {$type == "op" &&
+	[ contains $delims $text ]} {
+                            set type "delim"
+                        }
+                    }
+                    lappend result [standard_color \
+                    	$keywords $kw_types $type $text]
                     set state "idle"
                 }
             }
@@ -419,28 +425,101 @@ proc make_callbacks { } {
     
     gen::put_callback callbacks while_start   gen_c3::while_start
     gen::put_callback callbacks pass          gen_c3::pass
-    gen::put_callback callbacks comment       gen_c3::commentator
+    gen::put_callback callbacks comment       gen_c3::comment
     gen::put_callback callbacks break         "break;"
     return $callbacks
 }
 
 proc p.and { left right } {
-    return "\($left\) && \($right\)"
+    return "($left) && ($right)"
+}
+
+proc p.generate { db gdb filename language } {
+    set callbacks [ make_callbacks ]
+    set machines [ sma::extract_many_machines \
+     $gdb $callbacks ]
+    gen_cpp::append_sm_names $gdb
+    gen_cpp::zap_cleanups $gdb
+    set sm_header [ gen_cpp::build_sm_header $machines ]
+    set sm_body [ gen_cpp::build_sm_body $gdb $machines ]
+    tab::generate_tables $gdb $callbacks 0
+    set diagrams [ $gdb eval {
+    	select diagram_id from diagrams } ]
+    foreach diagram_id $diagrams {
+        if {[ mwc::is_drakon $diagram_id ]} {
+            set append_semicolon 1
+            gen::fix_graph_for_diagram \
+            $gdb $callbacks $append_semicolon $diagram_id
+        }
+    }
+    if {[ graph::errors_occured ]} {
+        return
+    }
+    set sections { h_header h_footer c_header c_footer \
+    	class options structure globals }
+    lassign \
+    [ gen::scan_file_description $db $sections ] \
+    h_header h_footer c_header c_footer \
+    	class options structure globals
+    lassign \
+    [gen_cpp::build_globals $globals] \
+    g_header g_body
+    set functions [ gen::generate_functions $db $gdb  \
+    	$callbacks 1 ]
+    if {[ graph::errors_occured ]} {
+        
+    } else {
+        if {$language == "cpp"} {
+            set copying [ gen_cpp::extract_copying $options ]
+            set class_name [ gen_cpp::extract_class_name $class ]
+        } else {
+            set copying 0
+            set class_name ""
+        }
+        set functions [ gen_cpp::update_returns $gdb $functions ]
+        lassign \
+        [ gen_cpp::sort_functions $functions $language $class_name ] \
+        free_funs ctrs dtrs methods signals slots
+        set h_filename [ replace_extension $filename "h" ]
+        set c_filename [ replace_extension $filename $language ]
+        set filenames [ list $h_filename $c_filename ]
+        lassign \
+        [ open_files $filenames "w" ] \
+        hfile cfile
+        catch {
+            print_header $h_filename $hfile $free_funs \
+            $ctrs $dtrs $methods $signals $slots \
+            $h_header $h_footer $class $copying $class_name \
+            $language $sm_header $g_header
+            
+            gen_cpp::print_cpp $h_filename $cfile $free_funs \
+            $ctrs $dtrs $methods $slots \
+            $c_header $c_footer $class_name \
+            $language $sm_body $g_body
+        } error_message
+        close_files [ list $hfile $cfile ]
+        if {$error_message == ""} {
+            
+        } else {
+            puts $::errorInfo
+            error $error_message
+        }
+    }
 }
 
 proc p.not { operand } {
-    return "!\($operand\)"
+    return "!($operand)"
 }
 
 proc p.or { left right } {
-    return "\($left\) || \($right\)"
+    return "($left) || ($right)"
 }
 
 proc pass { } {
     return ""
 }
 
-proc print_header { filename fhandle functions header footer language structure globals } {
+proc print_header { filename fhandle functions ctrs dtrs methods signals slots header footer class copying class_name language structure globals } {
     gen_cpp::put_credits $fhandle
     set guard [ gen_c::guard_name $filename ]
     puts $fhandle "#ifndef $guard"
@@ -448,8 +527,8 @@ proc print_header { filename fhandle functions header footer language structure 
     puts $fhandle ""
     puts $fhandle $header
     variable src_file
-    set module_name [ \
-    gen_cpp::take_module_name $src_file ]
+    set module_name \
+    	[ gen_cpp::take_module_name $src_file ]
     init_current_file $fhandle
     gen_c_t::generate_h $module_name
     puts $fhandle ""
@@ -475,9 +554,74 @@ proc print_header { filename fhandle functions header footer language structure 
         gen_cpp::print_function \
         $fhandle $function 0 "" $language
     }
+    if {$class == ""} {
+        
+    } else {
+        puts $fhandle $class
+        if {$copying} {
+            
+        } else {
+            gen_cpp::noncopyable $fhandle $class_name
+        }
+        gen_cpp::print_methods $fhandle $ctrs public $class_name
+        gen_cpp::print_methods $fhandle $ctrs protected $class_name
+        gen_cpp::print_methods $fhandle $dtrs public $class_name
+        gen_cpp::print_methods $fhandle $ctrs private $class_name
+        gen_cpp::print_methods $fhandle $signals public $class_name "signals"
+        gen_cpp::print_methods $fhandle $slots public $class_name "public slots"
+        gen_cpp::print_methods $fhandle $slots protected $class_name "protected slots"
+        gen_cpp::print_methods $fhandle $slots private $class_name "private slots"
+        gen_cpp::print_methods $fhandle $methods public $class_name
+        gen_cpp::print_methods $fhandle $methods protected $class_name
+        gen_cpp::print_methods $fhandle $methods private $class_name
+        puts $fhandle "\};"
+    }
     puts $fhandle $footer
     puts $fhandle "#endif"
     puts $fhandle ""
+}
+
+proc process_ops { tokens } {
+    set result {}
+    set ntok [ llength $tokens ]
+    set i 0
+    while { 1 } {
+        if {$i < $ntok} {
+            
+        } else {
+            break
+        }
+        set token [ lindex $tokens $i ]
+        lassign \
+        $token \
+        type text
+        if {$type == "op"} {
+            set inext [ expr { $i + 1 } ]
+            set lookahead [ lindex $tokens $inext ]
+            lassign \
+            $lookahead \
+            lahtype lahtext
+            if {$text == "-" &&
+	$lahtype == "op" && $lahtext == ">"} {
+                incr i
+                set tok [ list $type "->" ]
+                lappend result $tok $tok
+            } else {
+                if {$text == ":" &&
+	$lahtype == "op" && $lahtext == ":"} {
+                    incr i
+                    set tok [ list $type "::" ]
+                    lappend result $tok $tok
+                } else {
+                    lappend result $token
+                }
+            }
+        } else {
+            lappend result $token
+        }
+        incr i
+    }
+    return $result
 }
 
 proc return_none { } {
@@ -495,18 +639,38 @@ proc standard_color { keywords kw_types type text } {
         if {$type == "number"} {
             return $colors::syntax_number
         } else {
-            if {$type == "token"} {
-                if {[contains $kw_types $text]} {
-                    return $colors::syntax_type
+            if {$type == "type"} {
+                return $colors::syntax_type
+            } else {
+                if {$type == "keyword"} {
+                    return $colors::syntax_keyword
                 } else {
-                    if {[contains $keywords $text]} {
-                        return $colors::syntax_keyword
+                    if {$type == "access"} {
+                        return $colors::syntax_operator
                     } else {
-                        return $colors::syntax_identifier
+                        if {$type == "macro"} {
+                            return $colors::syntax_number
+                        } else {
+                            if {$type == "const"} {
+                                return $colors::syntax_number
+                            } else {
+                                if {$type == "delim"} {
+                                    return $colors::syntax_delimiter
+                                } else {
+                                    if {$type == "call"} {
+                                        return $colors::syntax_identifier
+                                    } else {
+                                        if {$type == "label"} {
+                                            return $colors::text_fg
+                                        } else {
+                                            return $colors::syntax_call
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-            } else {
-                return $colors::syntax_identifier
             }
         }
     }

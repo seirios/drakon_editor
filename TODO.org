@@ -1,7 +1,7 @@
 * Ada generator
 ** TODO Allow overriding/not_overriding as keywords
 ** TODO Support named loops
-** TODO Add test cases
+** INPR Add test cases
 ** TODO Support different select modes (?)
 + normal if-tree (if)
 + string (str)
@@ -14,9 +14,9 @@
 + Added keywords to manually order them
 ** DONE Add highlighting for Ada! 
 * C3 generator
-** TODO Add C++ support
 ** TODO Add test cases
-** TODO Native for/while switch
+** TODO Native for/while, switch (?)
+** DONE Add C++ support
 * Canvas
 ** TODO Allow enabling/disabling actions
 ** TODO Allow enabling/disabling branches

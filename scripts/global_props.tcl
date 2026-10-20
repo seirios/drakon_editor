@@ -27,12 +27,14 @@ variable element_list {
 	"Text"
 	"Branch background"
 	"Code: identifier"
+	"Code: call"
 	"Code: string"
 	"Code: keyword"
 	"Code: type"
 	"Code: number"
 	"Code: comment"
 	"Code: operator"
+	"Code: delimiter"
 }
 
 variable scheme_list {
@@ -62,12 +64,14 @@ variable strict {
 	comment_s		"#38BAC8"
 	branch		"#C3E7EF"
 	syntax_identifier "#000000"
+	syntax_call "#000000"
 	syntax_string "#d00000"
 	syntax_keyword "#0000cB"
 	syntax_type "#0000cB"
 	syntax_number "#d00000"
 	syntax_comment "#228B22"
 	syntax_operator "#a000a0"
+	syntax_delimiter "#a000a0"
 }
 
 variable parrot {
@@ -82,12 +86,14 @@ variable parrot {
 	comment_s		"#909090"
 	branch		"#C3E7EF"
 	syntax_identifier "#000000"
+	syntax_call "#000000"
 	syntax_string "#d00000"
 	syntax_keyword "#0000cB"
 	syntax_type "#0000cB"
 	syntax_number "#d00000"
 	syntax_comment "#228B22"
 	syntax_operator "#a000a0"
+	syntax_delimiter "#a000a0"
 }
 
 variable black {
@@ -102,12 +108,14 @@ variable black {
 	comment_s		"#303030"
 	branch		"#000000"
 	syntax_identifier "#c0c0c0"
+	syntax_call "#c0c0c0"
 	syntax_string "#909090"
 	syntax_keyword "#b0b0b0"
 	syntax_type "#b0b0b0"
 	syntax_number "#ffffff"
 	syntax_comment "#505050"
 	syntax_operator "#ffffff"  
+	syntax_delimiter "#ffffff"  
 }
 
 variable night {
@@ -122,12 +130,14 @@ variable night {
 	comment_s		"#0000a0"
 	branch	 	"#000040"
 	syntax_identifier "#BCD5FF"
+	syntax_call "#BCD5FF"
 	syntax_string "#6882aF"
 	syntax_keyword "#70A5FF"
 	syntax_type "#70A5FF"
 	syntax_number "#ffffff"
 	syntax_comment "#808080"
 	syntax_operator "#ffffff"  
+	syntax_delimiter "#ffffff"  
 }
 
 variable colored_night {
@@ -142,12 +152,14 @@ variable colored_night {
 	comment_s		"#0000a0"
 	branch		"#000040"
 	syntax_identifier "#FBF9C0"
+	syntax_call "#FBF9C0"
 	syntax_string "#dC8623"
 	syntax_keyword "#ABFFCF"
 	syntax_type "#ABFFCF"
 	syntax_number "#ffffff"
 	syntax_comment "#808080"
 	syntax_operator "#6CCC88"
+	syntax_delimiter "#6CCC88"
 }
 
 variable hi_contrast {
@@ -162,12 +174,14 @@ variable hi_contrast {
 	comment_s		"#000099"
 	branch 			"#250025"
 	syntax_identifier	"#ffffff"
+	syntax_call		"#00ff00"
 	syntax_string		"#ff00ff"
 	syntax_keyword		"#ffff00"
-	syntax_type		"#00ff00"
+	syntax_type		"#1e90ff"
 	syntax_number		"#ff00ff"
 	syntax_comment		"#00ffff"
 	syntax_operator		"#ffff00"
+	syntax_delimiter	"#ff0000"
 }
 
 #	syntax_identifier "#EBD9C0"
@@ -211,12 +225,14 @@ proc load_from_settings {} {
 	set colors::branch_bg [ color_safe $colors_dict branch ]
 
 	set colors::syntax_identifier [ color_safe $colors_dict syntax_identifier ]
+	set colors::syntax_call [ color_safe $colors_dict syntax_call ]
 	set colors::syntax_string [ color_safe $colors_dict syntax_string ]
 	set colors::syntax_keyword [ color_safe $colors_dict syntax_keyword ]
 	set colors::syntax_type [ color_safe $colors_dict syntax_type ]
 	set colors::syntax_number [ color_safe $colors_dict syntax_number ]
 	set colors::syntax_comment [ color_safe $colors_dict syntax_comment ]
 	set colors::syntax_operator [ color_safe $colors_dict syntax_operator ]
+	set colors::syntax_delimiter [ color_safe $colors_dict syntax_delimiter ]
 
         set main_font_family [ app_settings::get_prop drakon_editor font ]
         set main_font_size [ app_settings::get_prop drakon_editor fontsize ]
@@ -261,12 +277,14 @@ proc element_changed {} {
 		"Text"	{ set color_text [ color text ] }
 		"Branch background"	{ set color_text [ color branch ] }
 		"Code: identifier" { set color_text [ color syntax_identifier ] }
+		"Code: call" { set color_text [ color syntax_call ] }
 		"Code: string" { set color_text [ color syntax_string ] }
 		"Code: keyword" { set color_text [ color syntax_keyword ] }
 		"Code: type" { set color_text [ color syntax_type ] }
 		"Code: number" { set color_text [ color syntax_number ] }
 		"Code: comment" { set color_text [ color syntax_comment ] }
 		"Code: operator" { set color_text [ color syntax_operator ] }
+		"Code: delimiter" { set color_text [ color syntax_delimiter ] }
 	}
 	set color_entry $color_text
 }
@@ -294,12 +312,14 @@ proc color_changed { color } {
 		"Text"	{ color_set text $color }
 		"Branch background"	{ color_set branch $color }
 		"Code: identifier" { color_set syntax_identifier $color }
+		"Code: call" { color_set syntax_call $color }
 		"Code: string" { color_set syntax_string $color }
 		"Code: keyword" { color_set syntax_keyword $color }
 		"Code: type" { color_set syntax_type $color }
 		"Code: number" { color_set syntax_number $color }
 		"Code: comment" { color_set syntax_comment $color }
 		"Code: operator" { color_set syntax_operator $color }
+		"Code: delimiter" { color_set syntax_delimiter $color }
 	}
 	
 	draw_sample_picture
@@ -550,12 +570,14 @@ proc load_colors {} {
 	color_set comment $colors::comment_fg
 	color_set branch $colors::branch_bg
 	color_set syntax_identifier $colors::syntax_identifier
+	color_set syntax_call $colors::syntax_call
 	color_set syntax_string  $colors::syntax_string
 	color_set syntax_keyword  $colors::syntax_keyword
 	color_set syntax_type  $colors::syntax_type
 	color_set syntax_number $colors::syntax_number
 	color_set syntax_comment  $colors::syntax_comment
 	color_set syntax_operator  $colors::syntax_operator	
+	color_set syntax_delimiter  $colors::syntax_delimiter	
 }
 
 proc save_colors {} {
@@ -572,12 +594,13 @@ proc save_colors {} {
 	set colors::branch_bg [ color branch ]
 	
 	set colors::syntax_identifier [ color syntax_identifier ]
+	set colors::syntax_call [ color syntax_call ]
 	set colors::syntax_string  [ color syntax_string ]
 	set colors::syntax_keyword  [ color syntax_keyword ]
 	set colors::syntax_type  [ color syntax_type ]
 	set colors::syntax_number [ color syntax_number ]
 	set colors::syntax_comment  [ color syntax_comment ]
-	set colors::syntax_operator  [ color syntax_operator ]
+	set colors::syntax_delimiter  [ color syntax_delimiter ]
 		
 	save_to_settings
 	
