@@ -1,4 +1,5 @@
 * Ada generator
+** TODO Support 'with' predicates
 ** TODO Support named loops
 ** INPR Add test cases
 ** TODO Support different select modes (?)

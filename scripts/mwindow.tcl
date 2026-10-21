@@ -1511,6 +1511,8 @@ proc canvas_key_press { window k n code } {
 		mwc::delete foo
 	} elseif { $k == "Escape" } {
 		mwc::deselect_all
+	} elseif { $k == "Home" } {
+		zoom_home
 	} else {
 		if { $code == $codes(Up) } {
 
