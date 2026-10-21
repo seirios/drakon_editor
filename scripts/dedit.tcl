@@ -271,7 +271,9 @@ proc next_skewer { dir } {
 	lassign [ $db eval { select item_id, type from items
 		where diagram_id = :diagram_id and selected = 1 } ] item_id type
 
-	if { $type != "case" && $type != "branch" } { return }
+	if { $type != "case"
+		&& $type != "branch"
+		&& $type != "address" } { return }
 
 	graph::verify_one $db $diagram_id
 	if { [ graph::errors_occured ] } { return }
@@ -283,30 +285,14 @@ proc next_skewer { dir } {
 	set next_vertex ""
 	switch $type {
 		"case" {
-			set selects [ $gdb onecolumn {
-				select vertex_id from vertices
-				where diagram_id = :diagram_id and type = 'select' } ]
-
-			foreach select $selects {
-				set ordinals [ $gdb eval {
-					select ordinal from links where src = :select } ]
-				set ordlen [ llength $ordinals ]
-				set i 0
-				while { $i < $ordlen } {
-					set ordinal [ lindex $ordinals $i ]
-					set dst [ gen::p.link_dst $gdb $select $ordinal ]
-					if { $dst == $vertex_id } {
-						break
-					}
-					incr i
-				}
-				if { $i < $ordlen } {
-					set inext [ expr { ( $i + ($dir) ) % $ordlen } ]
-					set next_ordinal [ lindex $ordinals $inext ]
-					set next_vertex [ gen::p.link_dst $gdb $select $next_ordinal ]
-					break
-				}
-			}
+			set parent [ $gdb eval {
+				select src,ordinal from links where dst = :vertex_id } ]
+			lassign $parent select ord
+			set ordlen [ $gdb eval {
+				select count(*) from links where src = :select } ]
+			# ordinals are 1-based
+			set inext [ expr { 1 + ( ($ord - 1) + ($dir) ) % $ordlen } ]
+			set next_vertex [ gen::p.link_dst $gdb $select $inext ]
 		}
 		"branch" {
 			set branches [ $gdb eval {
@@ -326,11 +312,24 @@ proc next_skewer { dir } {
 				set next_vertex [ lindex $branches $inext ]
 			}
 		}
+		"address" {
+			set next_vertex [ $gdb eval {
+				select dst from links where src = :vertex_id } ]
+		}
 	}
 
 	if { $next_vertex != "" } {
 		set next_item [ gen::p.vertex_item $gdb $next_vertex ]
-		switch_to_item $next_item
+
+		begin_transaction switch_to_item
+
+		push_unselect_item $item_id
+		push_select_item $next_item
+		center_on $next_item 0.3
+
+		save_view
+		commit_transaction switch_to_item
+		state reset
 	}
 }
 
@@ -349,7 +348,7 @@ proc center_on_selected { } {
 	lassign [ $db eval { select item_id, type from items
 		where diagram_id = :diagram_id and selected = 1 } ] item_id type
 
-	center_on $item_id
+	center_on $item_id 0.3
 }
 
 proc swap_selected { } {
@@ -3296,7 +3295,7 @@ proc diagram_exists { diagram_id } {
 	return [ expr { $count > 0 } ]
 }
 
-proc center_on { item_id } {
+proc center_on { item_id y_factor } {
 	variable db
 	variable scroll_x
 	variable scroll_y
@@ -3309,7 +3308,7 @@ proc center_on { item_id } {
 		where item_id = :item_id
 	} {
 		set width2 [ expr { $width / 2 } ]
-		set height2 [ expr { $height / 2 } ]
+		set height2 [ expr { $height * $y_factor } ]
 		set scroll_x [ expr { $x - $width2 } ]
 		set scroll_y [ expr { $y - $height2 } ]
 		set cscroll_x [ zoom_value $scroll_x ]
@@ -3330,11 +3329,11 @@ proc switch_to_item { item_id } {
 
 	push_unselect_items $new_diagram_id
 	push_select_item $item_id
-	center_on $item_id
+	center_on $item_id 0.5
 
 	save_view
 	commit_transaction switch_to_item
-	state reset	
+	state reset
 }
 
 proc get_dia_description { } {

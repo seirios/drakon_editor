@@ -27,18 +27,22 @@
 ** DONE Do not center text in standalone comments
 ** DONE Allow tab to spaces conversion
 + In all generated text
-* General
+* Interface
 ** TODO Embed terminal in editor window!
 + Need Tk terminal widget
 + Some are available for Tkinter in Python
 + Possible to embed urxvt/st too!
 + Run user-defined editor (vim, avoe, etc.)
-* Interface
+** TODO Add context menu to diagram description, with clear action
 ** TODO Allow setting editor window tab size
+** TODO Add bracket matching to editor window
 ** TODO Allow setting language when creating from dialog
 ** TODO Allow setting file kind (e.g. package, task, none, etc.)
-** TODO Add some facility to define boolean functions using truth tables
+** TODO Add some facility to define boolean functions with truth tables
 + Output is a diagram implementing the boolean function (tree of ifs)
+** DONE Fix tab shortcut for second select in series
+** DONE Do not center element, but place middle-top-20%
+** DONE Tab on address goes to branch header
 ** DONE Allow setting file language from CLI
 + Preset headers/footers
 ** DONE Create file if not present
