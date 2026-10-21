@@ -291,31 +291,35 @@ proc enforce_nogoto { name } {
 
 proc exit_cond { cond_text negate indent } {
     set result {}
-    if {$negate} {
-        set cond_text [ p.not $cond_text ]
-    }
-    set cond_lines [ split $cond_text "\n" ]
-    set nline [ llength $cond_lines ]
-    set first_cond [ lindex $cond_lines 0 ]
-    set line "${indent}exit when $first_cond"
-    if {$nline == 1} {
-        append line ";"
-    }
-    lappend result $line
-    set ili 1
-    while { 1 } {
-        if {$ili < $nline} {
-            
-        } else {
-            break
+    if {$cond_text == ""} {
+        
+    } else {
+        if {$negate} {
+            set cond_text [ p.not $cond_text ]
         }
-        set current [ lindex $cond_lines $ili ]
-        set line "$indent$current"
-        if {$ili == $nline - 1} {
+        set cond_lines [ split $cond_text "\n" ]
+        set nline [ llength $cond_lines ]
+        set first_cond [ lindex $cond_lines 0 ]
+        set line "${indent}exit when $first_cond"
+        if {$nline == 1} {
             append line ";"
         }
         lappend result $line
-        incr ili
+        set ili 1
+        while { 1 } {
+            if {$ili < $nline} {
+                
+            } else {
+                break
+            }
+            set current [ lindex $cond_lines $ili ]
+            set line "$indent$current"
+            if {$ili == $nline - 1} {
+                append line ";"
+            }
+            lappend result $line
+            incr ili
+        }
     }
     return $result
 }
@@ -1185,20 +1189,16 @@ proc p.rewire_loop { gdb start callbacks } {
     set parts [ split $text ";" ]
     set scheme [ lindex $parts 0 ]
     set ident [ lindex $parts 1 ]
-    if {$scheme == ""} {
-        set type "loop"
+    if {[ string first "for " $scheme ] != -1} {
+        set type "for"
     } else {
-        if {[ string first "for " $scheme ] != -1} {
-            set type "for"
+        if {[ string first "while " $scheme ] != -1} {
+            set type "while"
         } else {
-            if {[ string first "while " $scheme ] != -1} {
-                set type "while"
-            } else {
-                set type ""
-            }
+            set type ""
         }
     }
-    if {(($type == "loop") || ($type == "for")) || ($type == "while")} {
+    if {($type == "for") || ($type == "while")} {
         p.rewire_loop_any $gdb $start $end $scheme $ident
     } else {
         graph::p.error $diagram_id [ list $item_id ] \
@@ -1232,7 +1232,7 @@ proc p.rewire_loop_any { gdb start end scheme ident } {
     gen::p.link $gdb $check_id 1 $after_loop
     gen::p.link $gdb $check_id 2 $loop_body
     
-    loop!
+    # loop!
     gen::p.link $gdb $endloop_id 1 $check_id
     $gdb eval {
     	delete from links where src = :start;
