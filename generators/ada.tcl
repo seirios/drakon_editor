@@ -163,10 +163,45 @@ proc check_keywords { keywords args } {
 proc classify_keywords { keywords name } {
     set errors {}
     check_keywords $keywords \
-    	abstract inline protected tagged \
-    	ord-1 ord-2
+    	abstract inline \
+    	protected tagged
+    set override [ find_keywords \
+    	$keywords { overriding \
+    		    not_overriding } ]
+    set _sw31710000_ [ llength $override ]
+    if {$_sw31710000_ == 0} {
+        set override 0
+    } else {
+        if {$_sw31710000_ == 1} {
+            if {$override == "overriding"} {
+                set override 1
+            } else {
+                set override -1
+            }
+        } else {
+            lappend errors \
+             "$name: inconsistent order: $order"
+        }
+    }
+    set order [ find_keywords \
+    	$keywords { ord-1 ord-2 } ]
+    set _sw31530000_ [ llength $order ]
+    if {$_sw31530000_ == 0} {
+        set order 0
+    } else {
+        if {$_sw31530000_ == 1} {
+            if {$order == "ord-1"} {
+                set order -1
+            } else {
+                set order -2
+            }
+        } else {
+            lappend errors \
+             "$name: inconsistent order: $order"
+        }
+    }
     set access [ find_keywords \
-     $keywords { private public } ]
+    	$keywords { private public } ]
     set _sw21400000_ [ llength $access ]
     if {$_sw21400000_ == 0} {
         set access "static"
@@ -179,7 +214,7 @@ proc classify_keywords { keywords name } {
         }
     }
     set etype [ find_keywords $keywords \
-      { type subtype } ]
+    	{ type subtype } ]
     set _sw21760000_ [ llength $etype ]
     if {$_sw21760000_ == 0} {
         set etype "subprogram"
@@ -195,25 +230,12 @@ proc classify_keywords { keywords name } {
         lappend errors \
         "$name: both inline and abstract is not allowed"
     }
-    if {(${ord-1}) && (${ord-2})} {
-        lappend errors \
-        "$name: both ord-1 and ord-2 is not allowed"
-    }
     if {($etype == "subprogram") || (!(($etype == "type") || ($etype == "subtype")))} {
         
     } else {
         variable ada_types
         if {[ lsearch -exact $ada_types $name ] == -1} {
             lappend ada_types $name
-        }
-    }
-    if {${ord-1}} {
-        set order -1
-    } else {
-        if {${ord-2}} {
-            set order -2
-        } else {
-            set order 0
         }
     }
     array set props {}
@@ -224,6 +246,7 @@ proc classify_keywords { keywords name } {
     set props(access) $access
     set props(subtype) $etype
     set props(order) $order
+    set props(overriding) $override
     set proplist [ array get props ]
     set error_message [ join $errors "\n" ]
     return [ list $error_message $proplist ]
@@ -302,6 +325,7 @@ proc extract_signature { text name } {
     	access static \
     	inline 0 \
     	order 0 \
+    	overriding 0 \
     	subtype procedure \
     	tagged 0 }
     set error_message ""
@@ -334,16 +358,12 @@ proc extract_signature { text name } {
         set first_line [ lindex $lines 0 ]
         set first [ lindex $first_line 0 ]
         set keywords { 
-        	abstract \
-        	inline \
-        	ord-1 \
-        	ord-2 \
-        	public \
-        	private \
-        	protected \
-        	subtype \
-        	tagged \
-        	type }
+        	abstract inline
+        	not_overriding overriding
+        	ord-1 ord-2
+        	public private protected
+        	subtype type
+        	tagged }
         set found_keywords \
          [ find_keywords $first $keywords ]
         if {[ llength $found_keywords ] == 0} {
@@ -1078,58 +1098,13 @@ proc p.inspect_tree { node name } {
 }
 
 proc p.keywords { } {
-    return {
-    	and
-    	assign
-    	bad_case
-    	block_close
-    	body
-    	break
-    	can_glue
+    set extra_kw {
     	case_and
-    	case_else
-    	case_end
     	case_not
     	case_or
-    	case_value
-    	change_state
-    	comment
-    	compare
-    	compare2
-    	continue
-    	declare
-    	elseif_start
-    	else_start
-    	enforce_nogoto
-    	exit_door
-    	for_check
-    	for_current
-    	for_declare
-    	for_incr
-    	for_init
-    	fsm_merge
-    	goto
-    	if_block_end
-    	if_cond
-    	if_end
-    	if_start
-    	inspect_tree
-    	line_end
-    	native_foreach
-    	not
-    	or
-    	pass
-    	return_none
-    	select
-    	select_end
-    	select_gen_default
-    	shelf
-    	shutdown
-    	signature
     	tab_convert
-    	tag
-    	while_start	
     }
+    return [ concat [ gen::p.keywords_bkp ] $extra_kw ]
 }
 
 proc p.not { operand } {
@@ -1684,6 +1659,7 @@ proc print_subprogram { db fhandle component in_header } {
         $props(subtype) \
         $props(inline) \
         $props(abstract) \
+        $props(overriding) \
         $returns \
         $name \
         $parameters \
@@ -1696,7 +1672,7 @@ proc print_subprogram { db fhandle component in_header } {
     }
 }
 
-proc print_subprogram_kernel { fhandle depth static type inline abstract returns name parameters body print_body spec_header spec_footer body_header body_footer } {
+proc print_subprogram_kernel { fhandle depth static type inline abstract overriding returns name parameters body print_body spec_header spec_footer body_header body_footer } {
     set result {}
     set line ""
     set indent \
@@ -1709,6 +1685,15 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract returns
         	result $spec_header
     }
     puts $fhandle ""
+    if {$overriding == 0} {
+        
+    } else {
+        if {$overriding == 1} {
+            puts $fhandle "${indent}overriding"
+        } else {
+            puts $fhandle "${indent}not overriding"
+        }
+    }
     append line "$type"
     append line " $name"
     set param_count [ llength $parameters ]
@@ -1773,8 +1758,7 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract returns
         }
         puts -nonewline $fhandle $indent
         if {$i == $nline - 1} {
-            puts -nonewline \
-            	$fhandle [ lindex $result $i ]
+            puts -nonewline $fhandle [ lindex $result $i ]
             puts $fhandle ";"
         } else {
             puts $fhandle [ lindex $result $i ]
@@ -1858,8 +1842,7 @@ proc print_type_kernel { fhandle depth type abstract tagged name body print_body
         }
         puts -nonewline $fhandle $indent
         if {$i == $nline - 1} {
-            puts -nonewline \
-            	$fhandle [ lindex $result $i ]
+            puts -nonewline $fhandle [ lindex $result $i ]
             puts $fhandle ";"
         } else {
             puts $fhandle [ lindex $result $i ]
@@ -1870,8 +1853,7 @@ proc print_type_kernel { fhandle depth type abstract tagged name body print_body
 
 proc put_credits { fhandle } {
     set version [ version_string ]
-    puts $fhandle \
-        [ p.comment "Autogenerated with DRAKON Editor $version" ]
+    puts $fhandle [ p.comment "Autogenerated with DRAKON Editor $version" ]
 }
 
 proc puts_notempty { fhandle text } {

@@ -1,11 +1,11 @@
 * Ada generator
-** TODO Allow overriding/not_overriding as keywords
 ** TODO Support named loops
 ** INPR Add test cases
 ** TODO Support different select modes (?)
 + normal if-tree (if)
 + string (str)
 + select
+** DONE Allow overriding/not_overriding as keywords
 ** DONE Support named blocks
 ** DONE Use p.not in 'exit when' negate
 ** DONE Use 'or else' and 'and then' in p.or, p.and
