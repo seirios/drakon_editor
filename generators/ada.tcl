@@ -1575,31 +1575,35 @@ proc print_node_core { texts node callbacks depth } {
                         set body [ exit_cond $cond_text $negate $indent ]
                         set result [ concat $result $body ]
                     } else {
-                        if {$_sw17540000_ == "sel"} {
-                            set var_item [ lindex $current 1 ]
-                            set cases [ lindex $current 2 ]
-                            set var_text [ gen::get_text_lines \
-                            	$texts $var_item ]
-                            lappend result "${indent}case $var_text is"
-                            set body [ print_node_core \
-                            	$texts $cases $callbacks $depth ]
-                            set result [ concat $result $body ]
-                            lappend result "${indent}end case;"
+                        if {$_sw17540000_ == "break"} {
+                            lappend result "${indent}exit;"
                         } else {
-                            if {$_sw17540000_ == "case"} {
-                                
+                            if {$_sw17540000_ == "sel"} {
+                                set var_item [ lindex $current 1 ]
+                                set cases [ lindex $current 2 ]
+                                set var_text [ gen::get_text_lines \
+                                	$texts $var_item ]
+                                lappend result "${indent}case $var_text is"
+                                set body [ print_node_core \
+                                	$texts $cases $callbacks $depth ]
+                                set result [ concat $result $body ]
+                                lappend result "${indent}end case;"
                             } else {
-                                error "Unexpected switch value: $_sw17540000_"
+                                if {$_sw17540000_ == "case"} {
+                                    
+                                } else {
+                                    error "Unexpected switch value: $_sw17540000_"
+                                }
+                                set cond_item [ lindex $current 1 ]
+                                set actions [ lindex $current 2 ]
+                                set cond_text [ gen::get_text_lines \
+                                	$texts $cond_item ]
+                                set when_text [ when_line $cond_text ]
+                                lappend result "${indent}$when_text"
+                                set body [ print_node_core \
+                                	$texts $actions $callbacks $next_depth ]
+                                set result [ concat $result $body ]
                             }
-                            set cond_item [ lindex $current 1 ]
-                            set actions [ lindex $current 2 ]
-                            set cond_text [ gen::get_text_lines \
-                            	$texts $cond_item ]
-                            set when_text [ when_line $cond_text ]
-                            lappend result "${indent}$when_text"
-                            set body [ print_node_core \
-                            	$texts $actions $callbacks $next_depth ]
-                            set result [ concat $result $body ]
                         }
                     }
                 }
