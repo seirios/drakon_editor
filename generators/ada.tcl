@@ -609,12 +609,16 @@ proc gen_case { db item_id } {
 }
 
 proc gen_loop { db item_id } {
-    set item [ nogoto::gen_loop \
-    	$db $item_id "" ]
-    set result [ lindex $item 0 ]
-    set result [ if_break_to_exit_when $result ]
-    set result [ remove_dummy_case $result ]
-    set item [ list $result [ lindex $item 1 ] ]
+    set item [ nogoto::gen_loop $db $item_id "" ]
+    set node [ lindex $item 0 ]
+    set node [ if_break_to_exit_when $node ]
+    lassign \
+    [ remove_dummy_case $node ] \
+    node name_id
+    set pos [ lrange $node 1 end ]
+    set pre [ list "loop" [ list "name" $name_id ] ]
+    set node [ concat $pre $pos ]
+    set item [ list $node [ lindex $item 1 ] ]
     return $item
 }
 
@@ -936,6 +940,18 @@ proc is_empty_spec { components header footer } {
     return 0
 }
 
+proc loop_statement { name body indent } {
+    set result {}
+    lappend result "${indent}loop"
+    set result [ concat $result $body ]
+    if {$name == ""} {
+        lappend result "${indent}end loop;"
+    } else {
+        lappend result "${indent}end loop $name;"
+    }
+    return $result
+}
+
 proc lremove { l p } {
     return "[lrange $l 0 $p-1] [lrange $l $p+1 end]"
 }
@@ -1188,7 +1204,7 @@ proc p.rewire_loop { gdb start callbacks } {
     set item_id [ gen::p.vertex_item $gdb $start ]
     set parts [ split $text ";" ]
     set scheme [ lindex $parts 0 ]
-    set ident [ lindex $parts 1 ]
+    set name [ string trim [ lindex $parts 1 ] ]
     if {[ string first "for " $scheme ] != -1} {
         set type "for"
     } else {
@@ -1199,7 +1215,7 @@ proc p.rewire_loop { gdb start callbacks } {
         }
     }
     if {($type == "for") || ($type == "while")} {
-        p.rewire_loop_any $gdb $start $end $scheme $ident
+        p.rewire_loop_any $gdb $start $end $scheme $name
     } else {
         graph::p.error $diagram_id [ list $item_id ] \
         	"Error in loop statement: $text"
@@ -1208,9 +1224,14 @@ proc p.rewire_loop { gdb start callbacks } {
     }
 }
 
-proc p.rewire_loop_any { gdb start end scheme ident } {
+proc p.rewire_loop_any { gdb start end scheme name } {
     set diagram_id [ gen::p.vertex_diagram $gdb $start ]
     set item_id [ gen::p.vertex_item $gdb $start ]
+    if {$name == ""} {
+        
+    } else {
+        set scheme "$name :\n$scheme"
+    }
     set loop_id [ \
     	gen::p.insert_vertex $gdb $diagram_id [ \
     		gen::append_digits $item_id 0001 ] \
@@ -1218,7 +1239,7 @@ proc p.rewire_loop_any { gdb start end scheme ident } {
     set check_id [ \
     	gen::p.insert_vertex $gdb $diagram_id [ \
     		gen::append_digits $item_id 0002 ] \
-    	"case" "" "" 0 ]
+    	"case" $name "" 0 ]
     set endloop_id [ \
     	gen::p.insert_vertex $gdb $diagram_id [ \
     		gen::append_digits $item_id 0003 ] \
@@ -1561,11 +1582,19 @@ proc print_node_core { texts node callbacks depth } {
                 $if_close result $depth
             } else {
                 if {$_sw17540000_ == "loop"} {
+                    set name_node [ lindex $current 1 ]
+                    set name_item [ lindex $name_node 1 ]
+                    set current [ lremove $current 1 ]
+                    if {$name_item == ""} {
+                        set name ""
+                    } else {
+                        set name [ gen::get_text_lines \
+                        	$texts $name_item ]
+                    }
                     set body [ print_node_core \
                     	$texts $current $callbacks $next_depth ]
-                    lappend result "${indent}loop"
-                    set result [ concat $result $body ]
-                    lappend result "${indent}end loop;"
+                    set result [ concat $result \
+                    	[ loop_statement $name $body $indent ] ]
                 } else {
                     if {$_sw17540000_ == "exit"} {
                         set cond_item [ lindex $current 1 ]
@@ -1887,9 +1916,12 @@ proc puts_notempty { fhandle text } {
 proc remove_dummy_case { node } {
     set first [ lindex $node 1 ]
     if {[ lindex $first 0 ] == "case"} {
+        set name [ lindex $first 1 ]
         set node [ lremove $node 1 ]
+    } else {
+        set name ""
     }
-    return $node
+    return [ list $node $name ]
 }
 
 proc select_ifs_and_cases { db } {

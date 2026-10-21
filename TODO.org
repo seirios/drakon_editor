@@ -1,11 +1,13 @@
 * Ada generator
-** TODO Support 'with' predicates
-** TODO Support named loops
+** TODO Support 'for' clauses
+** TODO Support 'with' aspects
 ** INPR Add test cases
 ** TODO Support different select modes (?)
 + normal if-tree (if)
 + string (str)
 + select
+** TODO Investigate support for nested loop breaking with nogoto
+** DONE Support named loops
 ** DONE Allow overriding/not_overriding as keywords
 ** DONE Support named blocks
 ** DONE Use p.not in 'exit when' negate
