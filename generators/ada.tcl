@@ -1468,7 +1468,21 @@ proc parse_body { body depth } {
                 	[ gen::make_indent $depth ]
                 lappend result "${indent}end${name};"
             } else {
-                lappend result "${indent}$line"
+                if {$line == "##@@BEGIN_WITH@@##"} {
+                    lappend result "${indent}with"
+                    incr i
+                    set line [ lindex $body $i ]
+                    while { 1 } {
+                        if {$line == "##@@END_WITH@@##"} {
+                            break
+                        }
+                        lappend result "${indent}$line"
+                        incr i
+                        set line [ lindex $body $i ]
+                    }
+                } else {
+                    lappend result "${indent}$line"
+                }
             }
         }
         incr i
@@ -1821,8 +1835,10 @@ proc print_type_kernel { fhandle depth type abstract tagged name body print_body
     }
     lappend result $line
     if {$print_body} {
+        set body \
+        	[ parse_body $body $depth ]
         foreach line $body {
-            lappend result "${indent}$line"
+            lappend result $line
         }
         if {$print_body} {
             append_notempty \
