@@ -166,9 +166,14 @@ proc wrap_in_curly { text } {
 }
 
 proc shelf { primary secondary } {
+	# Do nothing with empty shelf
+	if { $primary == "" && $secondary == "" } {
+		return ""
+	}
+
 	set prim [ string trim $primary ]
 	set first [ string index $prim 0 ]
-
+	
 	if { [ string is alpha $first ] } {
 		if { [ string match "expr *" $prim ] } {
 			set expression [ string range $prim 4 end ]

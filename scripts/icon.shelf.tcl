@@ -2,7 +2,7 @@
 namespace eval mv {
 
 proc shelf.switch { } {
-	return ""
+	return [ mc2 "Toggle active" ]
 }
 
 proc shelf.create { item_id diagram_id x y } {
@@ -55,6 +55,12 @@ proc shelf.is_top { mx my x y w h a b } {
 
 proc shelf.icons { text text2 color x y w h a b } {
 	lassign [ get_colors $color $colors::action_bg ] fg bg tc
+	# Disabled appearance
+	if { $b == 1 } {
+		set fg $colors::inactive_fg
+		set bg $colors::inactive_bg
+		set tc $fg
+	}
 	set top [ expr { $y - $h } ]
 	set left [ expr { $x - $w } ]
 	set right [ expr { $x + $w } ]

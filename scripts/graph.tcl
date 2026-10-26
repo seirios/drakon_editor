@@ -17,9 +17,10 @@ proc copy_from { db } {
 		if { $type == "insertion" || $type == "input" || $type == "process" } {
 			set type "action"
 		}
-		# Inactive actions are considered empty
-		if { $type == "action" && $b == 1 } {
+		# Inactive actions/shelves are considered empty
+		if { $b == 1 && ( $type == "action" || $type == "shelf" ) } {
 			set text ""
+			set text2 ""
 		}
 
 		gdb eval {

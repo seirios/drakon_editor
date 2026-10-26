@@ -253,7 +253,8 @@ proc add_to_canvas { surface type coords text fore fill item_id } {
 		# Also not in inactive actions
 		if { $item_type == "commentin" || $item_type == "commentout"
 			|| $item_type == "branch" || $item_type == "address"
-			|| ( $item_type == "action" && $item_b ) } {
+			|| ( $item_type == "action" && $item_b )
+			|| ( $item_type == "shelf" && $item_b ) } {
 			set no_hl 1
 		}
 		return [ add_prim_to_canvas $surface $type $coords $text $fore $fill $anchor $no_hl ]
