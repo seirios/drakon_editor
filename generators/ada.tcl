@@ -1530,7 +1530,7 @@ proc parse_body { body depth } {
                             lappend result "${indent}record"
                             incr_indent indent depth
                             foreach line $lines {
-                                lappend result "${indent}$line;"
+                                lappend result "${indent}$line"
                             }
                             decr_indent indent depth
                             lappend result "${indent}end record"
