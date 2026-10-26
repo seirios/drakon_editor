@@ -1279,42 +1279,46 @@ proc p.shelf { primary secondary } {
             set result [ join $lines "\n" ]
         }
     } else {
-        if {$_sw11330000_ == "is"} {
-            lappend lines "##@@BEGIN_IS@@##"
-            foreach line $plines {
-                lappend lines "${indent}$line"
-            }
-            lappend lines "##@@END_IS@@##"
-            set result [ join $lines "\n" ]
+        if {$_sw11330000_ == "array"} {
+            set result "array $primary"
         } else {
-            if {$_sw11330000_ == "with"} {
-                lappend lines "##@@BEGIN_WITH@@##"
+            if {$_sw11330000_ == "is"} {
+                lappend lines "##@@BEGIN_IS@@##"
                 foreach line $plines {
                     lappend lines "${indent}$line"
                 }
-                lappend lines "##@@END_WITH@@##"
+                lappend lines "##@@END_IS@@##"
                 set result [ join $lines "\n" ]
             } else {
-                if {$_sw11330000_ == "declare"} {
-                    set name \
-                    	[ lindex $sterms 1 ]
-                    if {$name != ""} {
-                        lappend lines "$name :"
-                    }
-                    lappend lines "##@@BEGIN_DECLARE@@##"
+                if {$_sw11330000_ == "with"} {
+                    lappend lines "##@@BEGIN_WITH@@##"
                     foreach line $plines {
                         lappend lines "${indent}$line"
                     }
-                    lappend lines "##@@END_DECLARE@@##"
+                    lappend lines "##@@END_WITH@@##"
                     set result [ join $lines "\n" ]
                 } else {
-                    if {$_sw11330000_ == "end"} {
-                        lappend lines "##@@BEGIN_END@@##"
-                        append_notempty lines $primary
-                        lappend lines "##@@END_END@@##"
+                    if {$_sw11330000_ == "declare"} {
+                        set name \
+                        	[ lindex $sterms 1 ]
+                        if {$name != ""} {
+                            lappend lines "$name :"
+                        }
+                        lappend lines "##@@BEGIN_DECLARE@@##"
+                        foreach line $plines {
+                            lappend lines "${indent}$line"
+                        }
+                        lappend lines "##@@END_DECLARE@@##"
                         set result [ join $lines "\n" ]
                     } else {
-                        set result $primary
+                        if {$_sw11330000_ == "end"} {
+                            lappend lines "##@@BEGIN_END@@##"
+                            append_notempty lines $primary
+                            lappend lines "##@@END_END@@##"
+                            set result [ join $lines "\n" ]
+                        } else {
+                            set result $primary
+                        }
                     }
                 }
             }
