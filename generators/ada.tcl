@@ -252,6 +252,26 @@ proc classify_keywords { keywords name } {
     return [ list $error_message $proplist ]
 }
 
+proc collect_until { lines start until } {
+    set result {}
+    set len [ llength $lines ]
+    set i $start
+    while { 1 } {
+        if {$i < $len} {
+            
+        } else {
+            break
+        }
+        set current [ lindex $lines $i ]
+        if {$current == $until} {
+            break
+        }
+        lappend result $current
+        incr i
+    }
+    return [ list $i $result ]
+}
+
 proc complain_dia { name message } {
     variable tdb
     set id \
@@ -276,6 +296,12 @@ proc create_tree { prefix tree } {
     foreach child $children {
         create_tree $prefix $child
     }
+}
+
+proc decr_indent { ind d } {
+    upvar 1 $d depth $ind indent
+    incr depth -1
+    set indent [ gen::make_indent $depth ]
 }
 
 proc do_monkey_patch { } {
@@ -740,21 +766,19 @@ proc generate_item { db item_id parent_loop } {
     }
 }
 
-proc handle_is { list_result body } {
+proc handle_is { list_result body depth } {
     upvar 1 $list_result result
+    set indent \
+    	[ gen::make_indent $depth ]
     lappend result "is"
-    set lcnt 0
-    set firstline [ lindex $body 0 ]
-    if {$firstline == "##@@BEGIN_IS@@##"} {
-        set body [lrange $body 1 end]
-        foreach line $body {
-            if {$line == "##@@END_IS@@##"} {
-                break
-            }
-            lappend result $line
-            incr lcnt
+    if {[ lindex $body 0 ] == "##@@BEGIN_IS@@##"} {
+        lassign \
+        [ collect_until $body 1 "##@@END_IS@@##" ] \
+        i lines
+        foreach line $lines {
+            lappend result "${indent}$line"
         }
-        set body [lrange $body $lcnt+1 end]
+        set body [lrange $body $i+1 end]
     }
     return $body
 }
@@ -915,6 +939,12 @@ proc if_break_to_exit_when { node } {
         }
     }
     return $result
+}
+
+proc incr_indent { ind d } {
+    upvar 1 $d depth $ind indent
+    incr depth
+    set indent [ gen::make_indent $depth ]
 }
 
 proc init_description { filename } {
@@ -1267,47 +1297,34 @@ proc p.shelf { primary secondary } {
     set sterms [ split $secondary " " ]
     set indent [ gen::make_indent 1 ]
     set _sw11330000_ [ lindex $sterms 0 ]
-    if {$_sw11330000_ == "record"} {
-        if {[ lindex $plines 0 ] == "null"} {
-            set result "null record"
-        } else {
-            lappend lines "record"
-            foreach line $plines {
-                lappend lines "${indent}$line;"
-            }
-            lappend lines "end record"
-            set result [ join $lines "\n" ]
-        }
+    if {$_sw11330000_ == "array"} {
+        set result "array $primary"
     } else {
-        if {$_sw11330000_ == "array"} {
-            set result "array $primary"
+        if {$_sw11330000_ == "record"} {
+            lappend lines "##@@BEGIN_RECORD@@##"
+            set lines [ concat $lines $plines ]
+            lappend lines "##@@END_RECORD@@##"
+            set result [ join $lines "\n" ]
         } else {
             if {$_sw11330000_ == "is"} {
                 lappend lines "##@@BEGIN_IS@@##"
-                foreach line $plines {
-                    lappend lines "${indent}$line"
-                }
+                set lines [ concat $lines $plines ]
                 lappend lines "##@@END_IS@@##"
                 set result [ join $lines "\n" ]
             } else {
                 if {$_sw11330000_ == "with"} {
                     lappend lines "##@@BEGIN_WITH@@##"
-                    foreach line $plines {
-                        lappend lines "${indent}$line"
-                    }
+                    set lines [ concat $lines $plines ]
                     lappend lines "##@@END_WITH@@##"
                     set result [ join $lines "\n" ]
                 } else {
                     if {$_sw11330000_ == "declare"} {
-                        set name \
-                        	[ lindex $sterms 1 ]
+                        set name [ lindex $sterms 1 ]
                         if {$name != ""} {
                             lappend lines "$name :"
                         }
                         lappend lines "##@@BEGIN_DECLARE@@##"
-                        foreach line $plines {
-                            lappend lines "${indent}$line"
-                        }
+                        set lines [ concat $lines $plines ]
                         lappend lines "##@@END_DECLARE@@##"
                         set result [ join $lines "\n" ]
                     } else {
@@ -1449,8 +1466,7 @@ proc package_name { filename } {
 proc parse_body { body depth } {
     set result {}
     set name ""
-    set indent \
-    	[ gen::make_indent $depth ]
+    set indent [ gen::make_indent $depth ]
     set nline [ llength $body ]
     set i 0
     while { 1 } {
@@ -1461,52 +1477,67 @@ proc parse_body { body depth } {
         }
         set line [ lindex $body $i ]
         if {$line == "##@@BEGIN_DECLARE@@##"} {
-            lappend result "${indent}declare"
             incr i
-            set line [ lindex $body $i ]
-            while { 1 } {
-                if {$line == "##@@END_DECLARE@@##"} {
-                    break
-                }
+            lassign \
+            [ collect_until $body $i "##@@END_DECLARE@@##" ] \
+            i lines
+            lappend result "${indent}declare"
+            incr_indent indent depth
+            foreach line $lines {
                 lappend result "${indent}$line"
-                incr i
-                set line [ lindex $body $i ]
             }
+            decr_indent indent depth
             lappend result "${indent}begin"
-            incr depth
-            set indent \
-            	[ gen::make_indent $depth ]
+            incr_indent indent depth
         } else {
             if {$line == "##@@BEGIN_END@@##"} {
                 incr i
-                set line [ lindex $body $i ]
-                while { 1 } {
-                    if {$line == "##@@END_END@@##"} {
-                        break
-                    }
-                    set name " $line";
-                    incr i
-                    set line [ lindex $body $i ]
+                lassign \
+                [ collect_until $body $i "##@@END_END@@##" ] \
+                i lines
+                if {[ llength $lines ] > 0} {
+                    set name [ lindex $lines 0 ]
+                    set name " $name"
+                } else {
+                    set name ""
                 }
-                incr depth -1
-                set indent \
-                	[ gen::make_indent $depth ]
+                decr_indent indent depth
                 lappend result "${indent}end${name};"
             } else {
                 if {$line == "##@@BEGIN_WITH@@##"} {
-                    lappend result "${indent}with"
                     incr i
-                    set line [ lindex $body $i ]
-                    while { 1 } {
-                        if {$line == "##@@END_WITH@@##"} {
-                            break
+                    lassign \
+                    [ collect_until $body $i "##@@END_WITH@@##" ] \
+                    i lines
+                    if {[ llength $lines ] == 1} {
+                        set first [ lindex $lines 0 ]
+                        lappend result "${indent}with $first"
+                    } else {
+                        lappend result "${indent}with"
+                        foreach line $lines {
+                            lappend result "${indent}$line"
                         }
-                        lappend result "${indent}$line"
-                        incr i
-                        set line [ lindex $body $i ]
                     }
                 } else {
-                    lappend result "${indent}$line"
+                    if {$line == "##@@BEGIN_RECORD@@##"} {
+                        incr i
+                        lassign \
+                        [ collect_until $body $i "##@@END_RECORD@@##" ] \
+                        i lines
+                        if {[ lindex $lines 0 ] == "null"} {
+                            lappend result "${indent}null record"
+                        } else {
+                            lappend result "${indent}record"
+                            incr_indent indent depth
+                            foreach line $lines {
+                                lappend result "${indent}$line;"
+                            }
+                            decr_indent indent depth
+                            lappend result "${indent}end record"
+                        }
+                    } else {
+                        lappend result "${indent}$line"
+                    }
                 }
             }
         }
@@ -1782,7 +1813,7 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract overrid
     } else {
         if {$print_body} {
             set body [ handle_is \
-            	result $body ]
+            	result $body $depth ]
             set body \
             	[ parse_body $body $depth ]
             lappend result "begin"
