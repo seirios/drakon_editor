@@ -252,7 +252,7 @@ proc classify_keywords { keywords name } {
     return [ list $error_message $proplist ]
 }
 
-proc collect_until { lines start until } {
+proc collect_until { lines start until do_unindent } {
     set result {}
     set len [ llength $lines ]
     set i $start
@@ -263,10 +263,14 @@ proc collect_until { lines start until } {
             break
         }
         set current [ lindex $lines $i ]
-        if {[ string trimleft $current ] == $until} {
+        if {[ unindent $current ] == $until} {
             break
         }
-        lappend result $current
+        if {$do_unindent} {
+            lappend result [ unindent $current ]
+        } else {
+            lappend result $current
+        }
         incr i
     }
     return [ list $i $result ]
@@ -315,7 +319,7 @@ proc enforce_nogoto { name } {
     "Could not generate code for function '$name'.\nTry splitting it into smaller parts."
 }
 
-proc exit_cond { cond_text negate indent } {
+proc exit_statement { cond_text negate depth } {
     set result {}
     if {$cond_text == ""} {
         
@@ -324,28 +328,8 @@ proc exit_cond { cond_text negate indent } {
             set cond_text [ p.not $cond_text ]
         }
         set cond_lines [ split $cond_text "\n" ]
-        set nline [ llength $cond_lines ]
-        set first_cond [ lindex $cond_lines 0 ]
-        set line "${indent}exit when $first_cond"
-        if {$nline == 1} {
-            append line ";"
-        }
-        lappend result $line
-        set ili 1
-        while { 1 } {
-            if {$ili < $nline} {
-                
-            } else {
-                break
-            }
-            set current [ lindex $cond_lines $ili ]
-            set line "$indent$current"
-            if {$ili == $nline - 1} {
-                append line ";"
-            }
-            lappend result $line
-            incr ili
-        }
+        set result [ indent_group \
+        	$cond_lines "exit when" $depth 1 ]
     }
     return $result
 }
@@ -507,6 +491,20 @@ proc extract_signature { text name } {
     return [ list $error_message \
     [ gen::create_signature \
     	$type $prop_list $parameters $returns ] ]
+}
+
+proc extract_when { body } {
+    set lines {}
+    set i 0
+    set first [ lindex $body $i ]
+    if {[ unindent $first ] == "##@@BEGIN_WHEN@@##"} {
+        incr i
+        lassign \
+        [ collect_until $body $i "##@@END_WHEN@@##" 1 ] \
+        i lines
+        set body [lrange $body $i+1 end]
+    }
+    return [ list $body $lines ]
 }
 
 proc filter_subprograms { components inline access } {
@@ -768,46 +766,17 @@ proc generate_item { db item_id parent_loop } {
 
 proc handle_is { list_result body depth } {
     upvar 1 $list_result result
-    set indent \
-    	[ gen::make_indent $depth ]
+    set indent [ gen::make_indent $depth ]
     lappend result "is"
-    if {[ lindex $body 0 ] == "##@@BEGIN_IS@@##"} {
+    set i 0
+    set first [ lindex $body $i ]
+    if {$first == "##@@BEGIN_IS@@##"} {
+        incr i
         lassign \
-        [ collect_until $body 1 "##@@END_IS@@##" ] \
+        [ collect_until $body $i "##@@END_IS@@##" 0 ] \
         i lines
         foreach line $lines {
             lappend result "${indent}$line"
-        }
-        set body [lrange $body $i+1 end]
-    }
-    return $body
-}
-
-proc handle_when { list_result body depth } {
-    upvar 1 $list_result result
-    set indent [ gen::make_indent $depth ]
-    set next_depth [ expr { $depth + 1 } ]
-    set indent_next [ gen::make_indent $next_depth ]
-    set first [ lindex $body 0 ]
-    if {[ string trimleft $first ] == "##@@BEGIN_WHEN@@##"} {
-        lassign \
-        [ collect_until $body 1 "##@@END_WHEN@@##" ] \
-        i lines
-        set nlines [ llength $lines ]
-        set j 0
-        while { 1 } {
-            if {$j < $nlines} {
-                
-            } else {
-                break
-            }
-            set line [ string trimleft [ lindex $lines $j ] ]
-            if {$j == 0} {
-                lappend result "${indent}when $line"
-            } else {
-                lappend result "${indent_next}$line"
-            }
-            incr j
         }
         set body [lrange $body $i+1 end]
     }
@@ -978,6 +947,32 @@ proc incr_indent { ind d } {
     set indent [ gen::make_indent $depth ]
 }
 
+proc indent_group { lines prefix depth semicolon } {
+    set result {}
+    set indent [ gen::make_indent $depth ]
+    set nlines [ llength $lines ]
+    set i 0
+    while { 1 } {
+        if {$i < $nlines} {
+            
+        } else {
+            break
+        }
+        set current [ lindex $lines $i ]
+        if {$i == 0} {
+            set line "${indent}$prefix $current"
+        } else {
+            set line "${indent}$current"
+        }
+        if {$semicolon && $i == $nlines - 1} {
+            append line ";"
+        }
+        lappend result $line
+        incr i
+    }
+    return $result
+}
+
 proc init_description { filename } {
     set result {}
     set pkgname [ package_name $filename ]
@@ -1002,11 +997,13 @@ proc is_empty_spec { components header footer } {
 }
 
 proc loop_statement { name body depth } {
-    set result {}
     set indent [ gen::make_indent $depth ]
     set next_depth [ expr { $depth + 1 } ]
-    set body \
-    	[ handle_when result $body $next_depth ]
+    lassign \
+    [ extract_when $body ] \
+    body when_lines
+    set result [ indent_group \
+    	$when_lines "when" $next_depth 0 ]
     lappend result "${indent}loop"
     set result [ concat $result $body ]
     if {$name == ""} {
@@ -1521,7 +1518,7 @@ proc parse_body { body depth } {
         if {$line == "##@@BEGIN_DECLARE@@##"} {
             incr i
             lassign \
-            [ collect_until $body $i "##@@END_DECLARE@@##" ] \
+            [ collect_until $body $i "##@@END_DECLARE@@##" 0 ] \
             i lines
             lappend result "${indent}declare"
             incr_indent indent depth
@@ -1535,7 +1532,7 @@ proc parse_body { body depth } {
             if {$line == "##@@BEGIN_END@@##"} {
                 incr i
                 lassign \
-                [ collect_until $body $i "##@@END_END@@##" ] \
+                [ collect_until $body $i "##@@END_END@@##" 0 ] \
                 i lines
                 if {[ llength $lines ] > 0} {
                     set name [ lindex $lines 0 ]
@@ -1549,7 +1546,7 @@ proc parse_body { body depth } {
                 if {$line == "##@@BEGIN_WITH@@##"} {
                     incr i
                     lassign \
-                    [ collect_until $body $i "##@@END_WITH@@##" ] \
+                    [ collect_until $body $i "##@@END_WITH@@##" 0 ] \
                     i lines
                     if {[ llength $lines ] == 1} {
                         set first [ lindex $lines 0 ]
@@ -1564,7 +1561,7 @@ proc parse_body { body depth } {
                     if {$line == "##@@BEGIN_RECORD@@##"} {
                         incr i
                         lassign \
-                        [ collect_until $body $i "##@@END_RECORD@@##" ] \
+                        [ collect_until $body $i "##@@END_RECORD@@##" 0 ] \
                         i lines
                         if {[ lindex $lines 0 ] == "null"} {
                             lappend result "${indent}null record"
@@ -1628,21 +1625,20 @@ proc print_node_core { texts node callbacks depth } {
         }
         set current [ lindex $node $i ]
         if {[ string is integer $current ]} {
-            set text [ tab_convert $tab_convert \
-            	[ gen::get_text_lines $texts $current ] ]
+            set text [ gen::get_text_lines $texts $current ]
+            set text [ tab_convert $tab_convert $text ]
             set parts [ split $text "\n" ]
             foreach part $parts {
-                set line $indent$part
-                lappend result $line
+                lappend result "${indent}$part"
             }
         } else {
             set _sw17540000_ [ lindex $current 0 ]
             if {$_sw17540000_ == "if"} {
                 set cond_item [ lindex $current 1 ]
-                set cond_text [ tab_convert $tab_convert \
-                	[ gen::get_text_lines $texts $cond_item ] ]
+                set cond_text [ gen::get_text_lines $texts $cond_item ]
+                set cond_text [ tab_convert $tab_convert $cond_text ]
                 set cond [ gen::condition_line $callbacks $cond_text ]
-                lappend result $indent$cond
+                lappend result "${indent}$cond"
                 set then_node [ lindex $current 3 ]
                 set else_node [ lindex $current 2 ]
                 set then [ print_node_core \
@@ -1670,16 +1666,17 @@ proc print_node_core { texts node callbacks depth } {
                     }
                     set body [ print_node_core \
                     	$texts $current $callbacks $next_depth ]
-                    set result [ concat $result \
-                    	[ loop_statement $name $body $depth ] ]
+                    set loop_stmt [ loop_statement $name $body $depth ]
+                    set result [ concat $result $loop_stmt ]
                 } else {
                     if {$_sw17540000_ == "exit"} {
                         set cond_item [ lindex $current 1 ]
                         set negate [ lindex $current 2 ]
-                        set cond_text [ tab_convert $tab_convert \
-                        	[ gen::get_text_lines $texts $cond_item ] ]
-                        set body [ exit_cond $cond_text $negate $indent ]
-                        set result [ concat $result $body ]
+                        set cond_text [ gen::get_text_lines $texts $cond_item ]
+                        set cond_text [ tab_convert $tab_convert $cond_text ]
+                        set exit_stmt [ exit_statement \
+                        	$cond_text $negate $depth ]
+                        set result [ concat $result $exit_stmt ]
                     } else {
                         if {$_sw17540000_ == "break"} {
                             lappend result "${indent}exit;"
@@ -2057,6 +2054,10 @@ proc undo_monkey_patch { } {
     set direction "reverse"
     monkey_patch_gen $direction
     monkey_patch_nogoto $direction
+}
+
+proc unindent { str } {
+    return [ string trimleft $str ]
 }
 
 proc when_line { cond_text } {
