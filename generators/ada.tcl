@@ -263,7 +263,7 @@ proc collect_until { lines start until } {
             break
         }
         set current [ lindex $lines $i ]
-        if {$current == $until} {
+        if {[ string trimleft $current ] == $until} {
             break
         }
         lappend result $current
@@ -783,6 +783,37 @@ proc handle_is { list_result body depth } {
     return $body
 }
 
+proc handle_when { list_result body depth } {
+    upvar 1 $list_result result
+    set indent [ gen::make_indent $depth ]
+    set next_depth [ expr { $depth + 1 } ]
+    set indent_next [ gen::make_indent $next_depth ]
+    set first [ lindex $body 0 ]
+    if {[ string trimleft $first ] == "##@@BEGIN_WHEN@@##"} {
+        lassign \
+        [ collect_until $body 1 "##@@END_WHEN@@##" ] \
+        i lines
+        set nlines [ llength $lines ]
+        set j 0
+        while { 1 } {
+            if {$j < $nlines} {
+                
+            } else {
+                break
+            }
+            set line [ string trimleft [ lindex $lines $j ] ]
+            if {$j == 0} {
+                lappend result "${indent}when $line"
+            } else {
+                lappend result "${indent_next}$line"
+            }
+            incr j
+        }
+        set body [lrange $body $i+1 end]
+    }
+    return $body
+}
+
 proc highlight { tokens } {
     variable ada_keywords
     variable ada_types
@@ -970,8 +1001,12 @@ proc is_empty_spec { components header footer } {
     return 0
 }
 
-proc loop_statement { name body indent } {
+proc loop_statement { name body depth } {
     set result {}
+    set indent [ gen::make_indent $depth ]
+    set next_depth [ expr { $depth + 1 } ]
+    set body \
+    	[ handle_when result $body $next_depth ]
     lappend result "${indent}loop"
     set result [ concat $result $body ]
     if {$name == ""} {
@@ -1300,41 +1335,48 @@ proc p.shelf { primary secondary } {
     if {$_sw11330000_ == "array"} {
         set result "array $primary"
     } else {
-        if {$_sw11330000_ == "record"} {
-            lappend lines "##@@BEGIN_RECORD@@##"
+        if {$_sw11330000_ == "when"} {
+            lappend lines "##@@BEGIN_WHEN@@##"
             set lines [ concat $lines $plines ]
-            lappend lines "##@@END_RECORD@@##"
+            lappend lines "##@@END_WHEN@@##"
             set result [ join $lines "\n" ]
         } else {
-            if {$_sw11330000_ == "is"} {
-                lappend lines "##@@BEGIN_IS@@##"
+            if {$_sw11330000_ == "record"} {
+                lappend lines "##@@BEGIN_RECORD@@##"
                 set lines [ concat $lines $plines ]
-                lappend lines "##@@END_IS@@##"
+                lappend lines "##@@END_RECORD@@##"
                 set result [ join $lines "\n" ]
             } else {
-                if {$_sw11330000_ == "with"} {
-                    lappend lines "##@@BEGIN_WITH@@##"
+                if {$_sw11330000_ == "is"} {
+                    lappend lines "##@@BEGIN_IS@@##"
                     set lines [ concat $lines $plines ]
-                    lappend lines "##@@END_WITH@@##"
+                    lappend lines "##@@END_IS@@##"
                     set result [ join $lines "\n" ]
                 } else {
-                    if {$_sw11330000_ == "declare"} {
-                        set name [ lindex $sterms 1 ]
-                        if {$name != ""} {
-                            lappend lines "$name :"
-                        }
-                        lappend lines "##@@BEGIN_DECLARE@@##"
+                    if {$_sw11330000_ == "with"} {
+                        lappend lines "##@@BEGIN_WITH@@##"
                         set lines [ concat $lines $plines ]
-                        lappend lines "##@@END_DECLARE@@##"
+                        lappend lines "##@@END_WITH@@##"
                         set result [ join $lines "\n" ]
                     } else {
-                        if {$_sw11330000_ == "end"} {
-                            lappend lines "##@@BEGIN_END@@##"
-                            append_notempty lines $primary
-                            lappend lines "##@@END_END@@##"
+                        if {$_sw11330000_ == "declare"} {
+                            set name [ lindex $sterms 1 ]
+                            if {$name != ""} {
+                                lappend lines "$name :"
+                            }
+                            lappend lines "##@@BEGIN_DECLARE@@##"
+                            set lines [ concat $lines $plines ]
+                            lappend lines "##@@END_DECLARE@@##"
                             set result [ join $lines "\n" ]
                         } else {
-                            set result $primary
+                            if {$_sw11330000_ == "end"} {
+                                lappend lines "##@@BEGIN_END@@##"
+                                append_notempty lines $primary
+                                lappend lines "##@@END_END@@##"
+                                set result [ join $lines "\n" ]
+                            } else {
+                                set result $primary
+                            }
                         }
                     }
                 }
@@ -1629,7 +1671,7 @@ proc print_node_core { texts node callbacks depth } {
                     set body [ print_node_core \
                     	$texts $current $callbacks $next_depth ]
                     set result [ concat $result \
-                    	[ loop_statement $name $body $indent ] ]
+                    	[ loop_statement $name $body $depth ] ]
                 } else {
                     if {$_sw17540000_ == "exit"} {
                         set cond_item [ lindex $current 1 ]
