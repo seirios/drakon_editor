@@ -266,11 +266,11 @@ proc collect_until { lines start until do_unindent } {
         if {[ unindent $current ] == $until} {
             break
         }
+        set line $current
         if {$do_unindent} {
-            lappend result [ unindent $current ]
-        } else {
-            lappend result $current
+            set line [ unindent $line ]
         }
+        lappend result $line
         incr i
     }
     return [ list $i $result ]
@@ -329,9 +329,21 @@ proc exit_statement { cond_text negate depth } {
         }
         set cond_lines [ split $cond_text "\n" ]
         set result [ indent_group \
-        	$cond_lines "exit when" $depth 1 ]
+        	$cond_lines "exit when" $depth ";" ]
     }
     return $result
+}
+
+proc extract_is { body } {
+    lassign \
+    [ multi_extract $body 0 \
+    	"##@@BEGIN_IS@@##" "##@@END_IS@@##" 0 ] \
+    i is_lines
+    set lines [ join_lists $is_lines "" ]
+    if {$i > 0} {
+        set body [lrange $body $i end]
+    }
+    return [ list $body $lines ]
 }
 
 proc extract_signature { text name } {
@@ -494,15 +506,13 @@ proc extract_signature { text name } {
 }
 
 proc extract_when { body } {
-    set lines {}
-    set i 0
-    set first [ lindex $body $i ]
-    if {[ unindent $first ] == "##@@BEGIN_WHEN@@##"} {
-        incr i
-        lassign \
-        [ collect_until $body $i "##@@END_WHEN@@##" 1 ] \
-        i lines
-        set body [lrange $body $i+1 end]
+    lassign \
+    [ multi_extract $body 0 \
+    	"##@@BEGIN_WHEN@@##" "##@@END_WHEN@@##" 1 ] \
+    i when_lines
+    set lines [ join_lists $when_lines " and then" ]
+    if {$i > 0} {
+        set body [lrange $body $i end]
     }
     return [ list $body $lines ]
 }
@@ -764,25 +774,6 @@ proc generate_item { db item_id parent_loop } {
     }
 }
 
-proc handle_is { list_result body depth } {
-    upvar 1 $list_result result
-    set indent [ gen::make_indent $depth ]
-    lappend result "is"
-    set i 0
-    set first [ lindex $body $i ]
-    if {$first == "##@@BEGIN_IS@@##"} {
-        incr i
-        lassign \
-        [ collect_until $body $i "##@@END_IS@@##" 0 ] \
-        i lines
-        foreach line $lines {
-            lappend result "${indent}$line"
-        }
-        set body [lrange $body $i+1 end]
-    }
-    return $body
-}
-
 proc highlight { tokens } {
     variable ada_keywords
     variable ada_types
@@ -947,9 +938,12 @@ proc incr_indent { ind d } {
     set indent [ gen::make_indent $depth ]
 }
 
-proc indent_group { lines prefix depth semicolon } {
+proc indent_group { lines prefix depth endchar } {
     set result {}
     set indent [ gen::make_indent $depth ]
+    set next_depth [ expr { $depth + 1 } ]
+    set indent_next \
+    	[ gen::make_indent $next_depth ]
     set nlines [ llength $lines ]
     set i 0
     while { 1 } {
@@ -962,10 +956,10 @@ proc indent_group { lines prefix depth semicolon } {
         if {$i == 0} {
             set line "${indent}$prefix $current"
         } else {
-            set line "${indent}$current"
+            set line "${indent_next}$current"
         }
-        if {$semicolon && $i == $nlines - 1} {
-            append line ";"
+        if {$endchar != "" && $i == $nlines - 1} {
+            append line $endchar
         }
         lappend result $line
         incr i
@@ -996,6 +990,31 @@ proc is_empty_spec { components header footer } {
     return 0
 }
 
+proc join_lists { list_of_lists separator } {
+    set result {}
+    set nli [ llength $list_of_lists ]
+    set lastli [ expr { $nli - 1 } ]
+    set i 0
+    while { 1 } {
+        if {$i < $nli} {
+            
+        } else {
+            break
+        }
+        set lines [ lindex $list_of_lists $i ]
+        if {$separator != "" && $i != $lastli} {
+            set nlines [ llength $lines ]
+            set last [ expr { $nlines - 1 } ]
+            set last_line [ lindex $lines $last ]
+            set last_line "$last_line$separator"
+            set lines [ lreplace $lines $last $last $last_line ]
+        }
+        set result [ concat $result $lines ]
+        incr i
+    }
+    return $result
+}
+
 proc loop_statement { name body depth } {
     set indent [ gen::make_indent $depth ]
     set next_depth [ expr { $depth + 1 } ]
@@ -1003,7 +1022,7 @@ proc loop_statement { name body depth } {
     [ extract_when $body ] \
     body when_lines
     set result [ indent_group \
-    	$when_lines "when" $next_depth 0 ]
+    	$when_lines "when" $next_depth "" ]
     lappend result "${indent}loop"
     set result [ concat $result $body ]
     if {$name == ""} {
@@ -1095,6 +1114,26 @@ proc monkey_patch_nogoto { direction } {
     	::nogoto::select_ifs \
     	::nogoto::find_if_end_impl ]
     monkey_patch $direction $functions
+}
+
+proc multi_extract { body ifirst beginstr endstr do_unindent } {
+    set lines {}
+    set i $ifirst
+    while { 1 } {
+        set first [ lindex $body $i ]
+        if {[ unindent $first ] == $beginstr} {
+            
+        } else {
+            break
+        }
+        incr i
+        lassign \
+        [ collect_until $body $i $endstr $do_unindent ] \
+        i extracted
+        incr i
+        lappend lines $extracted
+    }
+    return [ list $i $lines ]
 }
 
 proc p.and { left right } {
@@ -1544,18 +1583,14 @@ proc parse_body { body depth } {
                 lappend result "${indent}end${name};"
             } else {
                 if {$line == "##@@BEGIN_WITH@@##"} {
-                    incr i
                     lassign \
-                    [ collect_until $body $i "##@@END_WITH@@##" 0 ] \
-                    i lines
-                    if {[ llength $lines ] == 1} {
-                        set first [ lindex $lines 0 ]
-                        lappend result "${indent}with $first"
-                    } else {
-                        lappend result "${indent}with"
-                        foreach line $lines {
-                            lappend result "${indent}$line"
-                        }
+                    [ multi_extract $body $i \
+                    	"##@@BEGIN_WITH@@##" "##@@END_WITH@@##" 0 ] \
+                    i with_lines
+                    set lines [ join_lists $with_lines "," ]
+                    set lines [ indent_group $lines "with" $depth "" ]
+                    foreach line $lines {
+                        lappend result $line
                     }
                 } else {
                     if {$line == "##@@BEGIN_RECORD@@##"} {
@@ -1851,8 +1886,13 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract overrid
         lappend result "is abstract"
     } else {
         if {$print_body} {
-            set body [ handle_is \
-            	result $body $depth ]
+            lassign \
+            [ extract_is $body ] \
+            body is_lines
+            lappend result "is"
+            foreach line $is_lines {
+                lappend result "${indent}$line"
+            }
             set body \
             	[ parse_body $body $depth ]
             lappend result "begin"
@@ -2004,6 +2044,20 @@ proc select_ifs_and_cases { db } {
     	from nodes
     	where type = 'if'
     	   or type = 'case' } ]
+}
+
+proc single_extract { body ifirst beginstr endstr do_unindent } {
+    set lines {}
+    set i $ifirst
+    set first [ lindex $body $i ]
+    if {[ unindent $first ] == $beginstr} {
+        incr i
+        lassign \
+        [ collect_until $body $i $endstr $do_unindent ] \
+        i lines
+        incr i
+    }
+    return [ list $i $lines ]
 }
 
 proc standard_color { keywords kw_types type text } {
