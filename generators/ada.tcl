@@ -79,6 +79,7 @@ variable ada_keywords {
 	while
 	with
 	xor
+	enum
 }
 
 variable ada_types {
@@ -1366,52 +1367,61 @@ proc p.shelf { primary secondary } {
     set lines {}
     set plines [ split $primary "\n" ]
     set sterms [ split $secondary " " ]
-    set indent [ gen::make_indent 1 ]
     set _sw11330000_ [ lindex $sterms 0 ]
     if {$_sw11330000_ == "array"} {
         set result "array $primary"
     } else {
-        if {$_sw11330000_ == "when"} {
-            lappend lines "##@@BEGIN_WHEN@@##"
-            set lines [ concat $lines $plines ]
-            lappend lines "##@@END_WHEN@@##"
-            set result [ join $lines "\n" ]
+        if {$_sw11330000_ == "new"} {
+            set result "new $primary"
         } else {
-            if {$_sw11330000_ == "record"} {
-                lappend lines "##@@BEGIN_RECORD@@##"
-                set lines [ concat $lines $plines ]
-                lappend lines "##@@END_RECORD@@##"
-                set result [ join $lines "\n" ]
+            if {$_sw11330000_ == "enum"} {
+                set values [ join $plines ", " ]
+                set result "($values)"
             } else {
-                if {$_sw11330000_ == "is"} {
-                    lappend lines "##@@BEGIN_IS@@##"
+                if {$_sw11330000_ == "when"} {
+                    lappend lines "##@@BEGIN_WHEN@@##"
                     set lines [ concat $lines $plines ]
-                    lappend lines "##@@END_IS@@##"
+                    lappend lines "##@@END_WHEN@@##"
                     set result [ join $lines "\n" ]
                 } else {
-                    if {$_sw11330000_ == "with"} {
-                        lappend lines "##@@BEGIN_WITH@@##"
+                    if {$_sw11330000_ == "record"} {
+                        lappend lines "##@@BEGIN_RECORD@@##"
                         set lines [ concat $lines $plines ]
-                        lappend lines "##@@END_WITH@@##"
+                        lappend lines "##@@END_RECORD@@##"
                         set result [ join $lines "\n" ]
                     } else {
-                        if {$_sw11330000_ == "declare"} {
-                            set name [ lindex $sterms 1 ]
-                            if {$name != ""} {
-                                lappend lines "$name :"
-                            }
-                            lappend lines "##@@BEGIN_DECLARE@@##"
+                        if {$_sw11330000_ == "is"} {
+                            lappend lines "##@@BEGIN_IS@@##"
                             set lines [ concat $lines $plines ]
-                            lappend lines "##@@END_DECLARE@@##"
+                            lappend lines "##@@END_IS@@##"
                             set result [ join $lines "\n" ]
                         } else {
-                            if {$_sw11330000_ == "end"} {
-                                lappend lines "##@@BEGIN_END@@##"
-                                append_notempty lines $primary
-                                lappend lines "##@@END_END@@##"
+                            if {$_sw11330000_ == "with"} {
+                                lappend lines "##@@BEGIN_WITH@@##"
+                                set lines [ concat $lines $plines ]
+                                lappend lines "##@@END_WITH@@##"
                                 set result [ join $lines "\n" ]
                             } else {
-                                set result $primary
+                                if {$_sw11330000_ == "declare"} {
+                                    set name [ lindex $sterms 1 ]
+                                    if {$name != ""} {
+                                        lappend lines "$name :"
+                                    }
+                                    lappend lines "##@@BEGIN_DECLARE@@##"
+                                    set lines [ concat $lines $plines ]
+                                    lappend lines "##@@END_DECLARE@@##"
+                                    set result [ join $lines "\n" ]
+                                } else {
+                                    if {$_sw11330000_ == "end"} {
+                                        
+                                    } else {
+                                        error "Unexpected switch value: $_sw11330000_"
+                                    }
+                                    lappend lines "##@@BEGIN_END@@##"
+                                    append_notempty lines $primary
+                                    lappend lines "##@@END_END@@##"
+                                    set result [ join $lines "\n" ]
+                                }
                             }
                         }
                     }
