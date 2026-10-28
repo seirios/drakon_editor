@@ -363,10 +363,25 @@ proc swap_selected { } {
 		
 	if { $count == 0 } { return }
 
-	lassign [ $db eval { select item_id, type from items
-		where diagram_id = :diagram_id and selected = 1 } ] item_id type
+	set item_ids [ $db eval { select item_id from items
+		where diagram_id = :diagram_id and selected = 1 } ]
 
-	mwc::swap_item $item_id
+	# Swap multiple items only if all actions or shelves
+	if { $count > 1 } {
+		set item_types [ $db eval { select type from items
+			where diagram_id = :diagram_id and selected = 1 } ]
+		set type [ lindex $item_types 0 ]
+		if { $type != "action" && $type != "shelf" } { return }
+		set actions [ lsearch -exact -all $item_types "action" ]
+		set shelves [ lsearch -exact -all $item_types "shelf" ]
+		if { [ llength $actions ] + [ llength $shelves ] == [ llength $item_types ] } {
+			foreach id $item_ids {
+				mwc::swap_item $id
+			}
+		}
+	} else {
+		mwc::swap_item [ lindex $item_ids 0 ]
+	}
 }
 
 proc adjust_sizes { } {
