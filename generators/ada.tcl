@@ -1984,13 +1984,17 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract overrid
             lassign \
             [ extract_is $body ] \
             body is_lines
-            lappend result "is"
-            foreach line $is_lines {
-                lappend result "${indent}$line"
+            if {[ llength $is_lines ] == 0} {
+                lappend result "is begin"
+            } else {
+                lappend result "is"
+                foreach line $is_lines {
+                    lappend result "${indent}$line"
+                }
+                lappend result "begin"
             }
             set body [ parse_body \
             	$body $depth $name ]
-            lappend result "begin"
             foreach line $body {
                 lappend result $line
             }
