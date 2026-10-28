@@ -290,6 +290,7 @@
 ::msgcat::mcset es "Tidy up all diagrams" "Acomodar todos los diagramas"
 ::msgcat::mcset es "Tidy up" "Acomodar"
 ::msgcat::mcset es "Timer" "Temporizador"
+::msgcat::mcset es "Toggle active" "Activar/desactivar"
 ::msgcat::mcset es "Too many 'begin' icons." "Demasiados elementos de 'inicio'."
 ::msgcat::mcset es "Two icons at the same position." "Dos elementos en la misma posición."
 ::msgcat::mcset es "Undo: \$name" "Deshacer: \$name"

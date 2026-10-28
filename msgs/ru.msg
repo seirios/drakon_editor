@@ -290,6 +290,7 @@
 ::msgcat::mcset ru "Tidy up all diagrams" "Выровнять все диаграммы"
 ::msgcat::mcset ru "Tidy up" "Выровнять диаграмму"
 ::msgcat::mcset ru "Timer" "Таймер"
+::msgcat::mcset ru "Toggle active" "Включить/выключить"
 ::msgcat::mcset ru "Too many 'begin' icons." "Слишком много икон 'начало'."
 ::msgcat::mcset ru "Two icons at the same position." "Две иконы на одном месте."
 ::msgcat::mcset ru "Undo: \$name" "Отменить: \$name"
