@@ -357,7 +357,8 @@ proc extract_is { body } {
 }
 
 proc extract_signature { text name } {
-    array set props { abstract 0 \
+    array set props { \
+    	abstract 0 \
     	access static \
     	inline 0 \
     	order 0 \
@@ -393,119 +394,123 @@ proc extract_signature { text name } {
     } else {
         set first_line [ lindex $lines 0 ]
         set first [ lindex $first_line 0 ]
-        set keywords { 
-        	abstract inline
-        	not_overriding overriding
-        	ord-1 ord-2
-        	public private protected
-        	subtype type
-        	tagged }
-        set found_keywords \
-         [ find_keywords $first $keywords ]
-        if {[ llength $found_keywords ] == 0} {
-            set start_index 0
-            set count [ llength $lines ]
-            set last [ expr { $count - 1 } ]
-            set i $start_index
-            while { 1 } {
-                if {$i < $count} {
-                    
-                } else {
-                    break
-                }
-                set current [ lindex $lines $i ]
-                set stripped [ lindex $current 0 ]
-                if {[ string match "returns *" $stripped ]} {
-                    if {$i == $last} {
-                        set returns [ \
-                        	gen::extract_return_type $stripped ]
-                    } else {
-                        set error_message \
-                        "$name: 'returns' can only be the last line."
-                    }
-                    break
-                }
-                lappend parameters $current
-                incr i
-            }
-            if {$type == "subprogram"} {
-                if {$returns == ""} {
-                    set props(subtype) "procedure"
-                } else {
-                    set props(subtype) "function"
-                }
-            } else {
-                if {$type == "type"} {
-                    set props(subtype) "type"
-                } else {
-                    if {$type == "subtype"} {
+        if {$first == "#comment"} {
+            set type "comment"
+        } else {
+            set keywords { 
+            	abstract inline
+            	not_overriding overriding
+            	ord-1 ord-2
+            	public private protected
+            	subtype type
+            	tagged }
+            set found_keywords \
+             [ find_keywords $first $keywords ]
+            if {[ llength $found_keywords ] == 0} {
+                set start_index 0
+                set count [ llength $lines ]
+                set last [ expr { $count - 1 } ]
+                set i $start_index
+                while { 1 } {
+                    if {$i < $count} {
                         
                     } else {
-                        error "Unexpected switch value: $type"
+                        break
                     }
-                    set props(subtype) "subtype"
+                    set current [ lindex $lines $i ]
+                    set stripped [ lindex $current 0 ]
+                    if {[ string match "returns *" $stripped ]} {
+                        if {$i == $last} {
+                            set returns [ \
+                            	gen::extract_return_type $stripped ]
+                        } else {
+                            set error_message \
+                            "$name: 'returns' can only be the last line."
+                        }
+                        break
+                    }
+                    lappend parameters $current
+                    incr i
                 }
-                set type "type"
-            }
-        } else {
-            set start_index 1
-            set alien_keywords \
-             [ find_not_belonging $first $keywords ]
-            if {[ llength $alien_keywords ] == 0} {
-                lassign \
-                [ classify_keywords $found_keywords $name ] \
-                error_message prop_list
-                if {$error_message == ""} {
-                    array unset props
-                    array set props $prop_list
-                    set type $props(subtype)
-                    set count [ llength $lines ]
-                    set last [ expr { $count - 1 } ]
-                    set i $start_index
-                    while { 1 } {
-                        if {$i < $count} {
+                if {$type == "subprogram"} {
+                    if {$returns == ""} {
+                        set props(subtype) "procedure"
+                    } else {
+                        set props(subtype) "function"
+                    }
+                } else {
+                    if {$type == "type"} {
+                        set props(subtype) "type"
+                    } else {
+                        if {$type == "subtype"} {
                             
                         } else {
-                            break
+                            error "Unexpected switch value: $type"
                         }
-                        set current [ lindex $lines $i ]
-                        set stripped [ lindex $current 0 ]
-                        if {[ string match "returns *" $stripped ]} {
-                            if {$i == $last} {
-                                set returns [ \
-                                	gen::extract_return_type $stripped ]
-                            } else {
-                                set error_message \
-                                "$name: 'returns' can only be the last line."
-                            }
-                            break
-                        }
-                        lappend parameters $current
-                        incr i
+                        set props(subtype) "subtype"
                     }
-                    if {$type == "subprogram"} {
-                        if {$returns == ""} {
-                            set props(subtype) "procedure"
-                        } else {
-                            set props(subtype) "function"
-                        }
-                    } else {
-                        if {$type == "type"} {
-                            set props(subtype) "type"
-                        } else {
-                            if {$type == "subtype"} {
-                                
-                            } else {
-                                error "Unexpected switch value: $type"
-                            }
-                            set props(subtype) "subtype"
-                        }
-                        set type "type"
-                    }
+                    set type "type"
                 }
             } else {
-                set error_message \
-                    "$name: Unexpected keywords: $alien_keywords"
+                set start_index 1
+                set alien_keywords \
+                 [ find_not_belonging $first $keywords ]
+                if {[ llength $alien_keywords ] == 0} {
+                    lassign \
+                    [ classify_keywords $found_keywords $name ] \
+                    error_message prop_list
+                    if {$error_message == ""} {
+                        array unset props
+                        array set props $prop_list
+                        set type $props(subtype)
+                        set count [ llength $lines ]
+                        set last [ expr { $count - 1 } ]
+                        set i $start_index
+                        while { 1 } {
+                            if {$i < $count} {
+                                
+                            } else {
+                                break
+                            }
+                            set current [ lindex $lines $i ]
+                            set stripped [ lindex $current 0 ]
+                            if {[ string match "returns *" $stripped ]} {
+                                if {$i == $last} {
+                                    set returns [ \
+                                    	gen::extract_return_type $stripped ]
+                                } else {
+                                    set error_message \
+                                    "$name: 'returns' can only be the last line."
+                                }
+                                break
+                            }
+                            lappend parameters $current
+                            incr i
+                        }
+                        if {$type == "subprogram"} {
+                            if {$returns == ""} {
+                                set props(subtype) "procedure"
+                            } else {
+                                set props(subtype) "function"
+                            }
+                        } else {
+                            if {$type == "type"} {
+                                set props(subtype) "type"
+                            } else {
+                                if {$type == "subtype"} {
+                                    
+                                } else {
+                                    error "Unexpected switch value: $type"
+                                }
+                                set props(subtype) "subtype"
+                            }
+                            set type "type"
+                        }
+                    }
+                } else {
+                    set error_message \
+                        "$name: Unexpected keywords: $alien_keywords"
+                }
             }
         }
     }
@@ -787,106 +792,50 @@ proc generate_item { db item_id parent_loop } {
 proc highlight { tokens } {
     variable ada_keywords
     variable ada_types
+    set tokens [ preprocess_tokens $tokens ]
     return [ highlight_generic $ada_keywords $ada_types $tokens ]
 }
 
 proc highlight_generic { keywords kw_types tokens } {
     set result {}
     set state "idle"
-    foreach token $tokens {
+    set ntok [ llength $tokens ]
+    set i 0
+    while { 1 } {
+        if {$i < $ntok} {
+            
+        } else {
+            break
+        }
+        set token [ lindex $tokens $i ]
+        set inext [ expr { $i + 1 } ]
+        set lookahead [ lindex $tokens $inext ]
         lassign \
         $token \
         type text
         if {$state == "idle"} {
-            set state \
-            [ idle_default $keywords $kw_types result $type $text ]
+            set state [ idle_default $keywords $kw_types \
+            	result $type $text $lookahead ]
         } else {
             if {$state == "string"} {
                 lappend result $colors::syntax_string
-                if {$text == "\""} {
+                if {($text == "\"") || ($text == "\n")} {
                     set state "idle"
-                } else {
-                    if {$text == "\\"} {
-                        set state "escaping"
-                    } else {
-                        if {$text == "\n"} {
-                            set state "idle"
-                        }
-                    }
                 }
             } else {
-                if {$state == "escaping"} {
-                    lappend result $colors::syntax_string
-                    if {$text == "\n"} {
-                        set state "idle"
-                    } else {
-                        set state "string"
-                    }
+                if {$state == "comment line"} {
+                    
                 } else {
-                    if {$state == "comment start"} {
-                        if {$text == "-"} {
-                            set state "comment line"
-                            lappend result $colors::syntax_comment \
-                            	$colors::syntax_comment
-                        } else {
-                            lappend result $colors::syntax_operator
-                            set state \
-                            [ idle_default $keywords $kw_types result $type $text ]
-                        }
-                    } else {
-                        if {$state == "comment line"} {
-                            lappend result \
-                            	$colors::syntax_comment
-                            if {$text == "\n"} {
-                                set state "idle"
-                            }
-                        } else {
-                            if {$state == "char"} {
-                                if {$text == "'"} {
-                                    lappend result \
-                                    	$colors::syntax_string
-                                    set state "idle"
-                                } else {
-                                    if {$text == "\\"} {
-                                        lappend result \
-                                        	$colors::syntax_string
-                                        set state "char escaping"
-                                    } else {
-                                        if {$text == "\n"} {
-                                            lappend result \
-                                            	$colors::syntax_string
-                                            set state "idle"
-                                        } else {
-                                            if {$text == "("} {
-                                                lappend result \
-                                                	$colors::syntax_operator
-                                                set state "idle"
-                                            } else {
-                                                lappend result \
-                                                	$colors::syntax_string
-                                            }
-                                        }
-                                    }
-                                }
-                            } else {
-                                if {$state == "char escaping"} {
-                                    
-                                } else {
-                                    error "Unexpected switch value: $state"
-                                }
-                                lappend result \
-                                  $colors::syntax_string
-                                if {$text == "\n"} {
-                                    set state "idle"
-                                } else {
-                                    set state "char"
-                                }
-                            }
-                        }
-                    }
+                    error "Unexpected switch value: $state"
+                }
+                lappend result \
+                	$colors::syntax_comment
+                if {$text == "\n"} {
+                    set state "idle"
                 }
             }
         }
+        incr i
     }
     if {$state == "comment start"} {
         lappend result $colors::syntax_operator
@@ -894,23 +843,44 @@ proc highlight_generic { keywords kw_types tokens } {
     return $result
 }
 
-proc idle_default { keywords kw_types result_name type text } {
+proc idle_default { keywords kw_types result_name type text lookahead } {
     upvar 1 $result_name result
+    set delims {
+    	"(" ")" "[" "]" ";" }
+    set consts {
+    	True False }
     if {$text == "\""} {
         lappend result $colors::syntax_string
         set state "string"
     } else {
-        if {$text == "'"} {
-            lappend result $colors::syntax_string
-            set state "char"
+        if {$text == "--"} {
+            lappend result \
+            	$colors::syntax_comment
+            set state "comment line"
         } else {
-            if {$text == "-"} {
-                set state "comment start"
+            if {$type == "token"} {
+                if {[contains $kw_types $text]} {
+                    set type "type"
+                } else {
+                    if {[contains $keywords $text]} {
+                        set type "keyword"
+                    } else {
+                        if {[contains $consts $text]} {
+                            set type "const"
+                        } else {
+                            set type "id"
+                        }
+                    }
+                }
             } else {
-                lappend result \
-                	[standard_color $keywords $kw_types $type $text]
-                set state "idle"
+                if {$type == "op" &&
+	[ contains $delims $text ]} {
+                    set type "delim"
+                }
             }
+            lappend result [standard_color \
+            	$keywords $kw_types $type $text]
+            set state "idle"
         }
     }
     return $state
@@ -1423,7 +1393,7 @@ proc p.shelf { primary secondary } {
                                 } else {
                                     if {$_sw11330000_ == "for"} {
                                         lappend lines "##@@BEGIN_FOR@@##"
-                                        lappend lines [ lindex $sterms 1 ]
+                                        lappend lines [ lrange $sterms 1 end ]
                                         set lines [ concat $lines $plines ]
                                         lappend lines "##@@END_FOR@@##"
                                         set result [ join $lines "\n" ]
@@ -1568,9 +1538,8 @@ proc package_name { filename } {
     return $name
 }
 
-proc parse_body { body depth } {
+proc parse_body { body depth name } {
     set result {}
-    set name ""
     set indent [ gen::make_indent $depth ]
     set nline [ llength $body ]
     set i 0
@@ -1601,13 +1570,13 @@ proc parse_body { body depth } {
                 [ collect_until $body $i "##@@END_END@@##" 0 ] \
                 i lines
                 if {[ llength $lines ] > 0} {
-                    set name [ lindex $lines 0 ]
-                    set name " $name"
+                    set loopname [ lindex $lines 0 ]
+                    set loopname " $loopname"
                 } else {
-                    set name ""
+                    set loopname ""
                 }
                 decr_indent indent depth
-                lappend result "${indent}end${name};"
+                lappend result "${indent}end${loopname};"
             } else {
                 if {$line == "##@@BEGIN_WITH@@##"} {
                     lassign \
@@ -1642,16 +1611,76 @@ proc parse_body { body depth } {
                             incr i
                             lassign \
                             [ collect_until $body $i "##@@END_FOR@@##" 0 ] \
-                            i lines
+                            i for_lines
                             add_last_semicolon result
-                            set line [ join $lines " " ]
-                            lappend result "for $line"
+                            set elem [ lindex $for_lines 0 ]
+                            set elem [ subst_at $elem $name ]
+                            set use_clause [ lrange $for_lines 1 end ]
+                            set lines [ join $use_clause " " ]
+                            lappend result "for $elem $lines"
                         } else {
                             lappend result "${indent}$line"
                         }
                     }
                 }
             }
+        }
+        incr i
+    }
+    return $result
+}
+
+proc preprocess_tokens { tokens } {
+    set result {}
+    set ntok [ llength $tokens ]
+    set i 0
+    while { 1 } {
+        if {$i < $ntok} {
+            
+        } else {
+            break
+        }
+        set token [ lindex $tokens $i ]
+        lassign \
+        $token \
+        type text
+        if {$type == "op"} {
+            set inext [ expr { $i + 1 } ]
+            set lookahead [ lindex $tokens $inext ]
+            lassign \
+            $lookahead \
+            lahtype lahtext
+            set inext2 [ expr { $i + 2 } ]
+            set lookahead2 [ lindex $tokens $inext2 ]
+            lassign \
+            $lookahead2 \
+            lahtype2 lahtext2
+            if {$text == "-" &&
+	$lahtype == "op" && $lahtext == "-"} {
+                incr i
+                set tok [ list $type "--" ]
+                lappend result $tok $tok
+            } else {
+                if {$text == "'" &&
+	$lahtype == "token" &&
+	$lahtext2 != "'"} {
+                    incr i
+                    set tok [ list "attr" $lahtext ]
+                    lappend result $token $tok
+                } else {
+                    if {$text == "'" &&
+	$lahtype == "token" &&
+	$lahtype2 == "op" && $lahtext2 == "'"} {
+                        incr i 2
+                        set tok [ list "char" $lahtext ]
+                        lappend result $tok $tok $tok
+                    } else {
+                        lappend result $token
+                    }
+                }
+            }
+        } else {
+            lappend result $token
         }
         incr i
     }
@@ -1931,8 +1960,8 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract overrid
             foreach line $is_lines {
                 lappend result "${indent}$line"
             }
-            set body \
-            	[ parse_body $body $depth ]
+            set body [ parse_body \
+            	$body $depth $name ]
             lappend result "begin"
             foreach line $body {
                 lappend result $line
@@ -2020,8 +2049,8 @@ proc print_type_kernel { fhandle depth type abstract tagged name body print_body
     }
     lappend result $line
     if {$print_body} {
-        set body \
-        	[ parse_body $body $depth ]
+        set body [ parse_body \
+        	$body $depth $name ]
         foreach line $body {
             lappend result $line
         }
@@ -2105,21 +2134,44 @@ proc standard_color { keywords kw_types type text } {
         if {$type == "number"} {
             return $colors::syntax_number
         } else {
-            if {$type == "token"} {
-                if {[contains $kw_types $text]} {
-                    return $colors::syntax_type
+            if {$type == "type"} {
+                return $colors::syntax_type
+            } else {
+                if {$type == "keyword"} {
+                    return $colors::syntax_keyword
                 } else {
-                    if {[contains $keywords $text]} {
-                        return $colors::syntax_keyword
+                    if {$type == "const"} {
+                        return $colors::syntax_number
                     } else {
-                        return $colors::syntax_identifier
+                        if {$type == "delim"} {
+                            return $colors::syntax_delimiter
+                        } else {
+                            if {$type == "char"} {
+                                return $colors::syntax_string
+                            } else {
+                                if {$type == "attr"} {
+                                    return $colors::syntax_call
+                                } else {
+                                    return $colors::syntax_identifier
+                                }
+                            }
+                        }
                     }
                 }
-            } else {
-                return $colors::syntax_identifier
             }
         }
     }
+}
+
+proc subst_at { str sub } {
+    set loc [ string first "@" $str ]
+    if {$loc == -1} {
+        
+    } else {
+        set str [string replace \
+        	$str $loc $loc $sub ]
+    }
+    return $str
 }
 
 proc tab_convert { convert_cb text } {

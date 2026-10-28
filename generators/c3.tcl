@@ -149,7 +149,7 @@ proc generate_cpp { db gdb filename } {
 proc highlight { tokens } {
     variable c3_keywords
     variable c3_types
-    set tokens [ process_ops $tokens ]
+    set tokens [ preprocess_tokens $tokens ]
     return [ highlight_generic $c3_keywords $c3_types $tokens ]
 }
 
@@ -547,6 +547,49 @@ proc pass { } {
     return ""
 }
 
+proc preprocess_tokens { tokens } {
+    set result {}
+    set ntok [ llength $tokens ]
+    set i 0
+    while { 1 } {
+        if {$i < $ntok} {
+            
+        } else {
+            break
+        }
+        set token [ lindex $tokens $i ]
+        lassign \
+        $token \
+        type text
+        if {$type == "op"} {
+            set inext [ expr { $i + 1 } ]
+            set lookahead [ lindex $tokens $inext ]
+            lassign \
+            $lookahead \
+            lahtype lahtext
+            if {$text == "-" &&
+	$lahtype == "op" && $lahtext == ">"} {
+                incr i
+                set tok [ list $type "->" ]
+                lappend result $tok $tok
+            } else {
+                if {$text == ":" &&
+	$lahtype == "op" && $lahtext == ":"} {
+                    incr i
+                    set tok [ list $type "::" ]
+                    lappend result $tok $tok
+                } else {
+                    lappend result $token
+                }
+            }
+        } else {
+            lappend result $token
+        }
+        incr i
+    }
+    return $result
+}
+
 proc print_header { filename fhandle functions ctrs dtrs methods signals slots header footer class copying class_name language structure globals } {
     gen_cpp::put_credits $fhandle
     set guard [ gen_c::guard_name $filename ]
@@ -607,49 +650,6 @@ proc print_header { filename fhandle functions ctrs dtrs methods signals slots h
     puts $fhandle $footer
     puts $fhandle "#endif"
     puts $fhandle ""
-}
-
-proc process_ops { tokens } {
-    set result {}
-    set ntok [ llength $tokens ]
-    set i 0
-    while { 1 } {
-        if {$i < $ntok} {
-            
-        } else {
-            break
-        }
-        set token [ lindex $tokens $i ]
-        lassign \
-        $token \
-        type text
-        if {$type == "op"} {
-            set inext [ expr { $i + 1 } ]
-            set lookahead [ lindex $tokens $inext ]
-            lassign \
-            $lookahead \
-            lahtype lahtext
-            if {$text == "-" &&
-	$lahtype == "op" && $lahtext == ">"} {
-                incr i
-                set tok [ list $type "->" ]
-                lappend result $tok $tok
-            } else {
-                if {$text == ":" &&
-	$lahtype == "op" && $lahtext == ":"} {
-                    incr i
-                    set tok [ list $type "::" ]
-                    lappend result $tok $tok
-                } else {
-                    lappend result $token
-                }
-            }
-        } else {
-            lappend result $token
-        }
-        incr i
-    }
-    return $result
 }
 
 proc return_none { } {
