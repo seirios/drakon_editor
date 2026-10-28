@@ -1986,19 +1986,29 @@ proc print_subprogram_kernel { fhandle depth static type inline abstract overrid
             body is_lines
             if {[ llength $is_lines ] == 0} {
                 lappend result "is begin"
+                set body [ parse_body \
+                	$body $depth $name ]
+                foreach line $body {
+                    lappend result $line
+                }
+                lappend result "end $name"
             } else {
                 lappend result "is"
                 foreach line $is_lines {
                     lappend result "${indent}$line"
                 }
-                lappend result "begin"
+                if {[ llength $body ] == 0} {
+                    
+                } else {
+                    lappend result "begin"
+                    set body [ parse_body \
+                    	$body $depth $name ]
+                    foreach line $body {
+                        lappend result $line
+                    }
+                    lappend result "end $name"
+                }
             }
-            set body [ parse_body \
-            	$body $depth $name ]
-            foreach line $body {
-                lappend result $line
-            }
-            lappend result "end $name"
         }
     }
     if {$print_body} {
