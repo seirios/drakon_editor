@@ -1398,15 +1398,27 @@ proc p.shelf { primary secondary } {
                                         lappend lines "##@@END_FOR@@##"
                                         set result [ join $lines "\n" ]
                                     } else {
-                                        if {$_sw11330000_ == "end"} {
-                                            
+                                        if {$_sw11330000_ == "return"} {
+                                            if {[ llength $sterms ] == 1} {
+                                                set result "return $primary;"
+                                            } else {
+                                                lappend lines "##@@BEGIN_RETURN@@##"
+                                                lappend lines [ lrange $sterms 1 end ]
+                                                set lines [ concat $lines $plines ]
+                                                lappend lines "##@@END_RETURN@@##"
+                                                set result [ join $lines "\n" ]
+                                            }
                                         } else {
-                                            error "Unexpected switch value: $_sw11330000_"
+                                            if {$_sw11330000_ == "end"} {
+                                                
+                                            } else {
+                                                error "Unexpected switch value: $_sw11330000_"
+                                            }
+                                            lappend lines "##@@BEGIN_END@@##"
+                                            append_notempty lines $primary
+                                            lappend lines "##@@END_END@@##"
+                                            set result [ join $lines "\n" ]
                                         }
-                                        lappend lines "##@@BEGIN_END@@##"
-                                        append_notempty lines $primary
-                                        lappend lines "##@@END_END@@##"
-                                        set result [ join $lines "\n" ]
                                     }
                                 }
                             }
@@ -1619,7 +1631,23 @@ proc parse_body { body depth name } {
                             set lines [ join $use_clause " " ]
                             lappend result "for $elem $lines"
                         } else {
-                            lappend result "${indent}$line"
+                            if {$line == "##@@BEGIN_RETURN@@##"} {
+                                incr i
+                                lassign \
+                                [ collect_until $body $i "##@@END_RETURN@@##" 0 ] \
+                                i return_lines
+                                set first [ lindex $return_lines 0 ]
+                                set lines [ lrange $return_lines 1 end ]
+                                lappend result "${indent}return $first do"
+                                incr_indent indent depth
+                                foreach line $lines {
+                                    lappend result "${indent}$line"
+                                }
+                                decr_indent indent depth
+                                lappend result "${indent}end return;"
+                            } else {
+                                lappend result "${indent}$line"
+                            }
                         }
                     }
                 }
