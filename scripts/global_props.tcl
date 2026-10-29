@@ -29,7 +29,7 @@ variable element_list {
 	"Inactive text"
 	"Inactive background"
 	"Code: identifier"
-	"Code: call"
+	"Code: special"
 	"Code: string"
 	"Code: keyword"
 	"Code: type"
@@ -68,7 +68,7 @@ variable strict {
 	inactive	"#aaaaaa"
 	inactive_s	"#666666"
 	syntax_identifier "#000000"
-	syntax_call "#000000"
+	syntax_special "#000000"
 	syntax_string "#d00000"
 	syntax_keyword "#0000cB"
 	syntax_type "#0000cB"
@@ -92,7 +92,7 @@ variable parrot {
 	inactive	"#aaaaaa"
 	inactive_s	"#666666"
 	syntax_identifier "#000000"
-	syntax_call "#000000"
+	syntax_special "#000000"
 	syntax_string "#d00000"
 	syntax_keyword "#0000cB"
 	syntax_type "#0000cB"
@@ -116,7 +116,7 @@ variable black {
 	inactive	"#aaaaaa"
 	inactive_s	"#666666"
 	syntax_identifier "#c0c0c0"
-	syntax_call "#c0c0c0"
+	syntax_special "#c0c0c0"
 	syntax_string "#909090"
 	syntax_keyword "#b0b0b0"
 	syntax_type "#b0b0b0"
@@ -140,7 +140,7 @@ variable night {
 	inactive	"#aaaaaa"
 	inactive_s	"#666666"
 	syntax_identifier "#BCD5FF"
-	syntax_call "#BCD5FF"
+	syntax_special "#BCD5FF"
 	syntax_string "#6882aF"
 	syntax_keyword "#70A5FF"
 	syntax_type "#70A5FF"
@@ -164,7 +164,7 @@ variable colored_night {
 	inactive	"#aaaaaa"
 	inactive_s	"#666666"
 	syntax_identifier "#FBF9C0"
-	syntax_call "#FBF9C0"
+	syntax_special "#FBF9C0"
 	syntax_string "#dC8623"
 	syntax_keyword "#ABFFCF"
 	syntax_type "#ABFFCF"
@@ -188,7 +188,7 @@ variable hi_contrast {
 	inactive		"#aaaaaa"
 	inactive_s		"#666666"
 	syntax_identifier	"#ffffff"
-	syntax_call		"#00ff00"
+	syntax_special		"#00ff00"
 	syntax_string		"#ff00ff"
 	syntax_keyword		"#ffff00"
 	syntax_type		"#1e90ff"
@@ -241,7 +241,7 @@ proc load_from_settings {} {
 	set colors::inactive_bg [ color_safe $colors_dict inactive_s ]
 
 	set colors::syntax_identifier [ color_safe $colors_dict syntax_identifier ]
-	set colors::syntax_call [ color_safe $colors_dict syntax_call ]
+	set colors::syntax_special [ color_safe $colors_dict syntax_special ]
 	set colors::syntax_string [ color_safe $colors_dict syntax_string ]
 	set colors::syntax_keyword [ color_safe $colors_dict syntax_keyword ]
 	set colors::syntax_type [ color_safe $colors_dict syntax_type ]
@@ -295,7 +295,7 @@ proc element_changed {} {
 		"Inactive text"	{ set color_text [ color inactive ] }
 		"Inactive background"	{ set color_text [ color inactive_s ] }
 		"Code: identifier" { set color_text [ color syntax_identifier ] }
-		"Code: call" { set color_text [ color syntax_call ] }
+		"Code: special" { set color_text [ color syntax_special ] }
 		"Code: string" { set color_text [ color syntax_string ] }
 		"Code: keyword" { set color_text [ color syntax_keyword ] }
 		"Code: type" { set color_text [ color syntax_type ] }
@@ -332,7 +332,7 @@ proc color_changed { color } {
 		"Inactive text"	{ color_set inactive $color }
 		"Inactive background"	{ color_set inactive_s $color }
 		"Code: identifier" { color_set syntax_identifier $color }
-		"Code: call" { color_set syntax_call $color }
+		"Code: special" { color_set syntax_special $color }
 		"Code: string" { color_set syntax_string $color }
 		"Code: keyword" { color_set syntax_keyword $color }
 		"Code: type" { color_set syntax_type $color }
@@ -593,7 +593,7 @@ proc load_colors {} {
 	color_set inactive_s $colors::inactive_bg
 
 	color_set syntax_identifier $colors::syntax_identifier
-	color_set syntax_call $colors::syntax_call
+	color_set syntax_special $colors::syntax_special
 	color_set syntax_string  $colors::syntax_string
 	color_set syntax_keyword  $colors::syntax_keyword
 	color_set syntax_type  $colors::syntax_type
@@ -619,7 +619,7 @@ proc save_colors {} {
 	set colors::inactive_bg [ color inactive_s ]
 	
 	set colors::syntax_identifier [ color syntax_identifier ]
-	set colors::syntax_call [ color syntax_call ]
+	set colors::syntax_special [ color syntax_special ]
 	set colors::syntax_string  [ color syntax_string ]
 	set colors::syntax_keyword  [ color syntax_keyword ]
 	set colors::syntax_type  [ color syntax_type ]

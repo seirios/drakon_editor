@@ -79,7 +79,6 @@ variable ada_keywords {
 	while
 	with
 	xor
-	enum
 }
 
 variable ada_types {
@@ -847,8 +846,9 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
     upvar 1 $result_name result
     set delims {
     	"(" ")" "[" "]" ";" }
-    set consts {
-    	True False }
+    set kw_extra { comment enum public
+    	not_overriding }
+    set consts { True False }
     if {$text == "\""} {
         lappend result $colors::syntax_string
         set state "string"
@@ -865,10 +865,14 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
                     if {[contains $keywords $text]} {
                         set type "keyword"
                     } else {
-                        if {[contains $consts $text]} {
-                            set type "const"
+                        if {[contains $kw_extra $text]} {
+                            set type "keyword"
                         } else {
-                            set type "id"
+                            if {[contains $consts $text]} {
+                                set type "const"
+                            } else {
+                                set type "id"
+                            }
                         }
                     }
                 }
@@ -1696,9 +1700,7 @@ proc preprocess_tokens { tokens } {
                     set tok [ list "attr" $lahtext ]
                     lappend result $token $tok
                 } else {
-                    if {$text == "'" &&
-	$lahtype == "token" &&
-	$lahtype2 == "op" && $lahtext2 == "'"} {
+                    if {$text == "'" && $lahtext2 == "'"} {
                         incr i 2
                         set tok [ list "char" $lahtext ]
                         lappend result $tok $tok $tok
@@ -2192,7 +2194,7 @@ proc standard_color { keywords kw_types type text } {
                                 return $colors::syntax_string
                             } else {
                                 if {$type == "attr"} {
-                                    return $colors::syntax_call
+                                    return $colors::syntax_special
                                 } else {
                                     return $colors::syntax_identifier
                                 }

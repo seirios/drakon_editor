@@ -27,7 +27,7 @@ namespace eval colors {
 	variable inactive_bg "#666666"
 
 	variable syntax_identifier "#000000"
-	variable syntax_call "#000000"
+	variable syntax_special "#000000"
 	variable syntax_string "#d00000"
 	variable syntax_keyword "#00008B"
 	variable syntax_type "#00008B"

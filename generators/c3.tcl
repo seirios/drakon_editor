@@ -150,7 +150,13 @@ proc highlight { tokens } {
     variable c3_keywords
     variable c3_types
     set tokens [ preprocess_tokens $tokens ]
-    return [ highlight_generic $c3_keywords $c3_types $tokens ]
+    set types [ highlight_generic $c3_keywords $c3_types $tokens ]
+    set types [ postprocess_types $types $tokens ]
+    set result {}
+    foreach t $types {
+        lappend result [ standard_color $t ]
+    }
+    return $result
 }
 
 proc highlight_generic { keywords kw_types tokens } {
@@ -175,7 +181,7 @@ proc highlight_generic { keywords kw_types tokens } {
             	result $type $text $lookahead ]
         } else {
             if {$state == "string"} {
-                lappend result $colors::syntax_string
+                lappend result "char"
                 if {$text == "\""} {
                     set state "idle"
                 } else {
@@ -189,7 +195,7 @@ proc highlight_generic { keywords kw_types tokens } {
                 }
             } else {
                 if {$state == "escaping"} {
-                    lappend result $colors::syntax_string
+                    lappend result "char"
                     if {$text == "\n"} {
                         set state "idle"
                     } else {
@@ -199,40 +205,38 @@ proc highlight_generic { keywords kw_types tokens } {
                     if {$state == "comment start"} {
                         if {$text == "*"} {
                             set state "comment"
-                            lappend result $colors::syntax_comment \
-                            	$colors::syntax_comment
+                            lappend result "comment" "comment"
                         } else {
                             if {$text == "/"} {
                                 set state "comment line"
-                                lappend result $colors::syntax_comment \
-                                	$colors::syntax_comment
+                                lappend result "comment" "comment"
                             } else {
-                                lappend result $colors::syntax_operator
+                                lappend result "op"
                                 set state [ idle_default $keywords $kw_types \
                                 	result $type $text $lookahead ]
                             }
                         }
                     } else {
                         if {$state == "comment"} {
-                            lappend result $colors::syntax_comment
+                            lappend result "comment"
                             if {$text == "*"} {
                                 set state "comment end"
                             }
                         } else {
                             if {$state == "comment end"} {
-                                lappend result $colors::syntax_comment
+                                lappend result "comment"
                                 if {$text == "/"} {
                                     set state "idle"
                                 }
                             } else {
                                 if {$state == "comment line"} {
-                                    lappend result $colors::syntax_comment
+                                    lappend result "comment"
                                     if {$text == "\n"} {
                                         set state "idle"
                                     }
                                 } else {
                                     if {$state == "char"} {
-                                        lappend result $colors::syntax_string
+                                        lappend result "char"
                                         if {$text == "'"} {
                                             set state "idle"
                                         } else {
@@ -246,8 +250,7 @@ proc highlight_generic { keywords kw_types tokens } {
                                         }
                                     } else {
                                         if {$state == "char escaping"} {
-                                            lappend result \
-                                              $colors::syntax_string
+                                            lappend result "char"
                                             if {$text == "\n"} {
                                                 set state "idle"
                                             } else {
@@ -256,17 +259,16 @@ proc highlight_generic { keywords kw_types tokens } {
                                         } else {
                                             if {$state == "verbatim start"} {
                                                 if {$text == "\""} {
-                                                    lappend result $colors::syntax_string \
-                                                    	$colors::syntax_string
+                                                    lappend result "char" "char"
                                                     set state "verbatim"
                                                 } else {
-                                                    lappend result $colors::syntax_operator
+                                                    lappend result "op"
                                                     set state [ idle_default $keywords $kw_types \
                                                     	result $type $text $lookahead ]
                                                 }
                                             } else {
                                                 if {$state == "verbatim"} {
-                                                    lappend result $colors::syntax_string
+                                                    lappend result "char"
                                                     if {$text == "\""} {
                                                         set state "verbatim end"
                                                     }
@@ -277,7 +279,7 @@ proc highlight_generic { keywords kw_types tokens } {
                                                         error "Unexpected switch value: $state"
                                                     }
                                                     if {$text == "\""} {
-                                                        lappend result $colors::syntax_string
+                                                        lappend result "char"
                                                         set state "verbatim"
                                                     } else {
                                                         set state [ idle_default $keywords $kw_types \
@@ -297,7 +299,7 @@ proc highlight_generic { keywords kw_types tokens } {
         incr i
     }
     if {($state == "comment start") || ($state == "verbatim start")} {
-        lappend result $colors::syntax_operator
+        lappend result "op"
     }
     return $result
 }
@@ -305,16 +307,16 @@ proc highlight_generic { keywords kw_types tokens } {
 proc idle_default { keywords kw_types result_name type text lookahead } {
     upvar 1 $result_name result
     set delims {
-    	"(" ")" "\{" "\}"
-    	"[" "]" "<" ">" }
-    set consts {
-    	true false }
+    	"(" ")" "[" "]" ";"
+    	"<" ">" "\{" "\}" }
+    set consts { true false }
+    set op_access { "::" "->" "." }
     if {$text == "\""} {
-        lappend result $colors::syntax_string
+        lappend result "char"
         set state "string"
     } else {
         if {$text == "'"} {
-            lappend result $colors::syntax_string
+            lappend result "char"
             set state "char"
         } else {
             if {$text == "/"} {
@@ -337,30 +339,17 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
                                     $lookahead \
                                     lahtype lahtext
                                     if {$lahtype == "op" &&
-	($lahtext == "::" ||
-	 $lahtext == "->" ||
-	 $lahtext == ".")} {
+	[ contains $op_access $lahtext ]} {
                                         set type "access"
                                     } else {
                                         if {$lahtype == "op" &&
 	$lahtext == ">"} {
                                             set type "type"
                                         } else {
-                                            if {$lahtype == "op" &&
-	($lahtext == "(" ||
-	 $lahtext == "<")} {
-                                                set type "call"
+                                            if {[ regexp {^[0-9A-Z_]+$} $text ]} {
+                                                set type "macro"
                                             } else {
-                                                if {[ regexp {^[0-9A-Z_]+$} $text ]} {
-                                                    set type "macro"
-                                                } else {
-                                                    if {$text == [mv::yes] ||
-	$text == [mv::no]} {
-                                                        set type "label"
-                                                    } else {
-                                                        set type "id"
-                                                    }
-                                                }
+                                                set type "id"
                                             }
                                         }
                                     }
@@ -373,8 +362,7 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
                             set type "delim"
                         }
                     }
-                    lappend result [standard_color \
-                    	$keywords $kw_types $type $text]
+                    lappend result $type
                     set state "idle"
                 }
             }
@@ -547,6 +535,36 @@ proc pass { } {
     return ""
 }
 
+proc postprocess_types { types tokens } {
+    set len [ llength $types ]
+    set i 0
+    while { 1 } {
+        if {$i < $len} {
+            
+        } else {
+            break
+        }
+        set current [ lindex $types $i ]
+        if {$current == "macro"} {
+            set j $i
+            while { 1 } {
+                set lbak [ lindex $types [ expr { $j - 1 } ] ]
+                if {$lbak == "op" || $lbak == "access"} {
+                    
+                } else {
+                    break
+                }
+                incr j -1
+            }
+            set nelem [ expr { $i - $j + 1 } ]
+            set sub [ lrepeat $nelem "macro" ]
+            set types [ lreplace $types $j $i {*}$sub ]
+        }
+        incr i
+    }
+    return $types
+}
+
 proc preprocess_tokens { tokens } {
     set result {}
     set ntok [ llength $tokens ]
@@ -660,38 +678,47 @@ proc shelf { primary secondary } {
     return "$secondary = $primary;"
 }
 
-proc standard_color { keywords kw_types type text } {
-    if {$type == "op"} {
-        return $colors::syntax_operator
+proc standard_color { type } {
+    if {$type == "comment"} {
+        return $colors::syntax_comment
     } else {
-        if {$type == "number"} {
-            return $colors::syntax_number
+        if {$type == "op"} {
+            return $colors::syntax_operator
         } else {
-            if {$type == "type"} {
-                return $colors::syntax_type
+            if {$type == "number"} {
+                return $colors::syntax_number
             } else {
-                if {$type == "keyword"} {
-                    return $colors::syntax_keyword
+                if {$type == "char"} {
+                    return $colors::syntax_string
                 } else {
-                    if {$type == "access"} {
-                        return $colors::syntax_operator
+                    if {$type == "type"} {
+                        return $colors::syntax_type
                     } else {
-                        if {$type == "macro"} {
-                            return $colors::syntax_number
+                        if {$type == "keyword"} {
+                            return $colors::syntax_keyword
                         } else {
-                            if {$type == "const"} {
-                                return $colors::syntax_number
+                            if {$type == "access"} {
+                                return $colors::syntax_special
                             } else {
-                                if {$type == "delim"} {
-                                    return $colors::syntax_delimiter
+                                if {$type == "macro"} {
+                                    return $colors::syntax_number
                                 } else {
-                                    if {$type == "call"} {
-                                        return $colors::syntax_identifier
+                                    if {$type == "const"} {
+                                        return $colors::syntax_number
                                     } else {
-                                        if {$type == "label"} {
-                                            return $colors::text_fg
+                                        if {$type == "delim"} {
+                                            return $colors::syntax_delimiter
                                         } else {
-                                            return $colors::syntax_call
+                                            if {$type == "id"} {
+                                                return $colors::syntax_identifier
+                                            } else {
+                                                if {$type == "space"} {
+                                                    
+                                                } else {
+                                                    error "Unexpected switch value: $type"
+                                                }
+                                                return ""
+                                            }
                                         }
                                     }
                                 }
