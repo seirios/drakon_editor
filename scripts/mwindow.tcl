@@ -498,7 +498,7 @@ proc create_ui { } {
 	.mainmenu.drakon add command -label [ mc2 "Verify" ] -underline 0 -command mw::verify -accelerator [ acc R ]
 	.mainmenu.drakon add command -label [ mc2 "Verify all" ] -underline 7 -command mw::verify_all
 	.mainmenu.drakon add separator		
-	.mainmenu.drakon add command -label [ mc2 "Generate code" ] -underline 0 -command gen::generate -accelerator [ acc Return ]
+	.mainmenu.drakon add command -label [ mc2 "Generate code" ] -underline 0 -command gen::generate -accelerator [ acc S ]
 
 	. configure -menu .mainmenu
 
@@ -937,7 +937,7 @@ proc shortcut_handler { window code key } {
 		mwc::go_to_branch
 	} elseif { $code == $codes(t) || $key == "t" } {
 		mwc::adjust_icon_sizes_current	
-	} elseif { $code == $codes(Return) || $key == "Return" } {
+	} elseif { $code == $codes(s) || $key == "s" } {
 		gen::generate
 	}
 }
