@@ -1207,7 +1207,6 @@ proc p.keywords { } {
     	case_and
     	case_not
     	case_or
-    	tab_convert
     }
     return [ concat [ gen::p.keywords_bkp ] $extra_kw ]
 }
@@ -1758,7 +1757,7 @@ proc print_node_core { texts node callbacks depth } {
         set current [ lindex $node $i ]
         if {[ string is integer $current ]} {
             set text [ gen::get_text_lines $texts $current ]
-            set text [ tab_convert $tab_convert $text ]
+            set text [ gen::tab_convert $tab_convert $text ]
             set parts [ split $text "\n" ]
             foreach part $parts {
                 lappend result "${indent}$part"
@@ -1768,7 +1767,7 @@ proc print_node_core { texts node callbacks depth } {
             if {$_sw17540000_ == "if"} {
                 set cond_item [ lindex $current 1 ]
                 set cond_text [ gen::get_text_lines $texts $cond_item ]
-                set cond_text [ tab_convert $tab_convert $cond_text ]
+                set cond_text [ gen::tab_convert $tab_convert $cond_text ]
                 set cond [ gen::condition_line $callbacks $cond_text ]
                 lappend result "${indent}$cond"
                 set then_node [ lindex $current 3 ]
@@ -1805,7 +1804,7 @@ proc print_node_core { texts node callbacks depth } {
                         set cond_item [ lindex $current 1 ]
                         set negate [ lindex $current 2 ]
                         set cond_text [ gen::get_text_lines $texts $cond_item ]
-                        set cond_text [ tab_convert $tab_convert $cond_text ]
+                        set cond_text [ gen::tab_convert $tab_convert $cond_text ]
                         set exit_stmt [ exit_statement \
                         	$cond_text $negate $depth ]
                         set result [ concat $result $exit_stmt ]
@@ -2216,14 +2215,6 @@ proc subst_at { str sub } {
         	$str $loc $loc $sub ]
     }
     return $str
-}
-
-proc tab_convert { convert_cb text } {
-    if {$convert_cb == ""} {
-        return $text
-    } else {
-        return [ regsub -all \t $text [ $convert_cb ] ]
-    }
 }
 
 proc traverse_links { gdb id } {

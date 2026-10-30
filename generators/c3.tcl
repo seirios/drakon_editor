@@ -379,6 +379,10 @@ proc if_start { } {
     return "if \("
 }
 
+proc indentation { } {
+    return "    "
+}
+
 proc init_description { filename } {
     set result {}
     set sections {
@@ -416,6 +420,7 @@ proc make_callbacks { } {
     gen::put_callback callbacks pass          gen_c3::pass
     gen::put_callback callbacks comment       gen_c3::comment
     gen::put_callback callbacks break         "break;"
+    gen::put_callback callbacks tab_convert   gen_c3::indentation
     return $callbacks
 }
 

@@ -2379,7 +2379,16 @@ proc get_if_close { callback } {
 	return [ get_callback $callback block_close ]
 }
 
+proc tab_convert { convert_cb text } {
+    if {$convert_cb == ""} {
+        return $text
+    } else {
+        return [ regsub -all \t $text [ $convert_cb ] ]
+    }
+}
+
 proc print_node_core { texts node callback depth break_var } {
+	set tab_convert [ get_optional_callback $callback tab_convert ]
 	set line_end [ get_optional_callback $callback line_end ]
 	set commentator [ get_callback $callback comment ]
 	set break_str [ get_callback $callback break ]
@@ -2410,6 +2419,7 @@ proc print_node_core { texts node callback depth break_var } {
 			set iteration [ newfor::get $current ]
 
 			set text [ get_text_lines $texts $current ]
+			set text [ tab_convert $tab_convert $text ]
 			set was_return 0
 			if { $iteration == "" } {
 				set parts [ split $text "\n" ]
@@ -2446,6 +2456,7 @@ proc print_node_core { texts node callback depth break_var } {
 
 			if { $start_item_info == "" } {
 				set cond_text [ get_text_lines $texts $cond_item ]
+				set cond_text [ tab_convert $tab_convert $cond_text ]
 				set comment [ $commentator "item $cond_item" ]
 				#lappend result $indent$comment
 
@@ -2711,6 +2722,7 @@ proc p.keywords { } {
 		exit_door
 		if_block_end
 		output
+		tab_convert
 	}
 }
 
