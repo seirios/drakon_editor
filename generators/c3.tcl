@@ -112,7 +112,7 @@ proc block_close { output depth } {
     lappend result $line
 }
 
-proc comment { text } {
+proc commentator { text } {
     #item 712
     return "// $text"
 }
@@ -561,7 +561,7 @@ proc make_callbacks { } {
     
     gen::put_callback callbacks while_start   gen_c3::while_start
     gen::put_callback callbacks pass          gen_c3::pass
-    gen::put_callback callbacks comment       gen_c3::comment
+    gen::put_callback callbacks comment       gen_c3::commentator
     gen::put_callback callbacks break         "break;"
     gen::put_callback callbacks tab_convert   gen_c3::indentation
     #item 307
