@@ -432,6 +432,17 @@ proc enforce_nogoto { name } {
     "Could not generate code for function '$name'.\nTry splitting it into smaller parts."
 }
 
+proc enum_lines { lines } {
+    #item 3720
+    set result {}
+    #item 3722
+    set values [ join $lines ", " ]
+    #item 3723
+    lappend result "($values)"
+    #item 3721
+    return $result
+}
+
 proc exit_statement { cond_text negate depth } {
     #item 3033
     set result {}
@@ -464,6 +475,8 @@ proc extract_is { body } {
     set lines [ join_lists $is_lines "" ]
     #item 3486
     if {$i > 0} {
+        #item 3713
+        incr i
         #item 3489
         set body [lrange $body $i end]
     }
@@ -715,6 +728,8 @@ proc extract_when { body } {
     set lines [ join_lists $when_lines " and then" ]
     #item 3480
     if {$i > 0} {
+        #item 3714
+        incr i
         #item 3483
         set body [lrange $body $i end]
     }
@@ -1532,9 +1547,10 @@ proc multi_extract { body ifirst beginstr endstr do_unindent } {
     #item 3455
     set lines {}
     set i $ifirst
+    set j $ifirst
     while { 1 } {
         #item 3453
-        set first [ lindex $body $i ]
+        set first [ lindex $body $j ]
         #item 3447
         if {[ unindent $first ] == $beginstr} {
             
@@ -1542,13 +1558,15 @@ proc multi_extract { body ifirst beginstr endstr do_unindent } {
             break
         }
         #item 3454
-        incr i
+        incr j
         #item 3452
         lassign \
-        [ collect_until $body $i $endstr $do_unindent ] \
-        i extracted
+        [ collect_until $body $j $endstr $do_unindent ] \
+        j extracted
+        #item 3712
+        set i $j
         #item 3464
-        incr i
+        incr j
         #item 3463
         lappend lines $extracted
     }
@@ -1870,10 +1888,14 @@ proc p.shelf { primary secondary } {
         } else {
             #item 11330003
             if {$_sw11330000_ == "enum"} {
-                #item 3521
-                set values [ join $plines ", " ]
-                #item 3520
-                set result "($values)"
+                #item 3700
+                lappend lines "##@@BEGIN_ENUM@@##"
+                #item 3703
+                set lines [ concat $lines $plines ]
+                #item 3702
+                lappend lines "##@@END_ENUM@@##"
+                #item 3701
+                set result [ join $lines "\n" ]
             } else {
                 #item 11330004
                 if {$_sw11330000_ == "when"} {
@@ -2309,8 +2331,24 @@ proc parse_body { body depth name } {
                                 #item 3684
                                 lappend result "${indent}end return;"
                             } else {
-                                #item 3071
-                                lappend result "${indent}$line"
+                                #item 30630007
+                                if {$line == "##@@BEGIN_ENUM@@##"} {
+                                    #item 3709
+                                    lassign \
+                                    [ multi_extract $body $i \
+                                    	"##@@BEGIN_ENUM@@##" "##@@END_ENUM@@##" 0 ] \
+                                    i enum_lines
+                                    #item 3705
+                                    set lines [ join_lists $enum_lines "" ]
+                                    set lines [ enum_lines $lines ]
+                                    foreach line $lines {
+                                        #item 3706
+                                        lappend result "${indent}$line"
+                                    }
+                                } else {
+                                    #item 3071
+                                    lappend result "${indent}$line"
+                                }
                             }
                         }
                     }
