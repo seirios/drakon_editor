@@ -387,24 +387,24 @@ proc complain_dia { name message } {
 }
 
 proc create_tree { prefix tree } {
-    #item 1288
+    #item 3747
     lassign \
     $tree \
     id type header text children
-    #item 161
+    #item 3736
     set lcase [ string tolower $text ]
-    #item 162
+    #item 3737
     set basename [ string cat $prefix $lcase ]
-    #item 163
+    #item 3738
     set bfile [ string cat $basename ".adb" ]
     close [ open $bfile a ]
-    #item 166
+    #item 3741
     set sfile [ string cat $basename ".ads" ]
     close [ open $sfile a ]
-    #item 170
+    #item 3745
     set prefix [ string cat $basename "-" ]
     foreach child $children {
-        #item 171
+        #item 3746
         create_tree $prefix $child
     }
 }
@@ -738,51 +738,52 @@ proc extract_when { body } {
 }
 
 proc filter_subprograms { components inline access } {
-    #item 464
+    #item 3754
     set result {}
     foreach component $components {
-        #item 1290
+        #item 3764
         lassign \
         $component \
         diagram_id name signature body
-        #item 1291
+        #item 3765
         lassign \
         $signature \
         type prop_list parameters returns
-        #item 467
+        #item 3757
         array set props $prop_list
-        #item 829
+        #item 3763
         if {(($type == "subprogram") && ($props(inline) == $inline)) && ($props(access) == $access)} {
-            #item 470
+            #item 3760
             lappend result $component
         }
     }
-    #item 465
+    #item 3755
     return $result
 }
 
-proc filter_types { components order } {
-    #item 836
+proc filter_types { components subtype } {
+    #item 3772
     set result {}
     foreach component $components {
-        #item 1292
+        #item 3780
         lassign \
         $component \
         diagram_id name signature body
-        #item 1293
+        #item 3781
         lassign \
         $signature \
         type prop_list parameters returns
-        #item 839
+        #item 3775
         array set props $prop_list
-        #item 845
-        if {$type == "type" \
-	&& $props(order) == $order} {
-            #item 842
+        #item 3779
+        if {($type == "type") && ($props(subtype) == $subtype)} {
+            #item 3776
             lappend result $component
         }
     }
-    #item 837
+    #item 3787
+    set result [ sort_types $result ]
+    #item 3773
     return $result
 }
 
@@ -2653,16 +2654,12 @@ proc print_spec { db filename fhandle components header footer } {
     #item 490
     puts_notempty \
     	$fhandle $header
-    foreach type [ filter_types $components -2 ] {
-        #item 807
-        print_type $db $fhandle $type
-    }
-    foreach type [ filter_types $components -1 ] {
-        #item 1274
-        print_type $db $fhandle $type
-    }
-    foreach type [ filter_types $components 0 ] {
+    foreach type [ filter_types $components "type" ] {
         #item 1277
+        print_type $db $fhandle $type
+    }
+    foreach type [ filter_types $components "subtype" ] {
+        #item 3786
         print_type $db $fhandle $type
     }
     foreach subprogram [ filter_subprograms $components 1 public ] {
@@ -2674,8 +2671,7 @@ proc print_spec { db filename fhandle components header footer } {
         print_subprogram $db $fhandle $subprogram 1
     }
     #item 769
-    if {[ llength \
-	[ filter_subprograms \
+    if {[ llength [ filter_subprograms \
 	$components 0 private ] ] == 0} {
         
     } else {
@@ -3093,6 +3089,38 @@ proc single_extract { body ifirst beginstr endstr do_unindent } {
     }
     #item 3381
     return [ list $i $lines ]
+}
+
+proc sort_types { components } {
+    #item 3796
+    set result {}
+    #item 3806
+    if {[ llength $components ] == 0} {
+        
+    } else {
+        #item 3802
+        array set by_order {}
+        foreach component $components {
+            #item 3800
+            lassign \
+            $component \
+            diagram_id name signature body
+            #item 3801
+            lassign \
+            $signature \
+            type prop_list parameters returns
+            #item 3799
+            array set props $prop_list
+            #item 3803
+            lappend by_order($props(order)) $component
+        }
+        foreach key [ lsort -integer [ array names by_order ] ] {
+            #item 3811
+            set result [ concat $result $by_order($key) ]
+        }
+    }
+    #item 3798
+    return $result
 }
 
 proc standard_color { keywords kw_types type text } {
