@@ -1192,7 +1192,7 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
     	"(" ")" "[" "]" ";" }
     #item 3696
     set kw_extra { comment enum public
-    	not_overriding }
+    	not_overriding returns }
     #item 3616
     set consts { True False }
     #item 14810001
@@ -2422,8 +2422,17 @@ proc preprocess_tokens { tokens } {
                         set tok [ list "char" $lahtext ]
                         lappend result $tok $tok $tok
                     } else {
-                        #item 3592
-                        lappend result $token
+                        #item 35870004
+                        if {$lahtype == "number" &&
+	($text == "-" || $text == "+" ||
+	 $text == ".")} {
+                            #item 3727
+                            set tok [ list "number" $text ]
+                            lappend result $tok
+                        } else {
+                            #item 3592
+                            lappend result $token
+                        }
                     }
                 }
             }
