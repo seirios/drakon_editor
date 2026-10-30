@@ -2426,7 +2426,7 @@ proc print_node_core { texts node callback depth break_var } {
 				if { [ llength $parts ] != 0 } {
 					append_line_end result $i $line_end			
 					set comment [ $commentator "item $current" ]
-					#lappend result $indent$comment
+					lappend result $indent$comment
 				}
 
 				foreach part $parts {
@@ -2458,7 +2458,7 @@ proc print_node_core { texts node callback depth break_var } {
 				set cond_text [ get_text_lines $texts $cond_item ]
 				set cond_text [ tab_convert $tab_convert $cond_text ]
 				set comment [ $commentator "item $cond_item" ]
-				#lappend result $indent$comment
+				lappend result $indent$comment
 
 				set cond [ condition_line $callback $cond_text ]
 				lappend result $indent$cond
