@@ -184,17 +184,29 @@ proc case_tree_to_case_list { node extra } {
     return $result
 }
 
-proc check_keywords { keywords args } {
-    foreach arg $args {
-        #item 1249
-        upvar 1 $arg keyword
+proc check_keywords { words keywords } {
+    foreach kw $keywords {
+        #item 3816
+        upvar 1 $kw keyvar
+        #item 3817
+        set keyvar 0
+    }
+    foreach word $words {
+        #item 3818
+        set key [ lindex $word 0 ]
+        set val [ lindex $word 1 ]
         #item 1250
-        if {[ contains $keywords $arg ]} {
-            #item 1252
-            set keyword 1
-        } else {
-            #item 1251
-            set keyword 0
+        if {[ contains $keywords $key ]} {
+            #item 3819
+            upvar 1 $key keyvar
+            #item 3820
+            if {$val == ""} {
+                #item 1252
+                set keyvar 1
+            } else {
+                #item 3823
+                set keyvar $val
+            }
         }
     }
 }
@@ -203,61 +215,8 @@ proc classify_keywords { keywords name } {
     #item 2177
     set errors {}
     check_keywords $keywords \
-    	abstract inline \
-    	protected tagged
-    #item 3164
-    set override [ find_keywords \
-    	$keywords { overriding \
-    		    not_overriding } ]
-    #item 31710000
-    set _sw31710000_ [ llength $override ]
-    #item 31710001
-    if {$_sw31710000_ == 0} {
-        #item 3173
-        set override 0
-    } else {
-        #item 31710002
-        if {$_sw31710000_ == 1} {
-            #item 3175
-            if {$override == "overriding"} {
-                #item 3179
-                set override 1
-            } else {
-                #item 3180
-                set override -1
-            }
-        } else {
-            #item 3166
-            lappend errors \
-             "$name: inconsistent order: $order"
-        }
-    }
-    #item 3146
-    set order [ find_keywords \
-    	$keywords { ord-1 ord-2 } ]
-    #item 31530000
-    set _sw31530000_ [ llength $order ]
-    #item 31530001
-    if {$_sw31530000_ == 0} {
-        #item 3155
-        set order 0
-    } else {
-        #item 31530002
-        if {$_sw31530000_ == 1} {
-            #item 3157
-            if {$order == "ord-1"} {
-                #item 3161
-                set order -1
-            } else {
-                #item 3162
-                set order -2
-            }
-        } else {
-            #item 3148
-            lappend errors \
-             "$name: inconsistent order: $order"
-        }
-    }
+    	{ abstract inline protected
+    	tagged order overriding }
     #item 2133
     set access [ find_keywords \
     	$keywords { private public } ]
@@ -324,7 +283,7 @@ proc classify_keywords { keywords name } {
     set props(access) $access
     set props(subtype) $etype
     set props(order) $order
-    set props(overriding) $override
+    set props(overriding) $overriding
     #item 2157
     set proplist [ array get props ]
     set error_message [ join $errors "\n" ]
@@ -545,8 +504,7 @@ proc extract_signature { text name } {
             #item 2093
             set keywords { 
             	abstract inline
-            	not_overriding overriding
-            	ord-1 ord-2
+            	order overriding
             	public private protected
             	subtype type
             	tagged }
@@ -848,14 +806,18 @@ proc find_if_end_impl { db parent_id ordinal path loops } {
     return $result
 }
 
-proc find_keywords { list keywords } {
+proc find_keywords { words keywords } {
     #item 1237
     set result {}
-    foreach keyword $keywords {
+    foreach word $words {
+        #item 3812
+        set parts [ split $word ":" ]
+        set key [ lindex $parts 0 ]
+        set val [ lindex $parts 1 ]
         #item 1239
-        if {[ contains $list $keyword ]} {
+        if {[ contains $keywords $key ]} {
             #item 1240
-            lappend result $keyword
+            lappend result $parts
         }
     }
     #item 1238
@@ -866,12 +828,16 @@ proc find_not_belonging { list keywords } {
     #item 1223
     set result {}
     foreach item $list {
+        #item 3813
+        set parts [ split $item ":" ]
+        set name [ lindex $parts 0 ]
+        set arg [ lindex $parts 1 ]
         #item 1226
-        if {[ contains $keywords $item ]} {
+        if {[ contains $keywords $name ]} {
             
         } else {
             #item 1229
-            lappend result $item
+            lappend result $name
         }
     }
     #item 1224
@@ -1192,8 +1158,9 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
     set delims {
     	"(" ")" "[" "]" ";" }
     #item 3696
-    set kw_extra { comment enum public
-    	not_overriding returns }
+    set kw_extra { enum
+    	comment public returns
+    	not_overriding order }
     #item 3616
     set consts { True False }
     #item 14810001
