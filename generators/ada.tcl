@@ -1882,130 +1882,136 @@ proc p.shelf { primary secondary } {
         set result "array $primary"
     } else {
         #item 11330002
-        if {$_sw11330000_ == "new"} {
-            #item 3526
-            set result "new $primary"
+        if {$_sw11330000_ == "access"} {
+            #item 3730
+            set result "access $primary"
         } else {
             #item 11330003
-            if {$_sw11330000_ == "enum"} {
-                #item 3700
-                lappend lines "##@@BEGIN_ENUM@@##"
-                #item 3703
-                set lines [ concat $lines $plines ]
-                #item 3702
-                lappend lines "##@@END_ENUM@@##"
-                #item 3701
-                set result [ join $lines "\n" ]
+            if {$_sw11330000_ == "new"} {
+                #item 3526
+                set result "new $primary"
             } else {
                 #item 11330004
-                if {$_sw11330000_ == "when"} {
-                    #item 3361
-                    lappend lines "##@@BEGIN_WHEN@@##"
-                    #item 3364
+                if {$_sw11330000_ == "enum"} {
+                    #item 3700
+                    lappend lines "##@@BEGIN_ENUM@@##"
+                    #item 3703
                     set lines [ concat $lines $plines ]
-                    #item 3363
-                    lappend lines "##@@END_WHEN@@##"
-                    #item 3362
+                    #item 3702
+                    lappend lines "##@@END_ENUM@@##"
+                    #item 3701
                     set result [ join $lines "\n" ]
                 } else {
                     #item 11330005
-                    if {$_sw11330000_ == "record"} {
-                        #item 3327
-                        lappend lines "##@@BEGIN_RECORD@@##"
-                        #item 3333
+                    if {$_sw11330000_ == "when"} {
+                        #item 3361
+                        lappend lines "##@@BEGIN_WHEN@@##"
+                        #item 3364
                         set lines [ concat $lines $plines ]
-                        #item 3331
-                        lappend lines "##@@END_RECORD@@##"
-                        #item 3330
+                        #item 3363
+                        lappend lines "##@@END_WHEN@@##"
+                        #item 3362
                         set result [ join $lines "\n" ]
                     } else {
                         #item 11330006
-                        if {$_sw11330000_ == "is"} {
-                            #item 1154
-                            lappend lines "##@@BEGIN_IS@@##"
-                            #item 3349
+                        if {$_sw11330000_ == "record"} {
+                            #item 3327
+                            lappend lines "##@@BEGIN_RECORD@@##"
+                            #item 3333
                             set lines [ concat $lines $plines ]
-                            #item 1159
-                            lappend lines "##@@END_IS@@##"
-                            #item 1158
+                            #item 3331
+                            lappend lines "##@@END_RECORD@@##"
+                            #item 3330
                             set result [ join $lines "\n" ]
                         } else {
                             #item 11330007
-                            if {$_sw11330000_ == "with"} {
-                                #item 1162
-                                lappend lines "##@@BEGIN_WITH@@##"
-                                #item 3350
+                            if {$_sw11330000_ == "is"} {
+                                #item 1154
+                                lappend lines "##@@BEGIN_IS@@##"
+                                #item 3349
                                 set lines [ concat $lines $plines ]
-                                #item 1167
-                                lappend lines "##@@END_WITH@@##"
-                                #item 1166
+                                #item 1159
+                                lappend lines "##@@END_IS@@##"
+                                #item 1158
                                 set result [ join $lines "\n" ]
                             } else {
                                 #item 11330008
-                                if {$_sw11330000_ == "declare"} {
-                                    #item 3126
-                                    set name [ lindex $sterms 1 ]
-                                    #item 3122
-                                    if {$name != ""} {
-                                        #item 3125
-                                        lappend lines "$name :"
-                                    }
-                                    #item 3037
-                                    lappend lines "##@@BEGIN_DECLARE@@##"
-                                    #item 3351
+                                if {$_sw11330000_ == "with"} {
+                                    #item 1162
+                                    lappend lines "##@@BEGIN_WITH@@##"
+                                    #item 3350
                                     set lines [ concat $lines $plines ]
-                                    #item 3042
-                                    lappend lines "##@@END_DECLARE@@##"
-                                    #item 3041
+                                    #item 1167
+                                    lappend lines "##@@END_WITH@@##"
+                                    #item 1166
                                     set result [ join $lines "\n" ]
                                 } else {
                                     #item 11330009
-                                    if {$_sw11330000_ == "for"} {
-                                        #item 3529
-                                        lappend lines "##@@BEGIN_FOR@@##"
-                                        #item 3533
-                                        lappend lines [ lrange $sterms 1 end ]
-                                        #item 3532
+                                    if {$_sw11330000_ == "declare"} {
+                                        #item 3126
+                                        set name [ lindex $sterms 1 ]
+                                        #item 3122
+                                        if {$name != ""} {
+                                            #item 3125
+                                            lappend lines "$name :"
+                                        }
+                                        #item 3037
+                                        lappend lines "##@@BEGIN_DECLARE@@##"
+                                        #item 3351
                                         set lines [ concat $lines $plines ]
-                                        #item 3531
-                                        lappend lines "##@@END_FOR@@##"
-                                        #item 3530
+                                        #item 3042
+                                        lappend lines "##@@END_DECLARE@@##"
+                                        #item 3041
                                         set result [ join $lines "\n" ]
                                     } else {
                                         #item 11330010
-                                        if {$_sw11330000_ == "return"} {
-                                            #item 3685
-                                            if {[ llength $sterms ] == 1} {
-                                                #item 3688
-                                                set result "return $primary;"
-                                            } else {
-                                                #item 3668
-                                                lappend lines "##@@BEGIN_RETURN@@##"
-                                                #item 3672
-                                                lappend lines [ lrange $sterms 1 end ]
-                                                #item 3671
-                                                set lines [ concat $lines $plines ]
-                                                #item 3670
-                                                lappend lines "##@@END_RETURN@@##"
-                                                #item 3669
-                                                set result [ join $lines "\n" ]
-                                            }
+                                        if {$_sw11330000_ == "for"} {
+                                            #item 3529
+                                            lappend lines "##@@BEGIN_FOR@@##"
+                                            #item 3533
+                                            lappend lines [ lrange $sterms 1 end ]
+                                            #item 3532
+                                            set lines [ concat $lines $plines ]
+                                            #item 3531
+                                            lappend lines "##@@END_FOR@@##"
+                                            #item 3530
+                                            set result [ join $lines "\n" ]
                                         } else {
                                             #item 11330011
-                                            if {$_sw11330000_ == "end"} {
-                                                
+                                            if {$_sw11330000_ == "return"} {
+                                                #item 3685
+                                                if {[ llength $sterms ] == 1} {
+                                                    #item 3688
+                                                    set result "return $primary;"
+                                                } else {
+                                                    #item 3668
+                                                    lappend lines "##@@BEGIN_RETURN@@##"
+                                                    #item 3672
+                                                    lappend lines [ lrange $sterms 1 end ]
+                                                    #item 3671
+                                                    set lines [ concat $lines $plines ]
+                                                    #item 3670
+                                                    lappend lines "##@@END_RETURN@@##"
+                                                    #item 3669
+                                                    set result [ join $lines "\n" ]
+                                                }
                                             } else {
                                                 #item 11330012
-                                                error "Unexpected switch value: $_sw11330000_"
+                                                if {$_sw11330000_ == "end"} {
+                                                    
+                                                } else {
+                                                    #item 11330013
+                                                    error "Unexpected switch value: $_sw11330000_"
+                                                }
+                                                #item 3049
+                                                lappend lines "##@@BEGIN_END@@##"
+                                                #item 3114
+                                                append_notempty lines $primary
+                                                #item 3113
+                                                lappend lines "##@@END_END@@##"
+                                                #item 3050
+                                                set result [ join $lines "\n" ]
                                             }
-                                            #item 3049
-                                            lappend lines "##@@BEGIN_END@@##"
-                                            #item 3114
-                                            append_notempty lines $primary
-                                            #item 3113
-                                            lappend lines "##@@END_END@@##"
-                                            #item 3050
-                                            set result [ join $lines "\n" ]
                                         }
                                     }
                                 }
@@ -2269,7 +2275,7 @@ proc parse_body { body depth name } {
                         #item 3538
                         set first [ lindex $lines 0 ]
                         #item 3345
-                        if {$first == "" || $first == "null"} {
+                        if {$first == "null"} {
                             #item 3348
                             lappend result "${indent}null record"
                         } else {
