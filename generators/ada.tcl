@@ -1793,48 +1793,31 @@ proc p.rewire_loop { gdb start callbacks } {
     set end [ gen::p.find_end $gdb $diagram_id $start ]
     set text [ gen::p.vertex_text $gdb $start ]
     set item_id [ gen::p.vertex_item $gdb $start ]
-    #item 1597
-    set parts [ split $text ";" ]
-    set scheme [ lindex $parts 0 ]
-    set name [ string trim [ lindex $parts 1 ] ]
-    #item 1918
-    if {[ string first "for " $scheme ] != -1} {
-        #item 1921
-        set type "for"
-    } else {
-        #item 1922
-        if {[ string first "while " $scheme ] != -1} {
-            #item 1925
-            set type "while"
-        } else {
-            #item 1926
-            set type ""
-        }
-    }
     #item 16000001
-    if {($type == "for") || ($type == "while")} {
+    if {[ string first "for " $text ] != -1} {
         #item 1599
-        p.rewire_loop_any $gdb $start $end $scheme $name
+        p.rewire_loop_any $gdb $start $end $text
     } else {
-        #item 1598
-        graph::p.error $diagram_id [ list $item_id ] \
-        	"Error in loop statement: $text"
-        gen::report_error $diagram_id $item_id \
-        	"Error in loop item $item_id: $text"
+        #item 16000002
+        if {[ string first "while " $text ] != -1} {
+            #item 3865
+            p.rewire_loop_any $gdb $start $end $text
+        } else {
+            #item 1598
+            graph::p.error $diagram_id [ list $item_id ] \
+            	"Error in loop statement: $text"
+            gen::report_error $diagram_id $item_id \
+            	"Error in loop item $item_id: $text"
+        }
     }
 }
 
-proc p.rewire_loop_any { gdb start end scheme name } {
+proc p.rewire_loop_any { gdb start end scheme } {
     #item 1625
     set diagram_id [ gen::p.vertex_diagram $gdb $start ]
     set item_id [ gen::p.vertex_item $gdb $start ]
-    #item 3262
-    if {$name == ""} {
-        
-    } else {
-        #item 3265
-        set scheme "$name :\n$scheme"
-    }
+    #item 3866
+    set name [ gen::p.vertex_text $gdb $end ]
     #item 1627
     set loop_id [ \
     	gen::p.insert_vertex $gdb $diagram_id [ \
@@ -1949,13 +1932,6 @@ proc p.shelf { primary secondary } {
                                 } else {
                                     #item 11330009
                                     if {$_sw11330000_ == "declare"} {
-                                        #item 3126
-                                        set name [ lindex $sterms 1 ]
-                                        #item 3122
-                                        if {$name != ""} {
-                                            #item 3125
-                                            lappend lines "$name :"
-                                        }
                                         #item 3037
                                         lappend lines "##@@BEGIN_DECLARE@@##"
                                         #item 3351
