@@ -162,6 +162,17 @@ proc generate_cpp { db gdb filename } {
     p.generate $db $gdb $filename "cpp"
 }
 
+proc get_preset_desc { preset } {
+    #item 10640001
+    if {$preset == "blank"} {
+        #item 1072
+        return [ init_description ]
+    } else {
+        #item 1073
+        return ""
+    }
+}
+
 proc highlight { tokens } {
     #item 460
     variable c3_keywords
@@ -520,17 +531,17 @@ proc indentation { } {
     return "    "
 }
 
-proc init_description { filename } {
-    #item 767
+proc init_description { } {
+    #item 1048
     set result {}
-    #item 766
+    #item 1047
     set sections {
     	h_header h_footer c_header c_footer }
     foreach section $sections {
-        #item 771
+        #item 1052
         lappend result "=== $section ==="
     }
-    #item 770
+    #item 1051
     return [ join $result "\n" ]
 }
 
@@ -833,6 +844,11 @@ proc preprocess_tokens { tokens } {
     }
     #item 829
     return $result
+}
+
+proc presets_desc { } {
+    #item 1058
+    return { blank }
 }
 
 proc print_header { filename fhandle functions ctrs dtrs methods signals slots header footer class copying class_name language structure globals } {

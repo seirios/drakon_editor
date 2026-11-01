@@ -290,13 +290,6 @@ proc createfile { filename language } {
 	if { $language != "" } {
 		hl::reset
 		mwc::set_file_properties [ list language $language ]
-
-		lassign $gen::generators($language) generator extension
-		set gen_namespace [ namespace tail [ namespace qualifiers $generator ] ]
-		set init_description "${gen_namespace}::init_description"
-		if { [ namespace which $init_description ] != "" } {
-			mwc::do_file_description "" [ eval "$init_description $filename" ]
-		}
 	}
 
 	return 1

@@ -90,6 +90,10 @@ proc tw_init { window data } {
 	grid $window.root.hint -row 2 -column 2 -sticky w
 	grid $window.root.cancel -row 2 -column 3 -padx 10 -pady 10
 	
+	# Add context menu
+	menu $tw_text.editpop -tearoff 0
+	menu $tw_text.editpop.preset -tearoff 0
+	
 	mw::bind_shortcut $window ui::shortcut_handler
 	
 	if { [ is_mac ] } {
@@ -102,7 +106,7 @@ proc tw_init { window data } {
 	bind_win_copypaste $tw_text
 		
 	bind $tw_text <ButtonRelease-2> { ui::noop; break }
-	bind $tw_text <ButtonRelease-3> { ui::noop; break }
+	bind $tw_text [ mw::right_up_event ] "ui::edit_popup %W %X %Y $tw_callback"
 	
 	bind $window <Escape> ui::tw_close
 }
@@ -277,6 +281,68 @@ proc tw_ok { } {
 	set new_wo_trail [ string trimright $new_value ]
 	$tw_callback $tw_olduserdata $new_wo_trail
 	tw_close
+}
+
+proc tw_select_all { window } {
+	$window tag add sel 1.0 end
+}
+
+proc tw_clear { window } {
+	$window delete 1.0 end
+}
+
+proc tw_replace { window text } {
+	tw_clear $window
+	$window insert 1.0 $text
+}
+
+proc edit_popup { window x_world y_world callback } {
+	global g_filename
+
+	if { [ focus ] == "" } { return }
+	$window.editpop delete 0 1000
+	$window.editpop.preset delete 0 1000
+
+	set preset_type "none"
+	if { $callback == "mwc::do_file_description" } {
+		set preset_type "desc"
+	} elseif { $callback == "mwc::change_text_and_fit" } {
+		set preset_type "code"
+	} elseif { $callback == "mwc::do_dia_properties" } {
+		set preset_type "dia"
+	}
+
+	set preset_state disabled
+	array set properties [ mwc::get_file_properties ]
+	if { [ info exists properties(language) ] } {
+		set language $properties(language)
+		if { [ info exists gen::generators($language) ] } {
+			lassign $gen::generators($language) generator extension
+			set gen_namespace [ namespace tail [ namespace qualifiers $generator ] ]
+			set cmd_presets "${gen_namespace}::presets_$preset_type"
+			set cmd_get_preset "${gen_namespace}::get_preset_$preset_type"
+			if { [ namespace which $cmd_presets ] != "" } {
+				set presets [ $cmd_presets ]
+				foreach pre $presets {
+					$window.editpop.preset add command -label $pre \
+						-command "ui::tw_replace $window {[ $cmd_get_preset $pre ]}"
+				}
+				set preset_state normal
+			}
+		}
+	}
+
+	$window.editpop add cascade -label [ mc2 "Preset" ] -underline 0 -menu $window.editpop.preset \
+		-state $preset_state
+	$window.editpop add separator
+	$window.editpop add command -label [ mc2 "Copy" ] -command "tk_textCopy $window"
+	$window.editpop add command -label [ mc2 "Paste" ] -command "tk_textPaste $window"
+	$window.editpop add command -label [ mc2 "Cut" ] -command "tk_textCut $window"
+	$window.editpop add separator
+	$window.editpop add command -label [ mc2 "Select all" ] -command "ui::tw_select_all $window"
+	$window.editpop add command -label [ mc2 "Clear" ] -command "ui::tw_clear $window"
+
+	tk_popup $window.editpop $x_world $y_world
 }
 
 }

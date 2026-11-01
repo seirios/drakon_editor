@@ -1071,6 +1071,25 @@ proc generate_item { db item_id parent_loop } {
     }
 }
 
+proc get_preset_desc { preset } {
+    #item 3864
+    global g_filename
+    #item 38350001
+    if {$preset == "blank"} {
+        #item 3849
+        return [ init_description ]
+    } else {
+        #item 38350002
+        if {$preset == "package"} {
+            #item 3862
+            return [ init_package $g_filename ]
+        } else {
+            #item 3843
+            return ""
+        }
+    }
+}
+
 proc highlight { tokens } {
     #item 1316
     variable ada_keywords
@@ -1313,24 +1332,38 @@ proc indent_group { lines prefix depth endchar } {
     return $result
 }
 
-proc init_description { filename } {
+proc init_description { } {
     #item 1907
     set result {}
-    #item 1910
+    #item 3844
+    set sections \
+    	{ spec_header spec_footer body_header body_footer }
+    foreach section $sections {
+        #item 3848
+        lappend result "=== $section ==="
+    }
+    #item 1908
+    return [ join $result "\n" ]
+}
+
+proc init_package { filename } {
+    #item 3855
+    set result {}
+    #item 3861
     set pkgname [ package_name $filename ]
-    #item 1909
+    #item 3857
     lappend result "=== spec_header ==="
     lappend result "package $pkgname is"
-    #item 1911
+    #item 3858
     lappend result "=== spec_footer ==="
     lappend result "end $pkgname;"
-    #item 1912
+    #item 3859
     lappend result "=== body_header ==="
     lappend result "package body $pkgname is"
-    #item 1913
+    #item 3860
     lappend result "=== body_footer ==="
     lappend result "end $pkgname;"
-    #item 1908
+    #item 3856
     return [ join $result "\n" ]
 }
 
@@ -2114,6 +2147,8 @@ proc p.while_start { } {
 }
 
 proc package_name { filename } {
+    #item 3863
+    set filename [ file tail $filename ]
     #item 1887
     set name [ string tolower $filename ]
     #item 1888
@@ -2419,6 +2454,11 @@ proc preprocess_tokens { tokens } {
     }
     #item 3574
     return $result
+}
+
+proc presets_desc { } {
+    #item 3829
+    return { blank package }
 }
 
 proc print_body { db filename fhandle components header footer } {
