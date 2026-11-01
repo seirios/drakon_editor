@@ -421,7 +421,7 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
     #item 937
     set delims {
     	"(" ")" "[" "]" ";"
-    	"<" ">" "\{" "\}" }
+    	"\{" "\}" }
     #item 939
     set consts { true false }
     #item 991
@@ -478,19 +478,12 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
                                         set type "access"
                                     } else {
                                         #item 9050002
-                                        if {$lahtype == "op" &&
-	$lahtext == ">"} {
-                                            #item 904
-                                            set type "type"
+                                        if {[ regexp {^[0-9A-Z_]+$} $text ]} {
+                                            #item 890
+                                            set type "macro"
                                         } else {
-                                            #item 9050003
-                                            if {[ regexp {^[0-9A-Z_]+$} $text ]} {
-                                                #item 890
-                                                set type "macro"
-                                            } else {
-                                                #item 879
-                                                set type "id"
-                                            }
+                                            #item 879
+                                            set type "id"
                                         }
                                     }
                                 }
@@ -815,6 +808,13 @@ proc preprocess_tokens { tokens } {
             lassign \
             $lookahead \
             lahtype lahtext
+            #item 1074
+            set inext2 [ expr { $i + 2 } ]
+            set lookahead2 [ lindex $tokens $inext2 ]
+            #item 1076
+            lassign \
+            $lookahead2 \
+            lahtype2 lahtext2
             #item 8460001
             if {$text == "-" &&
 	$lahtype == "op" && $lahtext == ">"} {
@@ -831,8 +831,18 @@ proc preprocess_tokens { tokens } {
                     set tok [ list $type "::" ]
                     lappend result $tok $tok
                 } else {
-                    #item 854
-                    lappend result $token
+                    #item 8460003
+                    if {$text == "<" &&
+	$lahtype == "token" && $lahtext2 == ">"} {
+                        #item 1079
+                        incr i 2
+                        lappend result [ list "delim" $text ] \
+                        	[ list "type" $lahtext ] \
+                        	[ list "delim" $lahtext2 ]
+                    } else {
+                        #item 854
+                        lappend result $token
+                    }
                 }
             }
         } else {

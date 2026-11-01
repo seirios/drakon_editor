@@ -1,14 +1,17 @@
 * Ada generator
-** TODO Add suport for 'pragma'
-** TODO Print subtypes after types
+** TODO Add support for 'pragma'
+** TODO Change how named loops are defined
++ Semicolon after iteration scheme may be confusing
++ Perhaps a 'name' shelf?
++ Add name to 'loopend'?
+** TODO Add support for 'select' in select icon
++ Use regular if-else tree
++ Check when elsif can be used
 ** TODO Allow declaration diagrams (for package variables)
 + Or is this part of the package header/footer?
 ** INPR Add test cases
-** TODO Support different select modes (?)
-+ normal if-tree (if)
-+ string (str)
-+ select
 ** TODO Investigate support for nested loop breaking with nogoto
+** DONE Print subtypes after types
 ** DONE Support 'for' clauses
 ** DONE Support 'with' aspects
 ** DONE Support named loops
@@ -40,13 +43,17 @@
 + Some are available for Tkinter in Python
 + Possible to embed urxvt/st too!
 + Run user-defined editor (vim, avoe, etc.)
-** TODO Add context menu to diagram description, with clear action
++ Need to handle temporary file
++ Close window on command exit
 ** TODO Allow setting editor window tab size
 ** TODO Add bracket matching to editor window
 ** TODO Allow setting language when creating from dialog
-** TODO Allow setting file kind (e.g. package, task, none, etc.)
 ** TODO Add some facility to define boolean functions with truth tables
 + Output is a diagram implementing the boolean function (tree of ifs)
+** WONTFIX Add context menu to diagram description, with clear action
++ No need, can clear from text editor context menu
+** WONTFIX Allow setting file kind (e.g. package, task, none, etc.)
++ No need, can use text editor context menu presets
 ** DONE Fix tab shortcut for second select in series
 ** DONE Do not center element, but place middle-top-20%
 ** DONE Tab on address goes to branch header
