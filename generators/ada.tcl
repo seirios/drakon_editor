@@ -1097,7 +1097,15 @@ proc highlight { tokens } {
     #item 3563
     set tokens [ preprocess_tokens $tokens ]
     #item 1317
-    return [ highlight_generic $ada_keywords $ada_types $tokens ]
+    set types [ highlight_generic $ada_keywords $ada_types $tokens ]
+    #item 3871
+    set result {}
+    foreach t $types {
+        #item 3874
+        lappend result [ standard_color $t ]
+    }
+    #item 3870
+    return $result
 }
 
 proc highlight_generic { keywords kw_types tokens } {
@@ -1134,7 +1142,7 @@ proc highlight_generic { keywords kw_types tokens } {
             #item 13570002
             if {$state == "string"} {
                 #item 1392
-                lappend result $colors::syntax_string
+                lappend result "char"
                 #item 13850001
                 if {($text == "\"") || ($text == "\n")} {
                     #item 1393
@@ -1149,8 +1157,7 @@ proc highlight_generic { keywords kw_types tokens } {
                     error "Unexpected switch value: $state"
                 }
                 #item 1421
-                lappend result \
-                	$colors::syntax_comment
+                lappend result "comment"
                 #item 1418
                 if {$text == "\n"} {
                     #item 1420
@@ -1185,15 +1192,14 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
     #item 14810001
     if {$text == "\""} {
         #item 1492
-        lappend result $colors::syntax_string
+        lappend result "char"
         #item 1498
         set state "string"
     } else {
         #item 14810002
         if {$text == "--"} {
             #item 3594
-            lappend result \
-            	$colors::syntax_comment
+            lappend result "comment"
             #item 1495
             set state "comment line"
         } else {
@@ -1234,8 +1240,7 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
                 }
             }
             #item 3618
-            lappend result [standard_color \
-            	$keywords $kw_types $type $text]
+            lappend result $type
             #item 1499
             set state "idle"
         }
@@ -1974,20 +1979,26 @@ proc p.shelf { primary secondary } {
                                                 }
                                             } else {
                                                 #item 11330012
-                                                if {$_sw11330000_ == "end"} {
-                                                    
+                                                if {$_sw11330000_ == "goto"} {
+                                                    #item 3869
+                                                    set result "goto $primary;"
                                                 } else {
                                                     #item 11330013
-                                                    error "Unexpected switch value: $_sw11330000_"
+                                                    if {$_sw11330000_ == "end"} {
+                                                        
+                                                    } else {
+                                                        #item 11330014
+                                                        error "Unexpected switch value: $_sw11330000_"
+                                                    }
+                                                    #item 3049
+                                                    lappend lines "##@@BEGIN_END@@##"
+                                                    #item 3114
+                                                    append_notempty lines $primary
+                                                    #item 3113
+                                                    lappend lines "##@@END_END@@##"
+                                                    #item 3050
+                                                    set result [ join $lines "\n" ]
                                                 }
-                                                #item 3049
-                                                lappend lines "##@@BEGIN_END@@##"
-                                                #item 3114
-                                                append_notempty lines $primary
-                                                #item 3113
-                                                lappend lines "##@@END_END@@##"
-                                                #item 3050
-                                                set result [ join $lines "\n" ]
                                             }
                                         }
                                     }
@@ -2415,8 +2426,17 @@ proc preprocess_tokens { tokens } {
                             set tok [ list "number" $text ]
                             lappend result $tok
                         } else {
-                            #item 3592
-                            lappend result $token
+                            #item 35870005
+                            if {($text == "<" && $lahtext == "<") ||
+	($text == ">" && $lahtext == ">")} {
+                                #item 3886
+                                incr i
+                                set tok [ list "delim" $text ]
+                                lappend result $tok $tok
+                            } else {
+                                #item 3592
+                                lappend result $token
+                            }
                         }
                     }
                 }
@@ -3106,49 +3126,68 @@ proc sort_types { components } {
     return $result
 }
 
-proc standard_color { keywords kw_types type text } {
+proc standard_color { type } {
     #item 13230001
-    if {$type == "op"} {
-        #item 1332
-        return $colors::syntax_operator
+    if {$type == "comment"} {
+        #item 3877
+        return $colors::syntax_comment
     } else {
         #item 13230002
-        if {$type == "number"} {
-            #item 1331
-            return $colors::syntax_number
+        if {$type == "op"} {
+            #item 1332
+            return $colors::syntax_operator
         } else {
             #item 13230003
-            if {$type == "type"} {
-                #item 3658
-                return $colors::syntax_type
+            if {$type == "number"} {
+                #item 1331
+                return $colors::syntax_number
             } else {
                 #item 13230004
-                if {$type == "keyword"} {
-                    #item 3656
-                    return $colors::syntax_keyword
+                if {$type == "char"} {
+                    #item 3880
+                    return $colors::syntax_string
                 } else {
                     #item 13230005
-                    if {$type == "const"} {
-                        #item 3663
-                        return $colors::syntax_number
+                    if {$type == "type"} {
+                        #item 3658
+                        return $colors::syntax_type
                     } else {
                         #item 13230006
-                        if {$type == "delim"} {
-                            #item 3665
-                            return $colors::syntax_delimiter
+                        if {$type == "keyword"} {
+                            #item 3656
+                            return $colors::syntax_keyword
                         } else {
                             #item 13230007
-                            if {$type == "char"} {
-                                #item 3608
-                                return $colors::syntax_string
+                            if {$type == "const"} {
+                                #item 3663
+                                return $colors::syntax_number
                             } else {
                                 #item 13230008
-                                if {$type == "attr"} {
-                                    #item 3614
-                                    return $colors::syntax_special
+                                if {$type == "delim"} {
+                                    #item 3665
+                                    return $colors::syntax_delimiter
                                 } else {
-                                    #item 1333
-                                    return $colors::syntax_identifier
+                                    #item 13230009
+                                    if {$type == "id"} {
+                                        #item 3883
+                                        return $colors::syntax_identifier
+                                    } else {
+                                        #item 13230010
+                                        if {$type == "attr"} {
+                                            #item 3614
+                                            return $colors::syntax_special
+                                        } else {
+                                            #item 13230011
+                                            if {$type == "space"} {
+                                                
+                                            } else {
+                                                #item 13230012
+                                                error "Unexpected switch value: $type"
+                                            }
+                                            #item 1333
+                                            return ""
+                                        }
+                                    }
                                 }
                             }
                         }

@@ -1,9 +1,5 @@
 * Ada generator
 ** TODO Add support for 'pragma'
-** TODO Change how named loops are defined
-+ Semicolon after iteration scheme may be confusing
-+ Perhaps a 'name' shelf?
-+ Add name to 'loopend'?
 ** TODO Add support for 'select' in select icon
 + Use regular if-else tree
 + Check when elsif can be used
@@ -11,6 +7,8 @@
 + Or is this part of the package header/footer?
 ** INPR Add test cases
 ** TODO Investigate support for nested loop breaking with nogoto
+** DONE Change how named loops are defined
++ Semicolon after iteration scheme may be confusing
 ** DONE Print subtypes after types
 ** DONE Support 'for' clauses
 ** DONE Support 'with' aspects

@@ -996,29 +996,29 @@ proc standard_color { type } {
                             return $colors::syntax_keyword
                         } else {
                             #item 4670007
-                            if {$type == "access"} {
-                                #item 931
-                                return $colors::syntax_special
+                            if {$type == "const"} {
+                                #item 922
+                                return $colors::syntax_number
                             } else {
                                 #item 4670008
-                                if {$type == "macro"} {
-                                    #item 892
-                                    return $colors::syntax_number
+                                if {$type == "delim"} {
+                                    #item 932
+                                    return $colors::syntax_delimiter
                                 } else {
                                     #item 4670009
-                                    if {$type == "const"} {
-                                        #item 922
-                                        return $colors::syntax_number
+                                    if {$type == "id"} {
+                                        #item 477
+                                        return $colors::syntax_identifier
                                     } else {
                                         #item 4670010
-                                        if {$type == "delim"} {
-                                            #item 932
-                                            return $colors::syntax_delimiter
+                                        if {$type == "access"} {
+                                            #item 931
+                                            return $colors::syntax_special
                                         } else {
                                             #item 4670011
-                                            if {$type == "id"} {
-                                                #item 477
-                                                return $colors::syntax_identifier
+                                            if {$type == "macro"} {
+                                                #item 892
+                                                return $colors::syntax_number
                                             } else {
                                                 #item 4670012
                                                 if {$type == "space"} {
