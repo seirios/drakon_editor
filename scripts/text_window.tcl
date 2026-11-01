@@ -296,6 +296,63 @@ proc tw_replace { window text } {
 	$window insert 1.0 $text
 }
 
+proc tw_redo { window } {
+	if { [ $window edit canredo ] } {
+		$window edit redo
+	}
+}
+
+proc tw_undo { window } {
+	if { [ $window edit canundo ] } {
+		$window edit undo
+	}
+}
+
+proc tw_get_sel_lines { window } {
+	set selrange [ $window tag nextrange sel 1.0 ]
+	if { $selrange == "" } {
+		set selrange { 1.0 end }
+	}
+	set text [ $window get {*}$selrange ]
+	set text [ string trimright $text ]
+	set lines [ split $text "\n" ]
+	return [ list $selrange $lines ]
+}
+
+proc tw_trim { window } {
+	lassign [ tw_get_sel_lines $window ] selrange lines
+	set lines_new {}
+	foreach line $lines {
+		lappend lines_new [ string trim $line ]
+	}
+	set text_new [ join $lines_new "\n" ]
+	$window replace {*}$selrange $text_new
+}
+
+proc tw_indent { window } {
+	lassign [ tw_get_sel_lines $window ] selrange lines
+	set lines_new {}
+	foreach line $lines {
+		lappend lines_new "\t$line"
+	}
+	set text_new [ join $lines_new "\n" ]
+	$window replace {*}$selrange $text_new
+}
+
+proc tw_unindent { window } {
+	lassign [ tw_get_sel_lines $window ] selrange lines
+	set lines_new {}
+	foreach line $lines {
+		if { [ string range $line 0 0 ] == "\t" } {
+			lappend lines_new [ string range $line 1 end ]
+		} else {
+			lappend lines_new $line
+		}
+	}
+	set text_new [ join $lines_new "\n" ]
+	$window replace {*}$selrange $text_new
+}
+
 proc edit_popup { window x_world y_world callback } {
 	global g_filename
 
@@ -332,15 +389,27 @@ proc edit_popup { window x_world y_world callback } {
 		}
 	}
 
-	$window.editpop add cascade -label [ mc2 "Preset" ] -underline 0 -menu $window.editpop.preset \
-		-state $preset_state
+	set sel_state normal
+	set selrange [ $window tag nextrange sel 1.0 ]
+	if { $selrange == "" } {
+		set sel_state disabled
+	}
+
+	$window.editpop add cascade -label [ mc2 "Preset" ] -underline 0 -menu $window.editpop.preset -state $preset_state
 	$window.editpop add separator
-	$window.editpop add command -label [ mc2 "Copy" ] -command "tk_textCopy $window"
+	$window.editpop add command -label [ mc2 "Undo" ] -command "ui::tw_undo $window"
+	$window.editpop add command -label [ mc2 "Redo" ] -command "ui::tw_redo $window"
+	$window.editpop add separator
+	$window.editpop add command -label [ mc2 "Cut" ] -command "tk_textCut $window" -state $sel_state
+	$window.editpop add command -label [ mc2 "Copy" ] -command "tk_textCopy $window" -state $sel_state
 	$window.editpop add command -label [ mc2 "Paste" ] -command "tk_textPaste $window"
-	$window.editpop add command -label [ mc2 "Cut" ] -command "tk_textCut $window"
 	$window.editpop add separator
 	$window.editpop add command -label [ mc2 "Select all" ] -command "ui::tw_select_all $window"
 	$window.editpop add command -label [ mc2 "Clear" ] -command "ui::tw_clear $window"
+	$window.editpop add separator
+	$window.editpop add command -label [ mc2 "Trim" ] -command "ui::tw_trim $window" -state $sel_state
+	$window.editpop add command -label [ mc2 "Indent" ] -command "ui::tw_indent $window" -state $sel_state
+	$window.editpop add command -label [ mc2 "Unindent" ] -command "ui::tw_unindent $window" -state $sel_state
 
 	tk_popup $window.editpop $x_world $y_world
 }
