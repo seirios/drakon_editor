@@ -719,7 +719,7 @@ proc filter_subprograms { components inline access } {
     return $result
 }
 
-proc filter_types { components subtype } {
+proc filter_types { components subtype access } {
     #item 3772
     set result {}
     foreach component $components {
@@ -734,7 +734,7 @@ proc filter_types { components subtype } {
         #item 3775
         array set props $prop_list
         #item 3779
-        if {($type == "type") && ($props(subtype) == $subtype)} {
+        if {(($type == "type") && ($props(subtype) == $subtype)) && ($props(access) == $access)} {
             #item 3776
             lappend result $component
         }
@@ -2633,11 +2633,11 @@ proc print_spec { db filename fhandle components header footer } {
     #item 490
     puts_notempty \
     	$fhandle $header
-    foreach type [ filter_types $components "type" ] {
+    foreach type [ filter_types $components type public ] {
         #item 1277
         print_type $db $fhandle $type
     }
-    foreach type [ filter_types $components "subtype" ] {
+    foreach type [ filter_types $components subtype public ] {
         #item 3786
         print_type $db $fhandle $type
     }
@@ -2649,14 +2649,23 @@ proc print_spec { db filename fhandle components header footer } {
         #item 493
         print_subprogram $db $fhandle $subprogram 1
     }
-    #item 769
-    if {[ llength [ filter_subprograms \
-	$components 0 private ] ] == 0} {
+    #item 3888
+    if {[ llength [ filter_subprograms $components 0 private ] ] +   
+[ llength [ filter_types $components type private    ] ] +   
+[ llength [ filter_types $components subtype private ] ] == 0} {
         
     } else {
         #item 3201
         puts $fhandle ""
         puts $fhandle "private"
+        foreach type [ filter_types $components type private ] {
+            #item 3893
+            print_type $db $fhandle $type
+        }
+        foreach type [ filter_types $components subtype private ] {
+            #item 3896
+            print_type $db $fhandle $type
+        }
         foreach subprogram [ filter_subprograms $components 0 private ] {
             #item 765
             print_subprogram $db $fhandle $subprogram 1
@@ -2928,16 +2937,9 @@ proc print_type_kernel { fhandle depth type abstract tagged name body print_body
     #item 3093
     set indent \
     	[ gen::make_indent $depth ]
-    #item 3097
-    if {$print_body} {
-        #item 3098
-        append_notempty \
-        	result $body_header
-    } else {
-        #item 3099
-        append_notempty \
-        	result $spec_header
-    }
+    #item 3099
+    append_notempty \
+    	result $spec_header
     #item 3202
     puts $fhandle ""
     #item 858
@@ -2958,26 +2960,16 @@ proc print_type_kernel { fhandle depth type abstract tagged name body print_body
     }
     #item 894
     lappend result $line
-    #item 890
-    if {$print_body} {
-        #item 3218
-        set body [ parse_body \
-        	$body $depth $name ]
-        foreach line $body {
-            #item 903
-            lappend result $line
-        }
-        #item 3108
-        if {$print_body} {
-            #item 3109
-            append_notempty \
-            	result $body_footer
-        } else {
-            #item 3110
-            append_notempty \
-            	result $spec_footer
-        }
+    #item 3218
+    set body [ parse_body \
+    	$body $depth $name ]
+    foreach line $body {
+        #item 903
+        lappend result $line
     }
+    #item 3110
+    append_notempty \
+    	result $spec_footer
     #item 1067
     set nline [ llength $result ]
     #item 9110001

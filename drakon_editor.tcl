@@ -284,8 +284,14 @@ proc createfile { filename language } {
 		return 0
 	}
 
+	if { $language == "Ada" } {
+		set dia_name [ gen_ada::package_name $filename ]
+	} else {
+		set dia_name "Untitled"
+	}
+
 	reload $filename
-	mwc::do_create_dia "Untitled" 1 0 drakon
+	mwc::do_create_dia $dia_name 1 0 drakon
 
 	if { $language != "" } {
 		hl::reset

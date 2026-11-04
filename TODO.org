@@ -3,6 +3,7 @@
 ** TODO Add support for 'select' in select icon
 + Use regular if-else tree
 + Check when elsif can be used
+** TODO Add support for 'incomplete' types (?)
 ** TODO Allow declaration diagrams (for package variables)
 + Or is this part of the package header/footer?
 ** INPR Add test cases
