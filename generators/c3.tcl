@@ -443,6 +443,31 @@ proc extract_signature { text name } {
     [ gen::create_signature $type $prop_list $parameters $returns ] ]
 }
 
+proc for_declare { item_id first second } {
+    #item 1397
+    return ""
+}
+
+proc foreach_check { item_id first second } {
+    #item 1398
+    return ""
+}
+
+proc foreach_current { item_id first second } {
+    #item 1399
+    return ""
+}
+
+proc foreach_incr { item_id first second } {
+    #item 1400
+    return ""
+}
+
+proc foreach_init { item_id first second } {
+    #item 1401
+    return ""
+}
+
 proc generate { db gdb filename } {
     #item 777
     p.generate $db $gdb $filename "c"
@@ -740,7 +765,7 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
     	virtual static
     	inline abstract const
     	method function ctr dtr
-    	signal slot returns }
+    	signal slot returns foreach }
     #item 939
     set consts { true false }
     #item 991
@@ -802,7 +827,7 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
                                             set type "access"
                                         } else {
                                             #item 9050002
-                                            if {[ regexp {^[0-9A-Z_]+$} $text ]} {
+                                            if {[ regexp "^\[0-9A-Z_\]\{2,\}\$" $text ]} {
                                                 #item 890
                                                 set type "macro"
                                             } else {
@@ -863,7 +888,7 @@ proc init_description { } {
     return [ join $result "\n" ]
 }
 
-proc make_callbacks { } {
+proc make_callbacks { language } {
     #item 306
     set callbacks {}
     #item 308
@@ -893,8 +918,23 @@ proc make_callbacks { } {
     gen::put_callback callbacks comment       gen_c3::commentator
     gen::put_callback callbacks break         "break;"
     gen::put_callback callbacks tab_convert   gen_c3::indentation
+    #item 1362
+    if {$language == "cpp"} {
+        #item 1365
+        gen::put_callback callbacks native_foreach   gen_c3::native_foreach
+        gen::put_callback callbacks for_init         gen_c3::foreach_init
+        gen::put_callback callbacks for_check        gen_c3::foreach_check
+        gen::put_callback callbacks for_current      gen_c3::foreach_current
+        gen::put_callback callbacks for_incr         gen_c3::foreach_incr
+        gen::put_callback callbacks for_declare      gen_c3::for_declare
+    }
     #item 307
     return $callbacks
+}
+
+proc native_foreach { for_it for_var } {
+    #item 1371
+    return "for ($for_it : $for_var) \{"
 }
 
 proc output_icon { primary secondary } {
@@ -947,7 +987,7 @@ proc p.and { left right } {
 
 proc p.generate { db gdb filename language } {
     #item 345
-    set callbacks [ make_callbacks ]
+    set callbacks [ make_callbacks $language ]
     #item 362
     set machines [ sma::extract_many_machines \
      $gdb $callbacks ]

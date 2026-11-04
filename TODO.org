@@ -22,8 +22,10 @@
 + Added keywords to manually order them
 ** DONE Add highlighting for Ada! 
 * C3 generator
+** TODO Native for, switch
++ Required for local variable semantics in for loop
++ Required when enums are no longer ints (C++ class enums)
 ** TODO Add test cases
-** TODO Native for/while, switch (?)
 ** DONE Add C++ support
 * Canvas
 ** TODO Show branches in order in 'go to branch...' (?)
