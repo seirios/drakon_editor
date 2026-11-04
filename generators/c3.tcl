@@ -243,6 +243,206 @@ proc elseif_start { } {
     return "\} else if \("
 }
 
+proc extract_signature { text name } {
+    #item 1140
+    array set props { access static abstract 0
+     inline 0 dispatch normal const 0 type function
+     memb_init_list "" }
+    set error_message ""
+    set parameters {}
+    set memb_init_list {}
+    set type "function"
+    set returns ""
+    #item 1099
+    set lines [ gen::separate_from_comments $text ]
+    #item 1101
+    if {[ llength $lines ] == 0} {
+        #item 1145
+        set returns "void"
+    } else {
+        #item 1100
+        set first_line [ lindex $lines 0 ]
+        set first [ lindex $first_line 0 ]
+        #item 1123
+        if {$first == "#comment"} {
+            #item 1113
+            set type comment
+            set returns ""
+        } else {
+            #item 1129
+            set keywords { 
+            	public private protected
+            	virtual static
+            	inline abstract const
+            	method function ctr dtr 
+            	signal slot }
+            #item 1130
+            set found_keywords \
+             [ gen_cpp::find_keywords $first $keywords ]
+            #item 1128
+            if {[ llength $found_keywords ] == 0} {
+                #item 1132
+                set start_index 0
+                #item 1108
+                set count [ llength $lines ]
+                set last [ expr { $count - 1 } ]
+                #item 11110001
+                set i $start_index
+                while { 1 } {
+                    #item 11110002
+                    if {$i < $count} {
+                        
+                    } else {
+                        break
+                    }
+                    #item 1110
+                    set current [ lindex $lines $i ]
+                    set stripped [ lindex $current 0 ]
+                    #item 1116
+                    if {[ string match "returns *" $stripped ]} {
+                        #item 1117
+                        if {$i == $last} {
+                            #item 1119
+                            set returns [ gen_cpp::extract_return_type $stripped ]
+                        } else {
+                            #item 1121
+                            set error_message \
+                            "$name: 'returns' can only be the last line."
+                        }
+                        break
+                    }
+                    #item 1165
+                    if {[ string index $stripped 0 ] == ":"} {
+                        #item 1170
+                        set line [ string range $stripped 1 end ]
+                        set line [ string trimleft $line ]
+                        #item 1168
+                        lappend memb_init_list $line
+                    } else {
+                        #item 1115
+                        lappend parameters $current
+                    }
+                    #item 11110003
+                    incr i
+                }
+                #item 1146
+                if {($type == "ctr") || ($type == "dtr")} {
+                    #item 1150
+                    if {$returns == ""} {
+                        
+                    } else {
+                        #item 1151
+                        set error_message \
+                        "$name: constructors and destructors must not have return type"
+                    }
+                } else {
+                    #item 1154
+                    if {$returns == ""} {
+                        #item 1157
+                        set returns "void"
+                    }
+                }
+            } else {
+                #item 1131
+                set start_index 1
+                #item 1134
+                set alien_keywords \
+                 [ gen_cpp::find_not_belonging $first $keywords ]
+                #item 1135
+                if {[ llength $alien_keywords ] == 0} {
+                    #item 1164
+                    lassign \
+                    [ gen_cpp::classify_keywords $found_keywords $name ] \
+                    error_message prop_list
+                    #item 1142
+                    if {$error_message == ""} {
+                        #item 1143
+                        array unset props
+                        array set props $prop_list
+                        set type $props(type)
+                        #item 1108
+                        set count [ llength $lines ]
+                        set last [ expr { $count - 1 } ]
+                        #item 11110001
+                        set i $start_index
+                        while { 1 } {
+                            #item 11110002
+                            if {$i < $count} {
+                                
+                            } else {
+                                break
+                            }
+                            #item 1110
+                            set current [ lindex $lines $i ]
+                            set stripped [ lindex $current 0 ]
+                            #item 1116
+                            if {[ string match "returns *" $stripped ]} {
+                                #item 1117
+                                if {$i == $last} {
+                                    #item 1119
+                                    set returns [ gen_cpp::extract_return_type $stripped ]
+                                } else {
+                                    #item 1121
+                                    set error_message \
+                                    "$name: 'returns' can only be the last line."
+                                }
+                                break
+                            }
+                            #item 1165
+                            if {[ string index $stripped 0 ] == ":"} {
+                                #item 1170
+                                set line [ string range $stripped 1 end ]
+                                set line [ string trimleft $line ]
+                                #item 1168
+                                lappend memb_init_list $line
+                            } else {
+                                #item 1115
+                                lappend parameters $current
+                            }
+                            #item 11110003
+                            incr i
+                        }
+                        #item 1146
+                        if {($type == "ctr") || ($type == "dtr")} {
+                            #item 1150
+                            if {$returns == ""} {
+                                
+                            } else {
+                                #item 1151
+                                set error_message \
+                                "$name: constructors and destructors must not have return type"
+                            }
+                        } else {
+                            #item 1154
+                            if {$returns == ""} {
+                                #item 1157
+                                set returns "void"
+                            }
+                        }
+                    }
+                } else {
+                    #item 1136
+                    set error_message \
+                        "$name: Unexpected keywords: $alien_keywords"
+                }
+            }
+        }
+    }
+    #item 1158
+    if {($type == "dtr") && ([ llength $parameters ] > 0)} {
+        #item 1162
+        set error_message \
+        "$name: destructor cannot have parameters"
+    }
+    #item 1169
+    set props(memb_init_list) [ join $memb_init_list ", " ]
+    #item 1144
+    set prop_list [ array get props ]
+    #item 1112
+    return [ list $error_message \
+    [ gen::create_signature $type $prop_list $parameters $returns ] ]
+}
+
 proc generate { db gdb filename } {
     #item 777
     p.generate $db $gdb $filename "c"
@@ -673,7 +873,7 @@ proc make_callbacks { } {
     gen::put_callback callbacks bad_case      gen_c3::bad_case
     
     gen::put_callback callbacks body          gen_c3::generate_body
-    gen::put_callback callbacks signature     gen_cpp::extract_signature
+    gen::put_callback callbacks signature     gen_c3::extract_signature
     gen::put_callback callbacks and           gen_c3::p.and
     gen::put_callback callbacks or            gen_c3::p.or
     gen::put_callback callbacks not           gen_c3::p.not
@@ -828,7 +1028,7 @@ proc p.generate { db gdb filename language } {
             $h_header $h_footer $class $copying $class_name \
             $language $sm_header $g_header
             
-            gen_cpp::print_cpp $h_filename $cfile $free_funs \
+            print_cpp $h_filename $cfile $free_funs \
             $ctrs $dtrs $methods $slots \
             $c_header $c_footer $class_name \
             $language $sm_body $g_body
@@ -986,6 +1186,326 @@ proc presets_desc { } {
     return { blank }
 }
 
+proc print_cpp { header_filename fhandle functions ctrs dtrs methods slots header footer class_name language structure globals } {
+    #item 1181
+    gen_cpp::put_credits $fhandle
+    #item 1182
+    set header_tail [ file tail $header_filename ]
+    #item 1226
+    puts $fhandle "#include \"$header_tail\""
+    #item 1227
+    puts $fhandle ""
+    puts $fhandle $header
+    #item 1222
+    variable src_file
+    set module_name \
+    	[ gen_cpp::take_module_name $src_file ]
+    foreach function [ gen_cpp::filter_functions $functions 0 static ] {
+        #item 1192
+        print_function $fhandle $function 1 "" $language
+    }
+    foreach function [ gen_cpp::filter_functions $functions 1 static ] {
+        #item 1195
+        print_function $fhandle $function 1 "" $language
+    }
+    #item 1228
+    puts $fhandle ""
+    puts $fhandle $structure
+    puts $fhandle ""
+    puts $fhandle $globals
+    #item 1220
+    init_current_file $fhandle
+    gen_c_t::generate_cpp $module_name
+    foreach function [ gen_cpp::filter_functions $functions 1 static ] {
+        #item 1198
+        print_function $fhandle $function 0 "" $language
+    }
+    foreach function [ gen_cpp::filter_functions $functions 0 static ] {
+        #item 1216
+        print_function $fhandle $function 0 "" $language
+    }
+    foreach function [ gen_cpp::filter_functions $functions 0 public ] {
+        #item 1201
+        print_function $fhandle $function 0 "" $language
+    }
+    foreach method $ctrs {
+        #item 1207
+        print_function $fhandle $method 0 $class_name "cpp"
+    }
+    foreach method $dtrs {
+        #item 1210
+        print_function $fhandle $method 0 $class_name  "cpp"
+    }
+    foreach method $methods {
+        #item 1213
+        print_function $fhandle $method 0 $class_name "cpp"
+    }
+    foreach method $slots {
+        #item 1219
+        print_function $fhandle $method 0 $class_name "cpp"
+    }
+    #item 1223
+    puts $fhandle $footer
+    #item 1224
+    puts $fhandle ""
+}
+
+proc print_function { fhandle function in_header class_name language } {
+    #item 1354
+    lassign \
+    $function \
+    diagram_id name signature body
+    #item 1355
+    lassign \
+    $signature \
+    type prop_list parameters returns
+    #item 1233
+    array set props $prop_list
+    set inline $props(inline)
+    set memb_init_list ""
+    #item 1264
+    if {$language == "c"} {
+        #item 1267
+        set empty "void"
+    } else {
+        #item 1268
+        set empty ""
+    }
+    #item 1253
+    if {$type == "function"} {
+        #item 1234
+        set depth 0
+        set static [ expr { $props(access) != "public" } ]
+        set virtual 0
+        set class ""
+        set const 0
+        set abstract 0
+        set print_body [ expr !$in_header ]
+        #item 1235
+        print_function_kernel \
+        $fhandle \
+        $depth \
+        $static \
+        $virtual \
+        $inline \
+        $returns \
+        $class \
+        $name \
+        $parameters \
+        $props(const) \
+        $abstract \
+        $body \
+        $print_body \
+        $empty \
+        $memb_init_list
+    } else {
+        #item 1237
+        if {$in_header} {
+            #item 1239
+            set depth 1
+            set static [ expr { $props(dispatch) == "static" } ]
+            set virtual [ expr { $props(dispatch) == "virtual" } ]
+            set class ""
+            set abstract $props(abstract)
+            #item 1241
+            if {$inline} {
+                #item 1244
+                set print_body 1
+            } else {
+                #item 1240
+                set print_body 0
+            }
+            #item 1249
+            if {$type == "ctr"} {
+                #item 1250
+                set returns "explicit"
+                set name $class_name
+            }
+            #item 1257
+            if {$type == "dtr"} {
+                #item 1259
+                set returns ""
+                set name "~$class_name"
+            }
+            #item 1235
+            print_function_kernel \
+            $fhandle \
+            $depth \
+            $static \
+            $virtual \
+            $inline \
+            $returns \
+            $class \
+            $name \
+            $parameters \
+            $props(const) \
+            $abstract \
+            $body \
+            $print_body \
+            $empty \
+            $memb_init_list
+        } else {
+            #item 1245
+            set depth 0
+            set static 0
+            set virtual 0
+            set class $class_name
+            set abstract 0
+            #item 1246
+            if {($inline) || ($props(abstract))} {
+                
+            } else {
+                #item 1258
+                set print_body 1
+                #item 1254
+                if {$type == "ctr"} {
+                    #item 1255
+                    set returns ""
+                    set name $class_name
+                    set memb_init_list $props(memb_init_list)
+                }
+                #item 1257
+                if {$type == "dtr"} {
+                    #item 1259
+                    set returns ""
+                    set name "~$class_name"
+                }
+                #item 1235
+                print_function_kernel \
+                $fhandle \
+                $depth \
+                $static \
+                $virtual \
+                $inline \
+                $returns \
+                $class \
+                $name \
+                $parameters \
+                $props(const) \
+                $abstract \
+                $body \
+                $print_body \
+                $empty \
+                $memb_init_list
+            }
+        }
+    }
+}
+
+proc print_function_kernel { fhandle depth static virtual inline returns class name parameters const abstract body print_body empty memb_init_list } {
+    #item 1274
+    set result {}
+    set line ""
+    #item 1272
+    if {$static} {
+        #item 1273
+        append line "static "
+    }
+    #item 1277
+    if {$virtual} {
+        #item 1278
+        append line "virtual "
+    }
+    #item 1281
+    if {$inline} {
+        #item 1282
+        append line "inline "
+    }
+    #item 1285
+    append line "$returns "
+    #item 1292
+    if {$class == ""} {
+        
+    } else {
+        #item 1294
+        append line "$class\:\:"
+    }
+    #item 1295
+    append line "$name\("
+    #item 1345
+    set param_count [ llength $parameters ]
+    #item 1286
+    if {$param_count == 0} {
+        #item 1296
+        append line "$empty\)"
+    } else {
+        #item 1308
+        lappend result $line
+        #item 12990001
+        set i 0
+        while { 1 } {
+            #item 12990002
+            if {$i < $param_count} {
+                
+            } else {
+                break
+            }
+            #item 1302
+            set parameter_info [ lindex $parameters $i ]
+            set parameter [ lindex $parameter_info 0 ]
+            #item 1300
+            set line "    $parameter"
+            #item 1303
+            if {$i == $param_count - 1} {
+                
+            } else {
+                #item 1304
+                append line ","
+            }
+            #item 1310
+            lappend result $line
+            #item 12990003
+            incr i
+        }
+        #item 1301
+        set line "\)"
+    }
+    #item 1318
+    if {$const} {
+        #item 1319
+        append line " const"
+    }
+    #item 1322
+    if {$abstract} {
+        #item 1323
+        append line " = 0"
+    }
+    #item 1326
+    if {$print_body} {
+        #item 1356
+        if {$memb_init_list == ""} {
+            
+        } else {
+            #item 1359
+            append line " : $memb_init_list"
+        }
+        #item 1329
+        append line " \{"
+        #item 1330
+        lappend result $line
+        foreach line $body {
+            #item 1339
+            lappend result "    $line"
+        }
+        #item 1342
+        lappend result "\}"
+    } else {
+        #item 1328
+        append line ";"
+        #item 1331
+        lappend result $line
+    }
+    #item 1348
+    set space [ gen::make_indent $depth ]
+    foreach line $result {
+        #item 1349
+        puts -nonewline $fhandle $space
+        puts $fhandle $line
+    }
+    #item 1350
+    puts $fhandle ""
+}
+
 proc print_header { filename fhandle functions ctrs dtrs methods signals slots header footer class copying class_name language structure globals } {
     #item 404
     gen_cpp::put_credits $fhandle
@@ -1020,19 +1540,16 @@ proc print_header { filename fhandle functions ctrs dtrs methods signals slots h
             
         } else {
             #item 409
-            gen_cpp::print_function \
-            $fhandle $function 1 "" $language
+            print_function $fhandle $function 1 "" $language
         }
     }
     foreach function [ gen_cpp::filter_functions $functions 1 public ] {
         #item 418
-        gen_cpp::print_function \
-        $fhandle $function 1 "" $language
+        print_function $fhandle $function 1 "" $language
     }
     foreach function [ gen_cpp::filter_functions $functions 1 public ] {
         #item 421
-        gen_cpp::print_function \
-        $fhandle $function 0 "" $language
+        print_function $fhandle $function 0 "" $language
     }
     #item 786
     if {$class == ""} {
