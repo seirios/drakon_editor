@@ -1013,6 +1013,8 @@ proc gen_subprogram_kernel { depth static type inline abstract overriding return
     #item 3051
     set indent \
     	[ gen::make_indent $depth ]
+    #item 4060
+    lappend result ""
     #item 949
     if {$print_body} {
         #item 950
@@ -1136,6 +1138,8 @@ proc gen_subprogram_kernel { depth static type inline abstract overriding return
             }
         }
     }
+    #item 4059
+    add_last_semicolon result
     #item 976
     if {$print_body} {
         #item 977
@@ -1261,8 +1265,8 @@ proc generate_functions { db gdb callbacks } {
     #item 3967
     variable g_no_ins
     #item 3929
-    set ins {}
-    set no_ins {}
+    set no_ins_ids {}
+    set ins_ids {}
     #item 3928
     $gdb eval {
     	select diagram_id
@@ -1270,26 +1274,28 @@ proc generate_functions { db gdb callbacks } {
     	order by name
     } {
     	if { [ mwc::is_drakon $diagram_id ] &&
-    		[ gen::has_branches $gdb $diagram_id ] &&
-    		![ has_insertions $gdb $diagram_id ] } {
-    		lappend no_ins [ gen::generate_function \
-    			$gdb $diagram_id $callbacks 1 0 ]
+    		[ gen::has_branches $gdb $diagram_id ] } {
+    		if { [ has_insertions $gdb $diagram_id ] } {
+    			lappend ins_ids $diagram_id
+    		} else {
+    			lappend no_ins_ids $diagram_id
+    		}
     	}
+    }
+    #item 4049
+    set no_ins {}
+    set ins {}
+    foreach diagram_id $no_ins_ids {
+        #item 4048
+        lappend no_ins [ gen::generate_function \
+        	$gdb $diagram_id $callbacks 1 0 ]
     }
     #item 3966
     set g_no_ins $no_ins
-    #item 3965
-    $gdb eval {
-    	select diagram_id
-    	from diagrams
-    	order by name
-    } {
-    	if { [ mwc::is_drakon $diagram_id ] &&
-    		[ gen::has_branches $gdb $diagram_id ] &&
-    		[ has_insertions $gdb $diagram_id ] } {
-    		lappend no_ins [ gen::generate_function \
-    			$gdb $diagram_id $callbacks 1 0 ]
-    	}
+    foreach diagram_id $ins_ids {
+        #item 4054
+        lappend ins [ gen::generate_function \
+        	$gdb $diagram_id $callbacks 1 0 ]
     }
     #item 3930
     return [ concat $no_ins $ins ]
@@ -2897,10 +2903,9 @@ proc print_node_core { texts node callbacks depth } {
                                 #item 4017
                                 set static 1
                                 set print_body 1
-                                set ins_depth 2
                                 #item 4018
                                 set ins_body [ gen_subprogram_kernel \
-                                	$ins_depth \
+                                	$next_depth \
                                 	$static \
                                 	$props(subtype) \
                                 	$props(inline) \
@@ -2912,8 +2917,6 @@ proc print_node_core { texts node callbacks depth } {
                                 	$body \
                                 	$print_body \
                                 	"" "" "" "" ]
-                                #item 4022
-                                add_last_semicolon ins_body
                                 #item 4020
                                 lappend result "##@@BEGIN_IS@@##"
                                 #item 3978
@@ -3081,8 +3084,6 @@ proc print_subprogram_kernel { fhandle depth result } {
     #item 4011
     set indent \
     	[ gen::make_indent $depth ]
-    #item 4010
-    puts $fhandle ""
     #item 4002
     set nline [ llength $result ]
     #item 40010001
@@ -3094,17 +3095,15 @@ proc print_subprogram_kernel { fhandle depth result } {
         } else {
             break
         }
-        #item 4009
-        puts -nonewline $fhandle $indent
-        #item 4003
-        if {$i == $nline - 1} {
-            #item 4008
-            puts -nonewline $fhandle [ lindex $result $i ]
-            #item 4007
-            puts $fhandle ";"
+        #item 4055
+        set line [ lindex $result $i ]
+        #item 4056
+        if {[ string is space $line ]} {
+            #item 4061
+            puts $fhandle ""
         } else {
             #item 4006
-            puts $fhandle [ lindex $result $i ]
+            puts $fhandle "${indent}$line"
         }
         #item 40010003
         incr i
