@@ -1154,6 +1154,52 @@ proc gen_subprogram_kernel { depth static type inline abstract overriding return
     return $result
 }
 
+proc gen_type_kernel { depth type abstract tagged name body print_body spec_header spec_footer body_header body_footer } {
+    #item 857
+    set result {}
+    set line ""
+    #item 3093
+    set indent \
+    	[ gen::make_indent $depth ]
+    #item 4063
+    lappend result ""
+    #item 3099
+    append_notempty \
+    	result $spec_header
+    #item 858
+    append line "$type"
+    #item 864
+    append line " $name"
+    #item 923
+    append line " is"
+    #item 887
+    if {$abstract} {
+        #item 888
+        append line " abstract"
+    }
+    #item 925
+    if {$tagged} {
+        #item 926
+        append line " tagged"
+    }
+    #item 894
+    lappend result $line
+    #item 3218
+    set body [ parse_body \
+    	$body $depth $name ]
+    foreach line $body {
+        #item 903
+        lappend result $line
+    }
+    #item 4062
+    add_last_semicolon result
+    #item 3110
+    append_notempty \
+    	result $spec_footer
+    #item 4064
+    return $result
+}
+
 proc generate { db gdb filename } {
     #item 2983
     variable tdb
@@ -2775,6 +2821,36 @@ proc print_body { db filename fhandle components header footer } {
     	$fhandle $footer
 }
 
+proc print_component { fhandle depth result } {
+    #item 4074
+    set indent \
+    	[ gen::make_indent $depth ]
+    #item 4072
+    set nline [ llength $result ]
+    #item 40710001
+    set i 0
+    while { 1 } {
+        #item 40710002
+        if {$i < $nline} {
+            
+        } else {
+            break
+        }
+        #item 4075
+        set line [ lindex $result $i ]
+        #item 4076
+        if {[ string is space $line ]} {
+            #item 4079
+            puts $fhandle ""
+        } else {
+            #item 4073
+            puts $fhandle "${indent}$line"
+        }
+        #item 40710003
+        incr i
+    }
+}
+
 proc print_node_core { texts node callbacks depth } {
     #item 1735
     set tab_convert [ gen::get_optional_callback $callbacks tab_convert ]
@@ -3076,37 +3152,7 @@ proc print_subprogram { db fhandle component in_header } {
         	$body_header \
         	$body_footer ]
         #item 4013
-        print_subprogram_kernel $fhandle $depth $result
-    }
-}
-
-proc print_subprogram_kernel { fhandle depth result } {
-    #item 4011
-    set indent \
-    	[ gen::make_indent $depth ]
-    #item 4002
-    set nline [ llength $result ]
-    #item 40010001
-    set i 0
-    while { 1 } {
-        #item 40010002
-        if {$i < $nline} {
-            
-        } else {
-            break
-        }
-        #item 4055
-        set line [ lindex $result $i ]
-        #item 4056
-        if {[ string is space $line ]} {
-            #item 4061
-            puts $fhandle ""
-        } else {
-            #item 4006
-            puts $fhandle "${indent}$line"
-        }
-        #item 40010003
-        incr i
+        print_component $fhandle $depth $result
     }
 }
 
@@ -3132,8 +3178,7 @@ proc print_type { db fhandle component } {
     set depth 1
     set print_body 1
     #item 852
-    print_type_kernel \
-    $fhandle \
+    set result [ gen_type_kernel \
     $depth \
     $props(subtype) \
     $props(abstract) \
@@ -3144,75 +3189,9 @@ proc print_type { db fhandle component } {
     $spec_header \
     $spec_footer \
     $body_header \
-    $body_footer
-}
-
-proc print_type_kernel { fhandle depth type abstract tagged name body print_body spec_header spec_footer body_header body_footer } {
-    #item 857
-    set result {}
-    set line ""
-    #item 3093
-    set indent \
-    	[ gen::make_indent $depth ]
-    #item 3099
-    append_notempty \
-    	result $spec_header
-    #item 3202
-    puts $fhandle ""
-    #item 858
-    append line "$type"
-    #item 864
-    append line " $name"
-    #item 923
-    append line " is"
-    #item 887
-    if {$abstract} {
-        #item 888
-        append line " abstract"
-    }
-    #item 925
-    if {$tagged} {
-        #item 926
-        append line " tagged"
-    }
-    #item 894
-    lappend result $line
-    #item 3218
-    set body [ parse_body \
-    	$body $depth $name ]
-    foreach line $body {
-        #item 903
-        lappend result $line
-    }
-    #item 3110
-    append_notempty \
-    	result $spec_footer
-    #item 1067
-    set nline [ llength $result ]
-    #item 9110001
-    set i 0
-    while { 1 } {
-        #item 9110002
-        if {$i < $nline} {
-            
-        } else {
-            break
-        }
-        #item 3207
-        puts -nonewline $fhandle $indent
-        #item 1068
-        if {$i == $nline - 1} {
-            #item 3205
-            puts -nonewline $fhandle [ lindex $result $i ]
-            #item 3204
-            puts $fhandle ";"
-        } else {
-            #item 3206
-            puts $fhandle [ lindex $result $i ]
-        }
-        #item 9110003
-        incr i
-    }
+    $body_footer ]
+    #item 4080
+    print_component $fhandle $depth $result
 }
 
 proc put_credits { fhandle } {
