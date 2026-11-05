@@ -6,6 +6,8 @@ variable tdb ""
 
 variable g_no_ins {}
 
+variable g_errmsg ""
+
 variable ada_keywords {
 	abort
 	abs
@@ -240,7 +242,7 @@ proc classify_keywords { keywords name } {
     }
     #item 2175
     set etype [ find_keywords $keywords \
-    	{ type subtype insertion } ]
+    	{ type subtype nested } ]
     #item 21760000
     set _sw21760000_ [ llength $etype ]
     #item 21760001
@@ -395,9 +397,19 @@ proc do_monkey_patch { } {
 }
 
 proc enforce_nogoto { name } {
+    #item 4093
+    variable g_errmsg
+    #item 4097
+    if {$g_errmsg == ""} {
+        #item 4100
+        set errmsg "Too complex for nogoto generator."
+    } else {
+        #item 4101
+        set errmsg $g_errmsg
+    }
     #item 2807
     complain_dia $name \
-    "Could not generate code for function '$name'.\nTry splitting it into smaller parts."
+    "Could not generate code for function '$name'. $errmsg"
 }
 
 proc enum_lines { lines } {
@@ -484,9 +496,9 @@ proc extract_signature { text name } {
             }
         } else {
             #item 31300002
-            if {$type == "insertion"} {
+            if {$type == "nested"} {
                 #item 3916
-                set type "insertion"
+                set type "nested"
                 #item 2109
                 if {$returns == ""} {
                     #item 2111
@@ -530,7 +542,7 @@ proc extract_signature { text name } {
             	order overriding
             	public private protected
             	subtype type
-            	tagged insertion }
+            	tagged nested }
             #item 2094
             set found_keywords \
              [ find_keywords $first $keywords ]
@@ -584,9 +596,9 @@ proc extract_signature { text name } {
                     }
                 } else {
                     #item 31300002
-                    if {$type == "insertion"} {
+                    if {$type == "nested"} {
                         #item 3916
-                        set type "insertion"
+                        set type "nested"
                         #item 2109
                         if {$returns == ""} {
                             #item 2111
@@ -679,9 +691,9 @@ proc extract_signature { text name } {
                             }
                         } else {
                             #item 31300002
-                            if {$type == "insertion"} {
+                            if {$type == "nested"} {
                                 #item 3916
-                                set type "insertion"
+                                set type "nested"
                                 #item 2109
                                 if {$returns == ""} {
                                     #item 2111
@@ -866,7 +878,7 @@ proc find_insertion { needle } {
         #item 3982
         lassign \
         $func \
-        diagram_id name real_sign body
+        diagram_id name signature body
         #item 3983
         if {$name == $needle} {
             #item 3988
@@ -955,13 +967,36 @@ proc gen_case { db item_id } {
 }
 
 proc gen_insertion { db item_id } {
-    #item 3910
-    set name [ $db eval { \
-    	select text_lines from nodes where item_id = :item_id } ]
+    #item 4095
+    variable g_errmsg
     #item 3907
     set next [ nogoto::get_next_node $db $item_id 0 ]
-    #item 3908
-    set result [ list "ins" $name ]
+    #item 3910
+    set text [ $db eval { \
+    	select text_lines from nodes where item_id = :item_id } ]
+    set text [ lindex $text 0 ]
+    #item 4083
+    if {[ lindex $text 0 ] == "nested"} {
+        #item 4087
+        set name [ lindex $text 1 ]
+        #item 4088
+        set ins [ find_insertion $name ]
+        #item 4089
+        if {$ins == ""} {
+            #item 4096
+            set g_errmsg "Please check insertions."
+            #item 4086
+            return {}
+        } else {
+            #item 3908
+            set result [ list "ins" $ins ]
+        }
+    } else {
+        #item 4096
+        set g_errmsg "Please check insertions."
+        #item 4086
+        return {}
+    }
     #item 3909
     return [ list $result $next ]
 }
@@ -1230,20 +1265,19 @@ proc generate { db gdb filename } {
             gen::fix_graph_for_diagram $gdb $callbacks 0 $diagram_id
         }
     }
-    #item 711
-    set sections \
-    	{ spec_header spec_footer body_header body_footer }
-    #item 1284
-    lassign \
-    [ gen::scan_file_description $db $sections ] \
-    spec_header spec_footer body_header body_footer
     #item 704
-    set components [ generate_functions \
-    	$db $gdb $callbacks ]
+    set components [ generate_components $db $gdb $callbacks ]
     #item 652
     if {[ graph::errors_occured ]} {
         
     } else {
+        #item 711
+        set sections \
+        	{ spec_header spec_footer body_header body_footer }
+        #item 1284
+        lassign \
+        [ gen::scan_file_description $db $sections ] \
+        spec_header spec_footer body_header body_footer
         #item 2228
         if {[ is_empty_spec \
 	$components $spec_header $spec_footer ]} {
@@ -1293,21 +1327,11 @@ proc generate { db gdb filename } {
 }
 
 proc generate_body { gdb diagram_id start_item node_list sorted incoming } {
-    #item 1516
-    set callbacks \
-    [ make_callbacks ]
-    #item 1517
-    return [ cbody::generate_body \
-                 $gdb \
-                 $diagram_id \
-                 $start_item \
-                 $node_list \
-                 $sorted \
-                 $incoming \
-                 $callbacks ]
+    #item 4082
+    return ""
 }
 
-proc generate_functions { db gdb callbacks } {
+proc generate_components { db gdb callbacks } {
     #item 3967
     variable g_no_ins
     #item 3929
@@ -1529,7 +1553,7 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
     set kw_extra { enum
     	comment public returns
     	not_overriding order 
-    	insertion }
+    	nested }
     #item 3616
     set consts { True False }
     #item 14810001
@@ -2963,9 +2987,7 @@ proc print_node_core { texts node callbacks depth } {
                             #item 17540005
                             if {$_sw17540000_ == "ins"} {
                                 #item 3970
-                                set ins_name [ lindex $current 1 ]
-                                #item 3972
-                                set component [ find_insertion $ins_name ]
+                                set component [ lindex $current 1 ]
                                 #item 4015
                                 lassign \
                                 $component \
