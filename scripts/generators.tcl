@@ -214,6 +214,23 @@ proc process_output { gdb item_id output_proc } {
 	}
 }
 
+proc process_insertion { gdb item_id } {
+	set text [ $gdb eval {
+		select text
+		from items
+		where item_id = :item_id
+	} ]
+
+	set new_text $text
+
+	$gdb eval {
+		update vertices
+		set text = :new_text,
+			type = 'action'
+		where item_id = :item_id
+	}
+}
+
 proc fix_graph_stage_1 { gdb callbacks append_semicolon diagram_id } {
 	fix_graph_stage_1_core $gdb $callbacks $append_semicolon $diagram_id 1
 }
@@ -425,6 +442,21 @@ proc fix_graph_stage_1_core { gdb callbacks append_semicolon diagram_id do_selec
 
 	foreach out $output_icons {
 		process_output $gdb $out $output_proc
+	}
+
+	set own_insertions [ get_optional_callback $callbacks own_insertions ]
+	# If generator does not own insertions, convert to actions
+	if { $own_insertions == "" } {
+		set insertion_icons [ $gdb eval {
+			select item_id
+			from items
+			where diagram_id = :diagram_id
+			and type = 'insertion'
+		} ]
+
+		foreach ins $insertion_icons {
+			process_insertion $gdb $ins
+		}
 	}
 
 	if { $do_selects } {
@@ -2723,6 +2755,7 @@ proc p.keywords { } {
 		if_block_end
 		output
 		tab_convert
+		own_insertions
 	}
 }
 

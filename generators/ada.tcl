@@ -1790,6 +1790,7 @@ proc make_callbacks { } {
     gen::put_callback callbacks signature           gen_ada::extract_signature
     gen::put_callback callbacks enforce_nogoto      gen_ada::enforce_nogoto
     gen::put_callback callbacks tab_convert         gen_ada::p.indentation
+    gen::put_callback callbacks own_insertions      gen_ada::own_insertions
     #item 7
     return $callbacks
 }
@@ -1882,6 +1883,11 @@ proc multi_extract { body ifirst beginstr endstr do_unindent } {
     }
     #item 3451
     return [ list $i $lines ]
+}
+
+proc own_insertions { } {
+    #item 4044
+    return ""
 }
 
 proc p.and { left right } {
