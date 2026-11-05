@@ -1213,7 +1213,8 @@ proc generate { db gdb filename } {
             close_files [ list $sfile ]
         }
         #item 2218
-        if {$error_message == ""} {
+        if {($error_message == "") && (!([ is_empty_body \
+	$components $body_header $body_footer ]))} {
             #item 670
             set body_filename [ replace_extension $filename "adb" ]
             #item 2222
@@ -1660,6 +1661,19 @@ proc init_package { filename } {
     lappend result "end $pkgname;"
     #item 3856
     return [ join $result "\n" ]
+}
+
+proc is_empty_body { components header footer } {
+    #item 4033
+    set publics \
+    	[ filter_subprograms $components 0 public ]
+    #item 4028
+    if {(([ llength $publics ] == 0) && ($header == "")) && ($footer == "")} {
+        #item 4031
+        return 1
+    }
+    #item 4032
+    return 0
 }
 
 proc is_empty_spec { components header footer } {
