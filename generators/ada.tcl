@@ -4,6 +4,8 @@ namespace eval gen_ada {
 
 variable tdb ""
 
+variable g_no_ins {}
+
 variable ada_keywords {
 	abort
 	abs
@@ -238,7 +240,7 @@ proc classify_keywords { keywords name } {
     }
     #item 2175
     set etype [ find_keywords $keywords \
-    	{ type subtype } ]
+    	{ type subtype insertion } ]
     #item 21760000
     set _sw21760000_ [ llength $etype ]
     #item 21760001
@@ -265,6 +267,13 @@ proc classify_keywords { keywords name } {
     if {($etype == "subprogram") || (!(($etype == "type") || ($etype == "subtype")))} {
         
     } else {
+        #item 3918
+        if {$access == "private"} {
+            
+        } else {
+            #item 3921
+            set access "public"
+        }
         #item 2204
         variable ada_types
         #item 2205
@@ -475,22 +484,36 @@ proc extract_signature { text name } {
             }
         } else {
             #item 31300002
-            if {$type == "type"} {
-                #item 3141
-                set props(subtype) "type"
+            if {$type == "insertion"} {
+                #item 3916
+                set type "insertion"
+                #item 2109
+                if {$returns == ""} {
+                    #item 2111
+                    set props(subtype) "procedure"
+                } else {
+                    #item 2112
+                    set props(subtype) "function"
+                }
             } else {
                 #item 31300003
-                if {$type == "subtype"} {
-                    
+                if {$type == "type"} {
+                    #item 3141
+                    set props(subtype) "type"
                 } else {
                     #item 31300004
-                    error "Unexpected switch value: $type"
+                    if {$type == "subtype"} {
+                        
+                    } else {
+                        #item 31300005
+                        error "Unexpected switch value: $type"
+                    }
+                    #item 3139
+                    set props(subtype) "subtype"
                 }
-                #item 3139
-                set props(subtype) "subtype"
+                #item 3140
+                set type "type"
             }
-            #item 3140
-            set type "type"
         }
     } else {
         #item 2068
@@ -507,7 +530,7 @@ proc extract_signature { text name } {
             	order overriding
             	public private protected
             	subtype type
-            	tagged }
+            	tagged insertion }
             #item 2094
             set found_keywords \
              [ find_keywords $first $keywords ]
@@ -561,22 +584,36 @@ proc extract_signature { text name } {
                     }
                 } else {
                     #item 31300002
-                    if {$type == "type"} {
-                        #item 3141
-                        set props(subtype) "type"
+                    if {$type == "insertion"} {
+                        #item 3916
+                        set type "insertion"
+                        #item 2109
+                        if {$returns == ""} {
+                            #item 2111
+                            set props(subtype) "procedure"
+                        } else {
+                            #item 2112
+                            set props(subtype) "function"
+                        }
                     } else {
                         #item 31300003
-                        if {$type == "subtype"} {
-                            
+                        if {$type == "type"} {
+                            #item 3141
+                            set props(subtype) "type"
                         } else {
                             #item 31300004
-                            error "Unexpected switch value: $type"
+                            if {$type == "subtype"} {
+                                
+                            } else {
+                                #item 31300005
+                                error "Unexpected switch value: $type"
+                            }
+                            #item 3139
+                            set props(subtype) "subtype"
                         }
-                        #item 3139
-                        set props(subtype) "subtype"
+                        #item 3140
+                        set type "type"
                     }
-                    #item 3140
-                    set type "type"
                 }
             } else {
                 #item 2095
@@ -642,22 +679,36 @@ proc extract_signature { text name } {
                             }
                         } else {
                             #item 31300002
-                            if {$type == "type"} {
-                                #item 3141
-                                set props(subtype) "type"
+                            if {$type == "insertion"} {
+                                #item 3916
+                                set type "insertion"
+                                #item 2109
+                                if {$returns == ""} {
+                                    #item 2111
+                                    set props(subtype) "procedure"
+                                } else {
+                                    #item 2112
+                                    set props(subtype) "function"
+                                }
                             } else {
                                 #item 31300003
-                                if {$type == "subtype"} {
-                                    
+                                if {$type == "type"} {
+                                    #item 3141
+                                    set props(subtype) "type"
                                 } else {
                                     #item 31300004
-                                    error "Unexpected switch value: $type"
+                                    if {$type == "subtype"} {
+                                        
+                                    } else {
+                                        #item 31300005
+                                        error "Unexpected switch value: $type"
+                                    }
+                                    #item 3139
+                                    set props(subtype) "subtype"
                                 }
-                                #item 3139
-                                set props(subtype) "subtype"
+                                #item 3140
+                                set type "type"
                             }
-                            #item 3140
-                            set type "type"
                         }
                     }
                 } else {
@@ -806,6 +857,27 @@ proc find_if_end_impl { db parent_id ordinal path loops } {
     return $result
 }
 
+proc find_insertion { needle } {
+    #item 3979
+    variable g_no_ins
+    #item 3986
+    set result {}
+    foreach func $g_no_ins {
+        #item 3982
+        lassign \
+        $func \
+        diagram_id name real_sign body
+        #item 3983
+        if {$name == $needle} {
+            #item 3988
+            set result $func
+            break
+        }
+    }
+    #item 3987
+    return $result
+}
+
 proc find_keywords { words keywords } {
     #item 1237
     set result {}
@@ -882,6 +954,18 @@ proc gen_case { db item_id } {
     }
 }
 
+proc gen_insertion { db item_id } {
+    #item 3910
+    set name [ $db eval { \
+    	select text_lines from nodes where item_id = :item_id } ]
+    #item 3907
+    set next [ nogoto::get_next_node $db $item_id 0 ]
+    #item 3908
+    set result [ list "ins" $name ]
+    #item 3909
+    return [ list $result $next ]
+}
+
 proc gen_loop { db item_id } {
     #item 2774
     set item [ nogoto::gen_loop $db $item_id "" ]
@@ -922,6 +1006,150 @@ proc gen_sel { db item_id } {
     return $item
 }
 
+proc gen_subprogram_kernel { depth static type inline abstract overriding returns name parameters body print_body spec_header spec_footer body_header body_footer } {
+    #item 546
+    set result {}
+    set line ""
+    #item 3051
+    set indent \
+    	[ gen::make_indent $depth ]
+    #item 949
+    if {$print_body} {
+        #item 950
+        append_notempty \
+        	result $body_header
+    } else {
+        #item 951
+        append_notempty \
+        	result $spec_header
+    }
+    #item 3181
+    if {$overriding == 0} {
+        
+    } else {
+        #item 3191
+        if {$overriding == 1} {
+            #item 3990
+            lappend result "overriding"
+        } else {
+            #item 3991
+            lappend result "not overriding"
+        }
+    }
+    #item 557
+    append line "$type"
+    #item 567
+    append line " $name"
+    #item 617
+    set param_count [ llength $parameters ]
+    #item 558
+    if {$param_count == 0} {
+        
+    } else {
+        #item 568
+        append line " \("
+        #item 580
+        lappend result $line
+        #item 5710001
+        set i 0
+        while { 1 } {
+            #item 5710002
+            if {$i < $param_count} {
+                
+            } else {
+                break
+            }
+            #item 574
+            set parameter_info [ lindex $parameters $i ]
+            set parameter [ lindex $parameter_info 0 ]
+            #item 572
+            set line "${indent}$parameter"
+            #item 575
+            if {$i == $param_count - 1} {
+                
+            } else {
+                #item 576
+                append line ";"
+            }
+            #item 582
+            lappend result $line
+            #item 5710003
+            incr i
+        }
+        #item 573
+        set line "\)"
+    }
+    #item 626
+    if {$type == "function"} {
+        #item 629
+        append line " return $returns"
+    }
+    #item 1059
+    lappend result $line
+    #item 1004
+    if {$abstract} {
+        #item 1005
+        lappend result "is abstract"
+    } else {
+        #item 1007
+        if {$print_body} {
+            #item 3446
+            lassign \
+            [ extract_is $body ] \
+            body is_lines
+            #item 3689
+            if {[ llength $is_lines ] == 0} {
+                #item 3693
+                lappend result "is begin"
+                #item 3052
+                set body [ parse_body \
+                	$body $depth $name ]
+                foreach line $body {
+                    #item 611
+                    lappend result $line
+                }
+                #item 614
+                lappend result "end $name"
+            } else {
+                #item 3456
+                lappend result "is"
+                foreach line $is_lines {
+                    #item 3457
+                    lappend result "${indent}$line"
+                }
+                #item 3695
+                if {[ llength $body ] == 0} {
+                    
+                } else {
+                    #item 3692
+                    lappend result "begin"
+                    #item 3052
+                    set body [ parse_body \
+                    	$body $depth $name ]
+                    foreach line $body {
+                        #item 611
+                        lappend result $line
+                    }
+                    #item 614
+                    lappend result "end $name"
+                }
+            }
+        }
+    }
+    #item 976
+    if {$print_body} {
+        #item 977
+        append_notempty \
+        	result $body_footer
+    } else {
+        #item 978
+        append_notempty \
+        	result $spec_footer
+    }
+    #item 4012
+    return $result
+}
+
 proc generate { db gdb filename } {
     #item 2983
     variable tdb
@@ -960,8 +1188,8 @@ proc generate { db gdb filename } {
     [ gen::scan_file_description $db $sections ] \
     spec_header spec_footer body_header body_footer
     #item 704
-    set components [ gen::generate_functions \
-    	$db $gdb $callbacks 1 ]
+    set components [ generate_functions \
+    	$db $gdb $callbacks ]
     #item 652
     if {[ graph::errors_occured ]} {
         
@@ -1028,43 +1256,87 @@ proc generate_body { gdb diagram_id start_item node_list sorted incoming } {
                  $callbacks ]
 }
 
+proc generate_functions { db gdb callbacks } {
+    #item 3967
+    variable g_no_ins
+    #item 3929
+    set ins {}
+    set no_ins {}
+    #item 3928
+    $gdb eval {
+    	select diagram_id
+    	from diagrams
+    	order by name
+    } {
+    	if { [ mwc::is_drakon $diagram_id ] &&
+    		[ gen::has_branches $gdb $diagram_id ] &&
+    		![ has_insertions $gdb $diagram_id ] } {
+    		lappend no_ins [ gen::generate_function \
+    			$gdb $diagram_id $callbacks 1 0 ]
+    	}
+    }
+    #item 3966
+    set g_no_ins $no_ins
+    #item 3965
+    $gdb eval {
+    	select diagram_id
+    	from diagrams
+    	order by name
+    } {
+    	if { [ mwc::is_drakon $diagram_id ] &&
+    		[ gen::has_branches $gdb $diagram_id ] &&
+    		[ has_insertions $gdb $diagram_id ] } {
+    		lappend no_ins [ gen::generate_function \
+    			$gdb $diagram_id $callbacks 1 0 ]
+    	}
+    }
+    #item 3930
+    return [ concat $no_ins $ins ]
+}
+
 proc generate_item { db item_id parent_loop } {
     #item 1789
     set type [ nogoto::get_node_type $db $item_id ]
     #item 17820001
-    if {$type == "action"} {
-        #item 1794
-        return [ nogoto::gen_action \
-        	$db $item_id $parent_loop ]
+    if {$type == "insertion"} {
+        #item 3901
+        return [ gen_insertion $db $item_id ]
     } else {
         #item 17820002
-        if {$type == "if"} {
-            #item 1812
-            return [ nogoto::gen_if \
+        if {$type == "action"} {
+            #item 1794
+            return [ nogoto::gen_action \
             	$db $item_id $parent_loop ]
         } else {
             #item 17820003
-            if {$type == "loop"} {
-                #item 2781
-                return [ gen_loop \
-                	$db $item_id ]
+            if {$type == "if"} {
+                #item 1812
+                return [ nogoto::gen_if \
+                	$db $item_id $parent_loop ]
             } else {
                 #item 17820004
-                if {$type == "case"} {
-                    #item 2875
-                    return [ gen_case \
+                if {$type == "loop"} {
+                    #item 2781
+                    return [ gen_loop \
                     	$db $item_id ]
                 } else {
                     #item 17820005
-                    if {$type == "sel"} {
-                        
+                    if {$type == "case"} {
+                        #item 2875
+                        return [ gen_case \
+                        	$db $item_id ]
                     } else {
                         #item 17820006
-                        error "Unexpected switch value: $type"
+                        if {$type == "sel"} {
+                            
+                        } else {
+                            #item 17820007
+                            error "Unexpected switch value: $type"
+                        }
+                        #item 2670
+                        return [ gen_sel \
+                        	$db $item_id ]
                     }
-                    #item 2670
-                    return [ gen_sel \
-                    	$db $item_id ]
                 }
             }
         }
@@ -1087,6 +1359,23 @@ proc get_preset_desc { preset } {
             #item 3843
             return ""
         }
+    }
+}
+
+proc has_insertions { gdb diagram_id } {
+    #item 3936
+    set types [ $gdb eval {
+    	select type
+    	from items
+    	where diagram_id = :diagram_id
+    } ]
+    #item 3937
+    if {[ lsearch -exact $types insertion ] == -1} {
+        #item 3941
+        return 0
+    } else {
+        #item 3940
+        return 1
     }
 }
 
@@ -1186,7 +1475,8 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
     #item 3696
     set kw_extra { enum
     	comment public returns
-    	not_overriding order }
+    	not_overriding order 
+    	insertion }
     #item 3616
     set consts { True False }
     #item 14810001
@@ -1957,26 +2247,25 @@ proc p.shelf { primary secondary } {
                                 } else {
                                     #item 11330009
                                     if {$_sw11330000_ == "return"} {
-                                        
+                                        #item 3685
+                                        if {[ llength $sterms ] == 1} {
+                                            #item 3688
+                                            set result "return $primary;"
+                                        } else {
+                                            #item 3668
+                                            lappend lines "##@@BEGIN_RETURN@@##"
+                                            #item 3672
+                                            lappend lines [ lrange $sterms 1 end ]
+                                            #item 3671
+                                            set lines [ concat $lines $plines ]
+                                            #item 3670
+                                            lappend lines "##@@END_RETURN@@##"
+                                            #item 3669
+                                            set result [ join $lines "\n" ]
+                                        }
                                     } else {
-                                        #item 11330010
-                                        error "Unexpected switch value: $_sw11330000_"
-                                    }
-                                    #item 3685
-                                    if {[ llength $sterms ] == 1} {
-                                        #item 3688
-                                        set result "return $primary;"
-                                    } else {
-                                        #item 3668
-                                        lappend lines "##@@BEGIN_RETURN@@##"
-                                        #item 3672
-                                        lappend lines [ lrange $sterms 1 end ]
-                                        #item 3671
-                                        set lines [ concat $lines $plines ]
-                                        #item 3670
-                                        lappend lines "##@@END_RETURN@@##"
-                                        #item 3669
-                                        set result [ join $lines "\n" ]
+                                        #item 3913
+                                        set result [ list "BADVAL" ]
                                     }
                                 }
                             }
@@ -2570,45 +2859,89 @@ proc print_node_core { texts node callbacks depth } {
                             lappend result "${indent}exit;"
                         } else {
                             #item 17540005
-                            if {$_sw17540000_ == "sel"} {
-                                #item 2682
-                                set var_item [ lindex $current 1 ]
-                                set cases [ lindex $current 2 ]
-                                #item 2684
-                                set var_text [ gen::get_text_lines \
-                                	$texts $var_item ]
-                                #item 2683
-                                lappend result "${indent}case $var_text is"
-                                #item 2749
-                                set body [ print_node_core \
-                                	$texts $cases $callbacks $depth ]
-                                #item 2757
-                                set result [ concat $result $body ]
-                                #item 2686
-                                lappend result "${indent}end case;"
+                            if {$_sw17540000_ == "ins"} {
+                                #item 3970
+                                set ins_name [ lindex $current 1 ]
+                                #item 3972
+                                set component [ find_insertion $ins_name ]
+                                #item 4015
+                                lassign \
+                                $component \
+                                diagram_id name signature body
+                                #item 4016
+                                lassign \
+                                $signature \
+                                type prop_list parameters returns
+                                #item 4014
+                                array set props $prop_list
+                                #item 4017
+                                set static 1
+                                set print_body 1
+                                set ins_depth 2
+                                #item 4018
+                                set ins_body [ gen_subprogram_kernel \
+                                	$ins_depth \
+                                	$static \
+                                	$props(subtype) \
+                                	$props(inline) \
+                                	$props(abstract) \
+                                	$props(overriding) \
+                                	$returns \
+                                	$name \
+                                	$parameters \
+                                	$body \
+                                	$print_body \
+                                	"" "" "" "" ]
+                                #item 4022
+                                add_last_semicolon ins_body
+                                #item 4020
+                                lappend result "##@@BEGIN_IS@@##"
+                                #item 3978
+                                set result [ concat $result $ins_body ]
+                                #item 4021
+                                lappend result "##@@END_IS@@##"
                             } else {
                                 #item 17540006
-                                if {$_sw17540000_ == "case"} {
-                                    
+                                if {$_sw17540000_ == "sel"} {
+                                    #item 2682
+                                    set var_item [ lindex $current 1 ]
+                                    set cases [ lindex $current 2 ]
+                                    #item 2684
+                                    set var_text [ gen::get_text_lines \
+                                    	$texts $var_item ]
+                                    #item 2683
+                                    lappend result "${indent}case $var_text is"
+                                    #item 2749
+                                    set body [ print_node_core \
+                                    	$texts $cases $callbacks $depth ]
+                                    #item 2757
+                                    set result [ concat $result $body ]
+                                    #item 2686
+                                    lappend result "${indent}end case;"
                                 } else {
                                     #item 17540007
-                                    error "Unexpected switch value: $_sw17540000_"
+                                    if {$_sw17540000_ == "case"} {
+                                        
+                                    } else {
+                                        #item 17540008
+                                        error "Unexpected switch value: $_sw17540000_"
+                                    }
+                                    #item 2752
+                                    set cond_item [ lindex $current 1 ]
+                                    set actions [ lindex $current 2 ]
+                                    #item 2753
+                                    set cond_text [ gen::get_text_lines \
+                                    	$texts $cond_item ]
+                                    #item 2754
+                                    set when_text [ when_line $cond_text ]
+                                    #item 2755
+                                    lappend result "${indent}$when_text"
+                                    #item 2758
+                                    set body [ print_node_core \
+                                    	$texts $actions $callbacks $next_depth ]
+                                    #item 2759
+                                    set result [ concat $result $body ]
                                 }
-                                #item 2752
-                                set cond_item [ lindex $current 1 ]
-                                set actions [ lindex $current 2 ]
-                                #item 2753
-                                set cond_text [ gen::get_text_lines \
-                                	$texts $cond_item ]
-                                #item 2754
-                                set when_text [ when_line $cond_text ]
-                                #item 2755
-                                lappend result "${indent}$when_text"
-                                #item 2758
-                                set body [ print_node_core \
-                                	$texts $actions $callbacks $next_depth ]
-                                #item 2759
-                                set result [ concat $result $body ]
                             }
                         }
                     }
@@ -2703,192 +3036,57 @@ proc print_subprogram { db fhandle component in_header } {
         set print_body [ expr !$in_header ]
         set depth 1
         #item 511
-        print_subprogram_kernel \
-        $fhandle \
-        $depth \
-        $static \
-        $props(subtype) \
-        $props(inline) \
-        $props(abstract) \
-        $props(overriding) \
-        $returns \
-        $name \
-        $parameters \
-        $body \
-        $print_body \
-        $spec_header \
-        $spec_footer \
-        $body_header \
-        $body_footer
+        set result [ gen_subprogram_kernel \
+        	$depth \
+        	$static \
+        	$props(subtype) \
+        	$props(inline) \
+        	$props(abstract) \
+        	$props(overriding) \
+        	$returns \
+        	$name \
+        	$parameters \
+        	$body \
+        	$print_body \
+        	$spec_header \
+        	$spec_footer \
+        	$body_header \
+        	$body_footer ]
+        #item 4013
+        print_subprogram_kernel $fhandle $depth $result
     }
 }
 
-proc print_subprogram_kernel { fhandle depth static type inline abstract overriding returns name parameters body print_body spec_header spec_footer body_header body_footer } {
-    #item 546
-    set result {}
-    set line ""
-    #item 3051
+proc print_subprogram_kernel { fhandle depth result } {
+    #item 4011
     set indent \
     	[ gen::make_indent $depth ]
-    #item 949
-    if {$print_body} {
-        #item 950
-        append_notempty \
-        	result $body_header
-    } else {
-        #item 951
-        append_notempty \
-        	result $spec_header
-    }
-    #item 3186
+    #item 4010
     puts $fhandle ""
-    #item 3181
-    if {$overriding == 0} {
-        
-    } else {
-        #item 3191
-        if {$overriding == 1} {
-            #item 3185
-            puts $fhandle "${indent}overriding"
-        } else {
-            #item 3193
-            puts $fhandle "${indent}not overriding"
-        }
-    }
-    #item 557
-    append line "$type"
-    #item 567
-    append line " $name"
-    #item 617
-    set param_count [ llength $parameters ]
-    #item 558
-    if {$param_count == 0} {
-        
-    } else {
-        #item 568
-        append line " \("
-        #item 580
-        lappend result $line
-        #item 5710001
-        set i 0
-        while { 1 } {
-            #item 5710002
-            if {$i < $param_count} {
-                
-            } else {
-                break
-            }
-            #item 574
-            set parameter_info [ lindex $parameters $i ]
-            set parameter [ lindex $parameter_info 0 ]
-            #item 572
-            set line "${indent}$parameter"
-            #item 575
-            if {$i == $param_count - 1} {
-                
-            } else {
-                #item 576
-                append line ";"
-            }
-            #item 582
-            lappend result $line
-            #item 5710003
-            incr i
-        }
-        #item 573
-        set line "\)"
-    }
-    #item 626
-    if {$type == "function"} {
-        #item 629
-        append line " return $returns"
-    }
-    #item 1059
-    lappend result $line
-    #item 1004
-    if {$abstract} {
-        #item 1005
-        lappend result "is abstract"
-    } else {
-        #item 1007
-        if {$print_body} {
-            #item 3446
-            lassign \
-            [ extract_is $body ] \
-            body is_lines
-            #item 3689
-            if {[ llength $is_lines ] == 0} {
-                #item 3693
-                lappend result "is begin"
-                #item 3052
-                set body [ parse_body \
-                	$body $depth $name ]
-                foreach line $body {
-                    #item 611
-                    lappend result $line
-                }
-                #item 614
-                lappend result "end $name"
-            } else {
-                #item 3456
-                lappend result "is"
-                foreach line $is_lines {
-                    #item 3457
-                    lappend result "${indent}$line"
-                }
-                #item 3695
-                if {[ llength $body ] == 0} {
-                    
-                } else {
-                    #item 3692
-                    lappend result "begin"
-                    #item 3052
-                    set body [ parse_body \
-                    	$body $depth $name ]
-                    foreach line $body {
-                        #item 611
-                        lappend result $line
-                    }
-                    #item 614
-                    lappend result "end $name"
-                }
-            }
-        }
-    }
-    #item 976
-    if {$print_body} {
-        #item 977
-        append_notempty \
-        	result $body_footer
-    } else {
-        #item 978
-        append_notempty \
-        	result $spec_footer
-    }
-    #item 1079
+    #item 4002
     set nline [ llength $result ]
-    #item 10750001
+    #item 40010001
     set i 0
     while { 1 } {
-        #item 10750002
+        #item 40010002
         if {$i < $nline} {
             
         } else {
             break
         }
-        #item 3190
+        #item 4009
         puts -nonewline $fhandle $indent
-        #item 1080
+        #item 4003
         if {$i == $nline - 1} {
-            #item 3189
+            #item 4008
             puts -nonewline $fhandle [ lindex $result $i ]
-            #item 3188
+            #item 4007
             puts $fhandle ";"
         } else {
-            #item 3187
+            #item 4006
             puts $fhandle [ lindex $result $i ]
         }
-        #item 10750003
+        #item 40010003
         incr i
     }
 }
