@@ -219,7 +219,7 @@ proc classify_keywords { keywords name } {
     #item 2177
     set errors {}
     check_keywords $keywords \
-    	{ abstract inline protected
+    	{ abstract protected
     	tagged order overriding }
     #item 2133
     set access [ find_keywords \
@@ -259,12 +259,6 @@ proc classify_keywords { keywords name } {
              "$name: inconsistent type: $etype"
         }
     }
-    #item 2178
-    if {($inline) && ($abstract)} {
-        #item 2182
-        lappend errors \
-        "$name: both inline and abstract is not allowed"
-    }
     #item 21440001
     if {($etype == "subprogram") || (!(($etype == "type") || ($etype == "subtype")))} {
         
@@ -288,7 +282,6 @@ proc classify_keywords { keywords name } {
     array set props {}
     #item 2156
     set props(abstract) $abstract
-    set props(inline) $inline
     set props(protected) $protected
     set props(tagged) $tagged
     set props(access) $access
@@ -469,7 +462,6 @@ proc extract_signature { text name } {
     array set props { \
     	abstract 0 \
     	access static \
-    	inline 0 \
     	order 0 \
     	overriding 0 \
     	subtype procedure \
@@ -538,7 +530,7 @@ proc extract_signature { text name } {
         } else {
             #item 2093
             set keywords { 
-            	abstract inline
+            	abstract
             	order overriding
             	public private protected
             	subtype type
@@ -758,7 +750,7 @@ proc extract_when { body } {
     return [ list $body $lines ]
 }
 
-proc filter_subprograms { components inline access } {
+proc filter_subprograms { components access } {
     #item 3754
     set result {}
     foreach component $components {
@@ -773,7 +765,7 @@ proc filter_subprograms { components inline access } {
         #item 3757
         array set props $prop_list
         #item 3763
-        if {(($type == "subprogram") && ($props(inline) == $inline)) && ($props(access) == $access)} {
+        if {($type == "subprogram") && ($props(access) == $access)} {
             #item 3760
             lappend result $component
         }
@@ -1047,7 +1039,7 @@ proc gen_sel { db item_id } {
     return $item
 }
 
-proc gen_subprogram_kernel { depth static type inline abstract overriding returns name parameters body print_body spec_header spec_footer body_header body_footer } {
+proc gen_subprogram_kernel { depth static type abstract overriding returns name parameters body print_body spec_header spec_footer body_header body_footer } {
     #item 546
     set result {}
     set line ""
@@ -1748,7 +1740,7 @@ proc init_package { filename } {
 proc is_empty_body { components header footer } {
     #item 4033
     set publics \
-    	[ filter_subprograms $components 0 public ]
+    	[ filter_subprograms $components public ]
     #item 4028
     if {(([ llength $publics ] == 0) && ($header == "")) && ($footer == "")} {
         #item 4031
@@ -1761,7 +1753,7 @@ proc is_empty_body { components header footer } {
 proc is_empty_spec { components header footer } {
     #item 2235
     set publics \
-    	[ filter_subprograms $components 0 public ]
+    	[ filter_subprograms $components public ]
     #item 2230
     if {(([ llength $publics ] == 0) && ($header == "")) && ($footer == "")} {
         #item 2233
@@ -2830,19 +2822,15 @@ proc print_body { db filename fhandle components header footer } {
     #item 741
     puts_notempty \
     	$fhandle $header
-    foreach subprogram [ filter_subprograms $components 1 static ] {
-        #item 744
-        print_subprogram $db $fhandle $subprogram 0
-    }
-    foreach subprogram [ filter_subprograms $components 0 static ] {
+    foreach subprogram [ filter_subprograms $components static ] {
         #item 748
         print_subprogram $db $fhandle $subprogram 0
     }
-    foreach subprogram [ filter_subprograms $components 0 public ] {
+    foreach subprogram [ filter_subprograms $components public ] {
         #item 753
         print_subprogram $db $fhandle $subprogram 0
     }
-    foreach subprogram [ filter_subprograms $components 0 private ] {
+    foreach subprogram [ filter_subprograms $components private ] {
         #item 758
         print_subprogram $db $fhandle $subprogram 0
     }
@@ -3012,7 +3000,6 @@ proc print_node_core { texts node callbacks depth } {
                                 	$next_depth \
                                 	$static \
                                 	$props(subtype) \
-                                	$props(inline) \
                                 	$props(abstract) \
                                 	$props(overriding) \
                                 	$returns \
@@ -3101,16 +3088,12 @@ proc print_spec { db filename fhandle components header footer } {
         #item 3786
         print_type $db $fhandle $type
     }
-    foreach subprogram [ filter_subprograms $components 1 public ] {
-        #item 502
-        print_subprogram $db $fhandle $subprogram 0
-    }
-    foreach subprogram [ filter_subprograms $components 0 public ] {
+    foreach subprogram [ filter_subprograms $components public ] {
         #item 493
         print_subprogram $db $fhandle $subprogram 1
     }
     #item 3888
-    if {[ llength [ filter_subprograms $components 0 private ] ] +   
+    if {[ llength [ filter_subprograms $components private   ] ] +   
 [ llength [ filter_types $components type private    ] ] +   
 [ llength [ filter_types $components subtype private ] ] == 0} {
         
@@ -3126,7 +3109,7 @@ proc print_spec { db filename fhandle components header footer } {
             #item 3896
             print_type $db $fhandle $type
         }
-        foreach subprogram [ filter_subprograms $components 0 private ] {
+        foreach subprogram [ filter_subprograms $components private ] {
             #item 765
             print_subprogram $db $fhandle $subprogram 1
         }
@@ -3167,7 +3150,6 @@ proc print_subprogram { db fhandle component in_header } {
         	$depth \
         	$static \
         	$props(subtype) \
-        	$props(inline) \
         	$props(abstract) \
         	$props(overriding) \
         	$returns \
