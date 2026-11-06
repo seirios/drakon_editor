@@ -1113,21 +1113,19 @@ proc p.output_cpp { primary secondary } {
         return ""
     }
     #item 14170001
-    if {$secondary == "debug"} {
-        #item 1424
-        set io "std::cerr"
+    if {$secondary == ""} {
+        #item 1426
+        set io "std::cout"
+        #item 1439
+        set end " << std::endl"
     } else {
-        #item 14170002
-        if {$secondary == ""} {
-            #item 1426
-            set io "std::cout"
-        } else {
-            #item 1422
-            set io $secondary
-        }
+        #item 1422
+        set io $secondary
+        #item 1440
+        set end ""
     }
     #item 1429
-    return "$io << $primary << std::endl;"
+    return "$io << $primary$end;"
 }
 
 proc pass { } {
