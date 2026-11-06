@@ -911,7 +911,6 @@ proc make_callbacks { language } {
     gen::put_callback callbacks block_close   gen_c3::block_close
     gen::put_callback callbacks return_none   gen_c3::return_none
     gen::put_callback callbacks shelf         gen_c3::shelf
-    gen::put_callback callbacks output        gen_c3::output_icon
     
     gen::put_callback callbacks while_start   gen_c3::while_start
     gen::put_callback callbacks pass          gen_c3::pass
@@ -927,6 +926,10 @@ proc make_callbacks { language } {
         gen::put_callback callbacks for_current      gen_c3::foreach_current
         gen::put_callback callbacks for_incr         gen_c3::foreach_incr
         gen::put_callback callbacks for_declare      gen_c3::for_declare
+        gen::put_callback callbacks output      gen_c3::p.output_cpp
+    } else {
+        #item 1402
+        gen::put_callback callbacks output        gen_c3::p.output_c
     }
     #item 307
     return $callbacks
@@ -935,49 +938,6 @@ proc make_callbacks { language } {
 proc native_foreach { for_it for_var } {
     #item 1371
     return "for ($for_it : $for_var) \{"
-}
-
-proc output_icon { primary secondary } {
-    #item 985
-    set result {}
-    #item 956
-    set lines [ split $primary "\n" ]
-    set nline [ llength $lines ]
-    #item 9740001
-    if {$secondary == "debug"} {
-        #item 990
-        lappend result "#if !NDEBUG"
-        #item 981
-        set fp "stderr"
-    } else {
-        #item 9740002
-        if {$secondary == ""} {
-            #item 983
-            set fp "stdout"
-        } else {
-            #item 979
-            set fp $secondary
-        }
-    }
-    #item 957
-    if {$nline == 1} {
-        #item 961
-        set prli [ lindex $lines 0 ]
-        #item 963
-        lappend result "fputs($prli,$fp);"
-    } else {
-        #item 960
-        set prli [ join $lines "," ]
-        #item 962
-        lappend result "fprintf($fp,$prli);"
-    }
-    #item 986
-    if {$secondary == "debug"} {
-        #item 989
-        lappend result "#endif"
-    }
-    #item 973
-    return [ join $result "\n" ]
 }
 
 proc p.and { left right } {
@@ -1094,6 +1054,68 @@ proc p.not { operand } {
 proc p.or { left right } {
     #item 672
     return "($left) || ($right)"
+}
+
+proc p.output_c { primary secondary } {
+    #item 985
+    set result {}
+    #item 956
+    set lines [ split $primary "\n" ]
+    set nline [ llength $lines ]
+    #item 9740001
+    if {$secondary == "debug"} {
+        #item 990
+        lappend result "#if !NDEBUG"
+        #item 981
+        set fp "stderr"
+    } else {
+        #item 9740002
+        if {$secondary == ""} {
+            #item 983
+            set fp "stdout"
+        } else {
+            #item 979
+            set fp $secondary
+        }
+    }
+    #item 957
+    if {$nline == 1} {
+        #item 961
+        set prli [ lindex $lines 0 ]
+        #item 963
+        lappend result "fputs($prli,$fp);"
+    } else {
+        #item 960
+        set prli [ join $lines "," ]
+        #item 962
+        lappend result "fprintf($fp,$prli);"
+    }
+    #item 986
+    if {$secondary == "debug"} {
+        #item 989
+        lappend result "#endif"
+    }
+    #item 973
+    return [ join $result "\n" ]
+}
+
+proc p.output_cpp { primary secondary } {
+    #item 14170001
+    if {$secondary == "debug"} {
+        #item 1424
+        set io "std::cerr"
+    } else {
+        #item 14170002
+        if {$secondary == ""} {
+            #item 1426
+            set io "std::cout"
+        } else {
+            #item 1422
+            set io $secondary
+        }
+    }
+    #item 1429
+    return "$io << $primary << std::endl;"
 }
 
 proc pass { } {
