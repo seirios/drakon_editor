@@ -1057,6 +1057,12 @@ proc p.or { left right } {
 }
 
 proc p.output_c { primary secondary } {
+    #item 1430
+    if {$primary == "" &&
+	$secondary == ""} {
+        #item 1433
+        return ""
+    }
     #item 985
     set result {}
     #item 956
@@ -1100,6 +1106,12 @@ proc p.output_c { primary secondary } {
 }
 
 proc p.output_cpp { primary secondary } {
+    #item 1434
+    if {$primary == "" &&
+	$secondary == ""} {
+        #item 1437
+        return ""
+    }
     #item 14170001
     if {$secondary == "debug"} {
         #item 1424

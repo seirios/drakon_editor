@@ -2,7 +2,7 @@
 namespace eval mv {
 
 proc output.switch { } {
-	return ""
+	return [ mc2 "Toggle active" ]
 }
 
 proc output.create { item_id diagram_id x y } {
@@ -69,6 +69,12 @@ proc output.is_top { mx my x y w h a b } {
 
 proc output.icons { text text2 color x y w h a b } {
 	lassign [ get_colors $color $colors::action_bg ] fg bg tc
+	# Disabled appearance
+	if { $b == 1 } {
+		set fg $colors::inactive_fg
+		set bg $colors::inactive_bg
+		set tc $fg
+	}
 	set left1 [ expr { $x - $w } ]
 	set top1 [ expr { $y - $h + $a } ]
 	set right1 [ expr { $x + $w - 20 } ]

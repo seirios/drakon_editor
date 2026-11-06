@@ -250,11 +250,11 @@ proc add_to_canvas { surface type coords text fore fill item_id } {
 			set anchor "center"
 		}
 		# No syntax highlighting inside comments and branch header/footers
-		# Also not in inactive actions
+		# Also not inside inactive icons
 		if { $item_type == "commentin" || $item_type == "commentout"
 			|| $item_type == "branch" || $item_type == "address"
-			|| ( $item_type == "action" && $item_b )
-			|| ( $item_type == "shelf" && $item_b ) } {
+			|| ( $item_b && ( $item_type == "action" || $item_type == "shelf" ||
+					  $item_type == "output" || $item_type == "insertion" )) } {
 			set no_hl 1
 		}
 		return [ add_prim_to_canvas $surface $type $coords $text $fore $fill $anchor $no_hl ]

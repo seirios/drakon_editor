@@ -2,7 +2,7 @@
 namespace eval mv {
 
 proc insertion.switch { } {
-	return ""
+	return [ mc2 "Toggle active" ]
 }
 
 proc insertion.create { item_id diagram_id x y } {
@@ -35,6 +35,12 @@ proc insertion.box { x y w h a b } {
 
 proc insertion.icons { text text2 color x y w h a b } {
 	lassign [ get_colors $color $colors::action_bg ] fg bg tc
+	# Disabled appearance
+	if { $b == 1 } {
+		set fg $colors::inactive_fg
+		set bg $colors::inactive_bg
+		set tc $fg
+	}
 	set rect_coords [ make_rect $x $y $w $h ]
 	set cdbox [ add_handle_border $rect_coords ]
 	set rect [ make_prim main rectangle $rect_coords "" $fg $bg $cdbox ]

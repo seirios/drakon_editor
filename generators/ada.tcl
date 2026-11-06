@@ -975,27 +975,33 @@ proc gen_insertion { db item_id } {
     set text [ $db eval { \
     	select text_lines from nodes where item_id = :item_id } ]
     set text [ lindex $text 0 ]
-    #item 4083
-    if {[ lindex $text 0 ] == "nested"} {
-        #item 4087
-        set name [ lindex $text 1 ]
-        #item 4088
-        set ins [ find_insertion $name ]
-        #item 4089
-        if {$ins == ""} {
+    #item 4102
+    if {$text == ""} {
+        #item 4105
+        set result $item_id
+    } else {
+        #item 4083
+        if {[ lindex $text 0 ] == "nested"} {
+            #item 4087
+            set name [ lindex $text 1 ]
+            #item 4088
+            set ins [ find_insertion $name ]
+            #item 4089
+            if {$ins == ""} {
+                #item 4096
+                set g_errmsg "Please check insertions."
+                #item 4086
+                return {}
+            } else {
+                #item 3908
+                set result [ list "ins" $ins ]
+            }
+        } else {
             #item 4096
             set g_errmsg "Please check insertions."
             #item 4086
             return {}
-        } else {
-            #item 3908
-            set result [ list "ins" $ins ]
         }
-    } else {
-        #item 4096
-        set g_errmsg "Please check insertions."
-        #item 4086
-        return {}
     }
     #item 3909
     return [ list $result $next ]

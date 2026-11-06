@@ -17,8 +17,9 @@ proc copy_from { db } {
 		if { $type == "input" || $type == "process" } {
 			set type "action"
 		}
-		# Inactive actions/shelves are considered empty
-		if { $b == 1 && ( $type == "action" || $type == "shelf" ) } {
+		# Inactive icons are considered empty
+		if { $b == 1 && ( $type == "action" || $type == "shelf" ||
+				  $type == "output" || $type == "insertion" ) } {
 			set text ""
 			set text2 ""
 		}
