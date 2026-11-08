@@ -219,17 +219,17 @@ proc classify_keywords { keywords name } {
     #item 2177
     set errors {}
     check_keywords $keywords \
-    	{ abstract protected
-    	tagged order overriding }
+    	{ order abstract local overriding
+    	tagged protected  }
     #item 2133
     set access [ find_keywords \
-    	$keywords { private public } ]
+    	$keywords { private visible } ]
     #item 21400000
     set _sw21400000_ [ llength $access ]
     #item 21400001
     if {$_sw21400000_ == 0} {
         #item 2154
-        set access "static"
+        set access ""
     } else {
         #item 21400002
         if {$_sw21400000_ == 1} {
@@ -260,34 +260,40 @@ proc classify_keywords { keywords name } {
         }
     }
     #item 21440001
-    if {($etype == "subprogram") || (!(($etype == "type") || ($etype == "subtype")))} {
-        
-    } else {
-        #item 3918
-        if {$access == "private"} {
-            
-        } else {
-            #item 3921
-            set access "public"
+    if {$etype == "subprogram"} {
+        #item 4106
+        if {$access == ""} {
+            #item 4109
+            set access "local"
         }
-        #item 2204
-        variable ada_types
-        #item 2205
-        if {[ lsearch -exact $ada_types $name ] == -1} {
-            #item 2209
-            lappend ada_types $name
+    } else {
+        #item 21440002
+        if {($etype == "type") || ($etype == "subtype")} {
+            #item 3918
+            if {$access == ""} {
+                #item 3921
+                set access "visible"
+            }
+            #item 2204
+            variable ada_types
+            #item 2205
+            if {[ lsearch -exact $ada_types $name ] == -1} {
+                #item 2209
+                lappend ada_types $name
+            }
         }
     }
     #item 2155
     array set props {}
     #item 2156
-    set props(abstract) $abstract
-    set props(protected) $protected
-    set props(tagged) $tagged
-    set props(access) $access
     set props(subtype) $etype
     set props(order) $order
+    set props(access) $access
+    set props(abstract) $abstract
+    set props(local) $local
     set props(overriding) $overriding
+    set props(protected) $protected
+    set props(tagged) $tagged
     #item 2157
     set proplist [ array get props ]
     set error_message [ join $errors "\n" ]
@@ -461,7 +467,7 @@ proc extract_signature { text name } {
     #item 2104
     array set props { \
     	abstract 0 \
-    	access static \
+    	access local \
     	order 0 \
     	overriding 0 \
     	subtype procedure \
@@ -529,12 +535,12 @@ proc extract_signature { text name } {
             set type "comment"
         } else {
             #item 2093
-            set keywords { 
-            	abstract
-            	order overriding
-            	public private protected
+            set keywords {
+            	order nested
+            	abstract overriding
+            	local private visible
             	subtype type
-            	tagged nested }
+            	tagged protected }
             #item 2094
             set found_keywords \
              [ find_keywords $first $keywords ]
@@ -1548,10 +1554,10 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
     set delims {
     	"(" ")" "[" "]" ";" }
     #item 3696
-    set kw_extra { enum
-    	comment public returns
-    	not_overriding order 
-    	nested }
+    set kw_extra {
+    	comment returns
+    	order nested 
+    	local visible }
     #item 3616
     set consts { True False }
     #item 14810001
@@ -2822,11 +2828,15 @@ proc print_body { db filename fhandle components header footer } {
     #item 741
     puts_notempty \
     	$fhandle $header
-    foreach subprogram [ filter_subprograms $components static ] {
+    foreach subprogram [ filter_subprograms $components local ] {
+        #item 4112
+        print_subprogram $db $fhandle $subprogram 1
+    }
+    foreach subprogram [ filter_subprograms $components local ] {
         #item 748
         print_subprogram $db $fhandle $subprogram 0
     }
-    foreach subprogram [ filter_subprograms $components public ] {
+    foreach subprogram [ filter_subprograms $components visible ] {
         #item 753
         print_subprogram $db $fhandle $subprogram 0
     }
@@ -3080,15 +3090,15 @@ proc print_spec { db filename fhandle components header footer } {
     #item 490
     puts_notempty \
     	$fhandle $header
-    foreach type [ filter_types $components type public ] {
+    foreach type [ filter_types $components type visible ] {
         #item 1277
         print_type $db $fhandle $type
     }
-    foreach type [ filter_types $components subtype public ] {
+    foreach type [ filter_types $components subtype visible ] {
         #item 3786
         print_type $db $fhandle $type
     }
-    foreach subprogram [ filter_subprograms $components public ] {
+    foreach subprogram [ filter_subprograms $components visible ] {
         #item 493
         print_subprogram $db $fhandle $subprogram 1
     }
