@@ -277,8 +277,14 @@ proc classify_keywords { keywords name } {
         if {($etype == "type") || ($etype == "subtype")} {
             #item 3918
             if {$access == ""} {
-                #item 3921
-                set access "visible"
+                #item 4132
+                if {$local} {
+                    #item 4134
+                    set access "local"
+                } else {
+                    #item 3921
+                    set access "visible"
+                }
             }
             #item 2204
             variable ada_types
@@ -2834,6 +2840,14 @@ proc print_body { db filename fhandle components header footer } {
     #item 741
     puts_notempty \
     	$fhandle $header
+    foreach type [ filter_types $components type local ] {
+        #item 4140
+        print_type $db $fhandle $type 0
+    }
+    foreach type [ filter_types $components subtype local ] {
+        #item 4144
+        print_type $db $fhandle $type 0
+    }
     foreach subprogram [ filter_subprograms $components local ] {
         #item 748
         print_subprogram $db $fhandle $subprogram 0
