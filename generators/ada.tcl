@@ -259,6 +259,12 @@ proc classify_keywords { keywords name } {
              "$name: inconsistent type: $etype"
         }
     }
+    #item 4128
+    if {$access == "visible" && $local} {
+        #item 4131
+        lappend errors \
+         "$name: cannot be visible and local"
+    }
     #item 21440001
     if {$etype == "subprogram"} {
         #item 4106
@@ -2829,10 +2835,6 @@ proc print_body { db filename fhandle components header footer } {
     puts_notempty \
     	$fhandle $header
     foreach subprogram [ filter_subprograms $components local ] {
-        #item 4112
-        print_subprogram $db $fhandle $subprogram 1
-    }
-    foreach subprogram [ filter_subprograms $components local ] {
         #item 748
         print_subprogram $db $fhandle $subprogram 0
     }
@@ -3090,13 +3092,17 @@ proc print_spec { db filename fhandle components header footer } {
     #item 490
     puts_notempty \
     	$fhandle $header
+    foreach type [ filter_types $components type private ] {
+        #item 4116
+        print_type $db $fhandle $type 0
+    }
     foreach type [ filter_types $components type visible ] {
         #item 1277
-        print_type $db $fhandle $type
+        print_type $db $fhandle $type 0
     }
     foreach type [ filter_types $components subtype visible ] {
         #item 3786
-        print_type $db $fhandle $type
+        print_type $db $fhandle $type 0
     }
     foreach subprogram [ filter_subprograms $components visible ] {
         #item 493
@@ -3113,11 +3119,11 @@ proc print_spec { db filename fhandle components header footer } {
         puts $fhandle "private"
         foreach type [ filter_types $components type private ] {
             #item 3893
-            print_type $db $fhandle $type
+            print_type $db $fhandle $type 1
         }
         foreach type [ filter_types $components subtype private ] {
             #item 3896
-            print_type $db $fhandle $type
+            print_type $db $fhandle $type 1
         }
         foreach subprogram [ filter_subprograms $components private ] {
             #item 765
@@ -3129,7 +3135,7 @@ proc print_spec { db filename fhandle components header footer } {
     	$fhandle $footer
 }
 
-proc print_subprogram { db fhandle component in_header } {
+proc print_subprogram { db fhandle component in_spec } {
     #item 1296
     lassign \
     $component \
@@ -3148,12 +3154,12 @@ proc print_subprogram { db fhandle component in_header } {
     [ gen::scan_diagram_description $db $diagram_id $sections ] \
     spec_header spec_footer body_header body_footer
     #item 760
-    if {$props(abstract) && !$in_header} {
+    if {$props(abstract) && !$in_spec} {
         
     } else {
         #item 510
         set static [ expr { $props(access) != "public" } ]
-        set print_body [ expr !$in_header ]
+        set print_body [ expr !$in_spec ]
         set depth 1
         #item 511
         set result [ gen_subprogram_kernel \
@@ -3176,7 +3182,7 @@ proc print_subprogram { db fhandle component in_header } {
     }
 }
 
-proc print_type { db fhandle component } {
+proc print_type { db fhandle component in_private } {
     #item 1294
     lassign \
     $component \
@@ -3197,19 +3203,31 @@ proc print_type { db fhandle component } {
     #item 851
     set depth 1
     set print_body 1
-    #item 852
-    set result [ gen_type_kernel \
-    $depth \
-    $props(subtype) \
-    $props(abstract) \
-    $props(tagged) \
-    $name \
-    $body \
-    $print_body \
-    $spec_header \
-    $spec_footer \
-    $body_header \
-    $body_footer ]
+    #item 4118
+    if {$props(access) == "private" && !$in_private} {
+        #item 4126
+        if {$props(local)} {
+            #item 4125
+            set result {}
+        } else {
+            #item 4122
+            set result [ list "type $name is private;" ]
+        }
+    } else {
+        #item 852
+        set result [ gen_type_kernel \
+        $depth \
+        $props(subtype) \
+        $props(abstract) \
+        $props(tagged) \
+        $name \
+        $body \
+        $print_body \
+        $spec_header \
+        $spec_footer \
+        $body_header \
+        $body_footer ]
+    }
     #item 4080
     print_component $fhandle $depth $result
 }
