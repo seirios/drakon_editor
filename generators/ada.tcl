@@ -768,6 +768,30 @@ proc extract_when { body } {
     return [ list $body $lines ]
 }
 
+proc filter_components { components access } {
+    #item 4152
+    set result {}
+    foreach component $components {
+        #item 4161
+        lassign \
+        $component \
+        diagram_id name signature body
+        #item 4162
+        lassign \
+        $signature \
+        type prop_list parameters returns
+        #item 4155
+        array set props $prop_list
+        #item 4156
+        if {$props(access) == $access} {
+            #item 4157
+            lappend result $component
+        }
+    }
+    #item 4153
+    return $result
+}
+
 proc filter_subprograms { components access } {
     #item 3754
     set result {}
@@ -1756,29 +1780,32 @@ proc init_package { filename } {
 }
 
 proc is_empty_body { components header footer } {
-    #item 4033
-    set publics \
-    	[ filter_subprograms $components public ]
-    #item 4028
-    if {(([ llength $publics ] == 0) && ($header == "")) && ($footer == "")} {
+    #item 4164
+    set visible [ filter_subprograms $components visible ]
+    set private [ filter_subprograms $components private ]
+    set local [ filter_components $components local ]
+    #item 4163
+    if {(([ llength [ concat $visible $private $local ] ] == 0) && ($header == "")) && ($footer == "")} {
         #item 4031
         return 1
+    } else {
+        #item 4032
+        return 0
     }
-    #item 4032
-    return 0
 }
 
 proc is_empty_spec { components header footer } {
     #item 2235
-    set publics \
-    	[ filter_subprograms $components public ]
+    set visible [ filter_components $components visible ]
+    set private [ filter_components $components private ]
     #item 2230
-    if {(([ llength $publics ] == 0) && ($header == "")) && ($footer == "")} {
+    if {(([ llength [ concat $visible $private ] ] == 0) && ($header == "")) && ($footer == "")} {
         #item 2233
         return 1
+    } else {
+        #item 2234
+        return 0
     }
-    #item 2234
-    return 0
 }
 
 proc join_lists { list_of_lists separator } {
@@ -3123,9 +3150,7 @@ proc print_spec { db filename fhandle components header footer } {
         print_subprogram $db $fhandle $subprogram 1
     }
     #item 3888
-    if {[ llength [ filter_subprograms $components private   ] ] +   
-[ llength [ filter_types $components type private    ] ] +   
-[ llength [ filter_types $components subtype private ] ] == 0} {
+    if {[ llength [ filter_components $components private ] ] == 0} {
         
     } else {
         #item 3201
