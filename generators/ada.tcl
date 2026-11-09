@@ -1183,38 +1183,21 @@ proc gen_subprogram_kernel { depth static type abstract overriding returns name 
         #item 1005
         lappend result "is abstract"
     } else {
-        #item 1007
-        if {$print_body} {
-            #item 3446
-            lassign \
-            [ extract_is $body ] \
-            body is_lines
-            #item 3689
-            if {[ llength $is_lines ] == 0} {
-                #item 3693
-                lappend result "is begin"
-                #item 3052
-                set body [ parse_body \
-                	$body $depth $name ]
-                foreach line $body {
-                    #item 611
-                    lappend result $line
-                }
-                #item 614
-                lappend result "end $name"
-            } else {
-                #item 3456
-                lappend result "is"
-                foreach line $is_lines {
-                    #item 3457
-                    lappend result "${indent}$line"
-                }
-                #item 3695
-                if {[ llength $body ] == 0} {
-                    
-                } else {
-                    #item 3692
-                    lappend result "begin"
+        #item 4381
+        if {[ is_null $body ]} {
+            #item 4397
+            lappend result "is null"
+        } else {
+            #item 4383
+            if {$print_body} {
+                #item 4384
+                lassign \
+                [ extract_is $body ] \
+                body is_lines
+                #item 4389
+                if {[ llength $is_lines ] == 0} {
+                    #item 4393
+                    lappend result "is begin"
                     #item 3052
                     set body [ parse_body \
                     	$body $depth $name ]
@@ -1224,6 +1207,29 @@ proc gen_subprogram_kernel { depth static type abstract overriding returns name 
                     }
                     #item 614
                     lappend result "end $name"
+                } else {
+                    #item 4385
+                    lappend result "is"
+                    foreach line $is_lines {
+                        #item 4386
+                        lappend result "${indent}$line"
+                    }
+                    #item 4394
+                    if {[ llength $body ] == 0} {
+                        
+                    } else {
+                        #item 4392
+                        lappend result "begin"
+                        #item 3052
+                        set body [ parse_body \
+                        	$body $depth $name ]
+                        foreach line $body {
+                            #item 611
+                            lappend result $line
+                        }
+                        #item 614
+                        lappend result "end $name"
+                    }
                 }
             }
         }
@@ -1825,6 +1831,17 @@ proc is_empty_spec { components header footer } {
         return 1
     } else {
         #item 2234
+        return 0
+    }
+}
+
+proc is_null { body } {
+    #item 4403
+    if {([ llength $body ] == 1) && ([ lindex $body 0 ] == [ p.pass ])} {
+        #item 4407
+        return 1
+    } else {
+        #item 4408
         return 0
     }
 }
