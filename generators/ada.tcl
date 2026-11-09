@@ -219,8 +219,8 @@ proc classify_keywords { keywords name } {
     #item 2177
     set errors {}
     check_keywords $keywords \
-    	{ order abstract local overriding
-    	tagged protected  }
+    	{ order abstract limited local
+    	overriding tagged protected  }
     #item 2133
     set access [ find_keywords \
     	$keywords { private visible } ]
@@ -302,6 +302,7 @@ proc classify_keywords { keywords name } {
     set props(order) $order
     set props(access) $access
     set props(abstract) $abstract
+    set props(limited) $limited
     set props(local) $local
     set props(overriding) $overriding
     set props(protected) $protected
@@ -494,6 +495,7 @@ proc extract_signature { text name } {
     array set props { \
     	abstract 0 \
     	access local \
+    	limited 0 \
     	order 0 \
     	overriding 0 \
     	subtype procedure \
@@ -566,7 +568,7 @@ proc extract_signature { text name } {
             	abstract overriding
             	local private visible
             	subtype type
-            	tagged protected }
+            	limited protected tagged }
             #item 2094
             set found_keywords \
              [ find_keywords $first $keywords ]
@@ -1250,7 +1252,7 @@ proc gen_subprogram_kernel { depth static type abstract overriding returns name 
     return $result
 }
 
-proc gen_type_kernel { depth type abstract tagged name body print_body spec_header spec_footer body_header body_footer } {
+proc gen_type_kernel { depth type access abstract limited tagged name body print_body spec_header spec_footer body_header body_footer } {
     #item 857
     set result {}
     set line ""
@@ -1272,6 +1274,12 @@ proc gen_type_kernel { depth type abstract tagged name body print_body spec_head
     if {$abstract} {
         #item 888
         append line " abstract"
+    }
+    #item 4416
+    if {$limited &&
+	$access != "private"} {
+        #item 4417
+        append line " limited"
     }
     #item 925
     if {$tagged} {
@@ -3368,15 +3376,26 @@ proc print_type { db fhandle component in_private } {
             #item 4125
             set result {}
         } else {
-            #item 4122
-            set result [ list "type $name is private;" ]
+            #item 4409
+            set line "type $name is"
+            #item 4410
+            if {$props(limited)} {
+                #item 4413
+                append line " limited"
+            }
+            #item 4414
+            append line " private;"
+            #item 4415
+            set result [ list $line ]
         }
     } else {
         #item 852
         set result [ gen_type_kernel \
         $depth \
         $props(subtype) \
+        $props(access) \
         $props(abstract) \
+        $props(limited) \
         $props(tagged) \
         $name \
         $body \
