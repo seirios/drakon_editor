@@ -407,6 +407,20 @@ proc do_monkey_patch { } {
     monkey_patch_nogoto $direction
 }
 
+proc ends_with { str end } {
+    #item 4372
+    set len [ string length $str ]
+    set endlen [ string length $end ]
+    #item 4373
+    if {($len >= $endlen) && ([ string last $end $str ] == $len - $endlen)} {
+        #item 4376
+        return 1
+    } else {
+        #item 4378
+        return 0
+    }
+}
+
 proc enforce_nogoto { name } {
     #item 4093
     variable g_errmsg
@@ -867,12 +881,12 @@ proc find_if_end_impl { db parent_id ordinal path loops } {
             #item 2554
             set type [ nogoto::get_node_type $db $item_id ]
             #item 25550001
-            if {($type == "action") || ($type == "sel")} {
+            if {(($type == "action") || ($type == "sel")) || ($type == "special")} {
                 #item 2562
                 set result [ find_if_end_impl \
                  $db $item_id 0 $path $loops ]
             } else {
-                #item 25550003
+                #item 25550004
                 if {$type == "loop"} {
                     #item 2564
                     lappend loops $item_id
@@ -880,11 +894,11 @@ proc find_if_end_impl { db parent_id ordinal path loops } {
                     set result [ find_if_end_impl \
                      $db $item_id 0 $path $loops ]
                 } else {
-                    #item 25550004
+                    #item 25550005
                     if {($type == "if") || ($type == "case")} {
                         
                     } else {
-                        #item 25550006
+                        #item 25550007
                         error "Unexpected switch value: $type"
                     }
                     #item 2566
@@ -907,7 +921,7 @@ proc find_insertion { needle } {
     #item 3979
     variable g_no_ins
     #item 3986
-    set result {}
+    set result ""
     foreach func $g_no_ins {
         #item 3982
         lassign \
@@ -1014,27 +1028,19 @@ proc gen_insertion { db item_id } {
         #item 4105
         set result $item_id
     } else {
-        #item 4083
-        if {[ lindex $text 0 ] == "nested"} {
-            #item 4087
-            set name [ lindex $text 1 ]
-            #item 4088
-            set ins [ find_insertion $name ]
-            #item 4089
-            if {$ins == ""} {
-                #item 4096
-                set g_errmsg "Please check insertions."
-                #item 4086
-                return {}
-            } else {
-                #item 3908
-                set result [ list "ins" $ins ]
-            }
+        #item 4087
+        set name [ lindex $text 1 ]
+        #item 4088
+        set ins [ find_insertion $name ]
+        #item 4237
+        if {$ins == ""} {
+            #item 4241
+            set g_errmsg [ mc2 "Some errors found." ]
+            #item 4240
+            set result {}
         } else {
-            #item 4096
-            set g_errmsg "Please check insertions."
-            #item 4086
-            return {}
+            #item 3908
+            set result [ list "ins" $ins ]
         }
     }
     #item 3909
@@ -1079,6 +1085,15 @@ proc gen_sel { db item_id } {
     set item [ list $result $after ]
     #item 2680
     return $item
+}
+
+proc gen_special { db item_id } {
+    #item 4322
+    set next [ nogoto::get_next_node $db $item_id 0 ]
+    #item 4324
+    set result [ list "special" $item_id ]
+    #item 4323
+    return [ list $result $next ]
 }
 
 proc gen_subprogram_kernel { depth static type abstract overriding returns name parameters body print_body spec_header spec_footer body_header body_footer } {
@@ -1426,33 +1441,39 @@ proc generate_item { db item_id parent_loop } {
             	$db $item_id $parent_loop ]
         } else {
             #item 17820003
-            if {$type == "if"} {
-                #item 1812
-                return [ nogoto::gen_if \
-                	$db $item_id $parent_loop ]
+            if {$type == "special"} {
+                #item 4316
+                return [ gen_special $db $item_id ]
             } else {
                 #item 17820004
-                if {$type == "loop"} {
-                    #item 2781
-                    return [ gen_loop \
-                    	$db $item_id ]
+                if {$type == "if"} {
+                    #item 1812
+                    return [ nogoto::gen_if \
+                    	$db $item_id $parent_loop ]
                 } else {
                     #item 17820005
-                    if {$type == "case"} {
-                        #item 2875
-                        return [ gen_case \
+                    if {$type == "loop"} {
+                        #item 2781
+                        return [ gen_loop \
                         	$db $item_id ]
                     } else {
                         #item 17820006
-                        if {$type == "sel"} {
-                            
+                        if {$type == "case"} {
+                            #item 2875
+                            return [ gen_case \
+                            	$db $item_id ]
                         } else {
                             #item 17820007
-                            error "Unexpected switch value: $type"
+                            if {$type == "sel"} {
+                                
+                            } else {
+                                #item 17820008
+                                error "Unexpected switch value: $type"
+                            }
+                            #item 2670
+                            return [ gen_sel \
+                            	$db $item_id ]
                         }
-                        #item 2670
-                        return [ gen_sel \
-                        	$db $item_id ]
                     }
                 }
             }
@@ -1893,7 +1914,6 @@ proc make_callbacks { } {
     gen::put_callback callbacks assign              gen_ada::p.assign
     gen::put_callback callbacks declare             gen_ada::p.declare
     gen::put_callback callbacks compare             gen_ada::p.compare
-    gen::put_callback callbacks shelf               gen_ada::p.shelf
     gen::put_callback callbacks comment             gen_ada::commentator
     gen::put_callback callbacks pass                gen_ada::p.pass
     
@@ -1909,7 +1929,9 @@ proc make_callbacks { } {
     gen::put_callback callbacks signature           gen_ada::extract_signature
     gen::put_callback callbacks enforce_nogoto      gen_ada::enforce_nogoto
     gen::put_callback callbacks tab_convert         gen_ada::p.indentation
+    
     gen::put_callback callbacks own_insertions      gen_ada::own_insertions
+    gen::put_callback callbacks own_shelves         gen_ada::own_shelves
     #item 7
     return $callbacks
 }
@@ -2004,9 +2026,182 @@ proc multi_extract { body ifirst beginstr endstr do_unindent } {
     return [ list $i $lines ]
 }
 
-proc own_insertions { } {
-    #item 4044
-    return ""
+proc own_insertions { gdb item_id } {
+    #item 4216
+    lassign [ $gdb eval {
+    	select text, text2
+    	from items
+    	where item_id = :item_id
+    	} ] text text2
+    #item 4218
+    if {[ lindex $text 0 ] == "nested"} {
+        #item 4233
+        set name [ lindex $text 1 ]
+        #item 4232
+        set found [ $gdb onecolumn {
+        	select count(*)
+        	from diagrams
+        	where name = :name
+        	} ]
+        #item 4234
+        if {$found} {
+            
+        } else {
+            #item 4236
+            syntax_error $gdb $item_id "Unknown diagram '$name'."
+        }
+    } else {
+        #item 4230
+        syntax_error $gdb $item_id "Insertion must begin with 'nested'."
+    }
+}
+
+proc own_shelves { gdb item_id } {
+    #item 4195
+    lassign [ $gdb eval {
+    	select text, text2
+    	from items
+    	where item_id = :item_id
+    	} ] primary secondary
+    #item 4252
+    set lines {}
+    set plines [ split $primary "\n" ]
+    set sterms [ split $secondary " " ]
+    set kind [ lindex $sterms 0 ]
+    #item 4340
+    set comment [ commentator \
+    	"Item $item_id" ]
+    #item 42470001
+    if {$kind == "enum"} {
+        #item 4306
+        lappend lines "##@@BEGIN_ENUM@@##"
+        #item 4309
+        set lines [ concat $lines $plines ]
+        #item 4308
+        lappend lines "##@@END_ENUM@@##"
+        #item 4307
+        set result [ join $lines "\n" ]
+    } else {
+        #item 42470002
+        if {$kind == "when"} {
+            #item 4284
+            lappend lines "##@@BEGIN_WHEN@@##"
+            #item 4287
+            set lines [ concat $lines $plines ]
+            #item 4286
+            lappend lines "##@@END_WHEN@@##"
+            #item 4285
+            set result [ join $lines "\n" ]
+        } else {
+            #item 42470003
+            if {$kind == "record"} {
+                #item 4275
+                lappend lines "##@@BEGIN_RECORD@@##"
+                #item 4278
+                set lines [ concat $lines $plines ]
+                #item 4277
+                lappend lines "##@@END_RECORD@@##"
+                #item 4276
+                set result [ join $lines "\n" ]
+            } else {
+                #item 42470004
+                if {$kind == "is"} {
+                    #item 4255
+                    lappend lines "##@@BEGIN_IS@@##"
+                    #item 4341
+                    lappend lines $comment
+                    #item 4279
+                    set lines [ concat $lines $plines ]
+                    #item 4257
+                    lappend lines "##@@END_IS@@##"
+                    #item 4256
+                    set result [ join $lines "\n" ]
+                } else {
+                    #item 42470005
+                    if {$kind == "declare"} {
+                        #item 4265
+                        lappend lines "##@@BEGIN_DECLARE@@##"
+                        #item 4342
+                        lappend lines $comment
+                        #item 4281
+                        set lines [ concat $lines $plines ]
+                        #item 4267
+                        lappend lines "##@@END_DECLARE@@##"
+                        #item 4266
+                        set result [ join $lines "\n" ]
+                    } else {
+                        #item 42470006
+                        if {$kind == "end"} {
+                            #item 4270
+                            lappend lines "##@@BEGIN_END@@##"
+                            #item 4273
+                            append_notempty lines $primary
+                            #item 4272
+                            lappend lines "##@@END_END@@##"
+                            #item 4271
+                            set result [ join $lines "\n" ]
+                        } else {
+                            #item 42470007
+                            if {$kind == "with"} {
+                                #item 4260
+                                lappend lines "##@@BEGIN_WITH@@##"
+                                #item 4280
+                                set lines [ concat $lines $plines ]
+                                #item 4262
+                                lappend lines "##@@END_WITH@@##"
+                                #item 4261
+                                set result [ join $lines "\n" ]
+                            } else {
+                                #item 42470008
+                                if {$kind == "for"} {
+                                    #item 4291
+                                    lappend lines "##@@BEGIN_FOR@@##"
+                                    #item 4295
+                                    lappend lines [ lrange $sterms 1 end ]
+                                    #item 4294
+                                    set lines [ concat $lines $plines ]
+                                    #item 4293
+                                    lappend lines "##@@END_FOR@@##"
+                                    #item 4292
+                                    set result [ join $lines "\n" ]
+                                } else {
+                                    #item 42470009
+                                    if {$kind == "return"} {
+                                        #item 4303
+                                        if {[ llength $sterms ] == 1} {
+                                            #item 4305
+                                            set result "return $primary;"
+                                        } else {
+                                            #item 4298
+                                            lappend lines "##@@BEGIN_RETURN@@##"
+                                            #item 4302
+                                            lappend lines [ lrange $sterms 1 end ]
+                                            #item 4301
+                                            set lines [ concat $lines $plines ]
+                                            #item 4300
+                                            lappend lines "##@@END_RETURN@@##"
+                                            #item 4299
+                                            set result [ join $lines "\n" ]
+                                        }
+                                    } else {
+                                        #item 4212
+                                        syntax_error $gdb $item_id "Invalid shelf kind '$kind'."
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    #item 4196
+    gdb eval {
+    	update vertices
+    	set text = :result,
+    	    type = 'special'
+    	where item_id = :item_id
+    }
 }
 
 proc p.and { left right } {
@@ -2285,137 +2480,6 @@ proc p.rewire_loop_any { gdb start end scheme } {
     	delete from links where src = :start;
     	delete from vertices where vertex_id in (:start, :end);
     }
-}
-
-proc p.shelf { primary secondary } {
-    #item 1146
-    set lines {}
-    set plines [ split $primary "\n" ]
-    set sterms [ split $secondary " " ]
-    #item 11330000
-    set _sw11330000_ [ lindex $sterms 0 ]
-    #item 11330001
-    if {$_sw11330000_ == "enum"} {
-        #item 3700
-        lappend lines "##@@BEGIN_ENUM@@##"
-        #item 3703
-        set lines [ concat $lines $plines ]
-        #item 3702
-        lappend lines "##@@END_ENUM@@##"
-        #item 3701
-        set result [ join $lines "\n" ]
-    } else {
-        #item 11330002
-        if {$_sw11330000_ == "when"} {
-            #item 3361
-            lappend lines "##@@BEGIN_WHEN@@##"
-            #item 3364
-            set lines [ concat $lines $plines ]
-            #item 3363
-            lappend lines "##@@END_WHEN@@##"
-            #item 3362
-            set result [ join $lines "\n" ]
-        } else {
-            #item 11330003
-            if {$_sw11330000_ == "record"} {
-                #item 3327
-                lappend lines "##@@BEGIN_RECORD@@##"
-                #item 3333
-                set lines [ concat $lines $plines ]
-                #item 3331
-                lappend lines "##@@END_RECORD@@##"
-                #item 3330
-                set result [ join $lines "\n" ]
-            } else {
-                #item 11330004
-                if {$_sw11330000_ == "is"} {
-                    #item 1154
-                    lappend lines "##@@BEGIN_IS@@##"
-                    #item 3349
-                    set lines [ concat $lines $plines ]
-                    #item 1159
-                    lappend lines "##@@END_IS@@##"
-                    #item 1158
-                    set result [ join $lines "\n" ]
-                } else {
-                    #item 11330005
-                    if {$_sw11330000_ == "with"} {
-                        #item 1162
-                        lappend lines "##@@BEGIN_WITH@@##"
-                        #item 3350
-                        set lines [ concat $lines $plines ]
-                        #item 1167
-                        lappend lines "##@@END_WITH@@##"
-                        #item 1166
-                        set result [ join $lines "\n" ]
-                    } else {
-                        #item 11330006
-                        if {$_sw11330000_ == "declare"} {
-                            #item 3037
-                            lappend lines "##@@BEGIN_DECLARE@@##"
-                            #item 3351
-                            set lines [ concat $lines $plines ]
-                            #item 3042
-                            lappend lines "##@@END_DECLARE@@##"
-                            #item 3041
-                            set result [ join $lines "\n" ]
-                        } else {
-                            #item 11330007
-                            if {$_sw11330000_ == "end"} {
-                                #item 3049
-                                lappend lines "##@@BEGIN_END@@##"
-                                #item 3114
-                                append_notempty lines $primary
-                                #item 3113
-                                lappend lines "##@@END_END@@##"
-                                #item 3050
-                                set result [ join $lines "\n" ]
-                            } else {
-                                #item 11330008
-                                if {$_sw11330000_ == "for"} {
-                                    #item 3529
-                                    lappend lines "##@@BEGIN_FOR@@##"
-                                    #item 3533
-                                    lappend lines [ lrange $sterms 1 end ]
-                                    #item 3532
-                                    set lines [ concat $lines $plines ]
-                                    #item 3531
-                                    lappend lines "##@@END_FOR@@##"
-                                    #item 3530
-                                    set result [ join $lines "\n" ]
-                                } else {
-                                    #item 11330009
-                                    if {$_sw11330000_ == "return"} {
-                                        #item 3685
-                                        if {[ llength $sterms ] == 1} {
-                                            #item 3688
-                                            set result "return $primary;"
-                                        } else {
-                                            #item 3668
-                                            lappend lines "##@@BEGIN_RETURN@@##"
-                                            #item 3672
-                                            lappend lines [ lrange $sterms 1 end ]
-                                            #item 3671
-                                            set lines [ concat $lines $plines ]
-                                            #item 3670
-                                            lappend lines "##@@END_RETURN@@##"
-                                            #item 3669
-                                            set result [ join $lines "\n" ]
-                                        }
-                                    } else {
-                                        #item 3913
-                                        set result [ list "BADVAL" ]
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    #item 1139
-    return $result
 }
 
 proc p.short_circuit { gdb callbacks diagram_id } {
@@ -2953,9 +3017,19 @@ proc print_node_core { texts node callbacks depth } {
             set text [ gen::tab_convert $tab_convert $text ]
             #item 1765
             set parts [ split $text "\n" ]
-            foreach part $parts {
-                #item 1772
-                lappend result "${indent}$part"
+            #item 4335
+            if {[ llength $parts ] == 0} {
+                
+            } else {
+                #item 4366
+                set comm_item [ trim_item_id $current ]
+                set comment [ commentator "Item $comm_item" ]
+                #item 4339
+                lappend result "${indent}$comment"
+                foreach part $parts {
+                    #item 1772
+                    lappend result "${indent}$part"
+                }
             }
         } else {
             #item 17540000
@@ -2968,6 +3042,10 @@ proc print_node_core { texts node callbacks depth } {
                 set cond_text [ gen::get_text_lines $texts $cond_item ]
                 set cond_text [ gen::tab_convert $tab_convert $cond_text ]
                 set cond [ gen::condition_line $callbacks $cond_text ]
+                #item 4351
+                set comment [ commentator "Item $cond_item" ]
+                #item 4350
+                lappend result "${indent}$comment"
                 #item 1800
                 lappend result "${indent}$cond"
                 #item 1801
@@ -3023,6 +3101,10 @@ proc print_node_core { texts node callbacks depth } {
                         #item 2029
                         set exit_stmt [ exit_statement \
                         	$cond_text $negate $depth ]
+                        #item 4349
+                        set comment [ commentator "Item $cond_item" ]
+                        #item 4348
+                        lappend result "${indent}$comment"
                         #item 3030
                         set result [ concat $result $exit_stmt ]
                     } else {
@@ -3032,82 +3114,102 @@ proc print_node_core { texts node callbacks depth } {
                             lappend result "${indent}exit;"
                         } else {
                             #item 17540005
-                            if {$_sw17540000_ == "ins"} {
-                                #item 3970
-                                set component [ lindex $current 1 ]
-                                #item 4015
-                                lassign \
-                                $component \
-                                diagram_id name signature body
-                                #item 4016
-                                lassign \
-                                $signature \
-                                type prop_list parameters returns
-                                #item 4014
-                                array set props $prop_list
-                                #item 4017
-                                set static 1
-                                set print_body 1
-                                #item 4018
-                                set ins_body [ gen_subprogram_kernel \
-                                	$next_depth \
-                                	$static \
-                                	$props(subtype) \
-                                	$props(abstract) \
-                                	$props(overriding) \
-                                	$returns \
-                                	$name \
-                                	$parameters \
-                                	$body \
-                                	$print_body \
-                                	"" "" "" "" ]
-                                #item 4020
-                                lappend result "##@@BEGIN_IS@@##"
-                                #item 3978
-                                set result [ concat $result $ins_body ]
-                                #item 4021
-                                lappend result "##@@END_IS@@##"
+                            if {$_sw17540000_ == "special"} {
+                                #item 4332
+                                set id [ lindex $current 1 ]
+                                #item 4327
+                                set text [ gen::get_text_lines $texts $id ]
+                                set text [ gen::tab_convert $tab_convert $text ]
+                                #item 4328
+                                set parts [ split $text "\n" ]
+                                foreach part $parts {
+                                    #item 4331
+                                    lappend result "${indent}$part"
+                                }
                             } else {
                                 #item 17540006
-                                if {$_sw17540000_ == "sel"} {
-                                    #item 2682
-                                    set var_item [ lindex $current 1 ]
-                                    set cases [ lindex $current 2 ]
-                                    #item 2684
-                                    set var_text [ gen::get_text_lines \
-                                    	$texts $var_item ]
-                                    #item 2683
-                                    lappend result "${indent}case $var_text is"
-                                    #item 2749
-                                    set body [ print_node_core \
-                                    	$texts $cases $callbacks $depth ]
-                                    #item 2757
-                                    set result [ concat $result $body ]
-                                    #item 2686
-                                    lappend result "${indent}end case;"
+                                if {$_sw17540000_ == "ins"} {
+                                    #item 3970
+                                    set component [ lindex $current 1 ]
+                                    #item 4015
+                                    lassign \
+                                    $component \
+                                    diagram_id name signature body
+                                    #item 4016
+                                    lassign \
+                                    $signature \
+                                    type prop_list parameters returns
+                                    #item 4014
+                                    array set props $prop_list
+                                    #item 4017
+                                    set static 1
+                                    set print_body 1
+                                    #item 4018
+                                    set ins_body [ gen_subprogram_kernel \
+                                    	$next_depth \
+                                    	$static \
+                                    	$props(subtype) \
+                                    	$props(abstract) \
+                                    	$props(overriding) \
+                                    	$returns \
+                                    	$name \
+                                    	$parameters \
+                                    	$body \
+                                    	$print_body \
+                                    	"" "" "" "" ]
+                                    #item 4020
+                                    lappend result "##@@BEGIN_IS@@##"
+                                    #item 3978
+                                    set result [ concat $result $ins_body ]
+                                    #item 4021
+                                    lappend result "##@@END_IS@@##"
                                 } else {
                                     #item 17540007
-                                    if {$_sw17540000_ == "case"} {
-                                        
+                                    if {$_sw17540000_ == "sel"} {
+                                        #item 2682
+                                        set var_item [ lindex $current 1 ]
+                                        set cases [ lindex $current 2 ]
+                                        #item 2684
+                                        set var_text [ gen::get_text_lines \
+                                        	$texts $var_item ]
+                                        #item 4347
+                                        set comm_item [ trim_item_id $var_item ]
+                                        set comment [ commentator "Item $comm_item" ]
+                                        #item 4346
+                                        lappend result "${indent}$comment"
+                                        #item 2683
+                                        lappend result "${indent}case $var_text is"
+                                        #item 2749
+                                        set body [ print_node_core \
+                                        	$texts $cases $callbacks $depth ]
+                                        #item 2757
+                                        set result [ concat $result $body ]
+                                        #item 2686
+                                        lappend result "${indent}end case;"
                                     } else {
                                         #item 17540008
-                                        error "Unexpected switch value: $_sw17540000_"
+                                        if {$_sw17540000_ == "case"} {
+                                            
+                                        } else {
+                                            #item 17540009
+                                            error "Unexpected switch value: $_sw17540000_"
+                                        }
+                                        #item 2752
+                                        set cond_item [ lindex $current 1 ]
+                                        set actions [ lindex $current 2 ]
+                                        #item 2753
+                                        set cond_text [ gen::get_text_lines \
+                                        	$texts $cond_item ]
+                                        #item 2754
+                                        set when_text [ when_line $cond_text ]
+                                        #item 2755
+                                        lappend result "${indent}$when_text"
+                                        #item 2758
+                                        set body [ print_node_core \
+                                        	$texts $actions $callbacks $next_depth ]
+                                        #item 2759
+                                        set result [ concat $result $body ]
                                     }
-                                    #item 2752
-                                    set cond_item [ lindex $current 1 ]
-                                    set actions [ lindex $current 2 ]
-                                    #item 2753
-                                    set cond_text [ gen::get_text_lines \
-                                    	$texts $cond_item ]
-                                    #item 2754
-                                    set when_text [ when_line $cond_text ]
-                                    #item 2755
-                                    lappend result "${indent}$when_text"
-                                    #item 2758
-                                    set body [ print_node_core \
-                                    	$texts $actions $callbacks $next_depth ]
-                                    #item 2759
-                                    set result [ concat $result $body ]
                                 }
                             }
                         }
@@ -3454,6 +3556,17 @@ proc subst_at { str sub } {
     return $str
 }
 
+proc syntax_error { gdb item_id message } {
+    #item 4226
+    set diagram_id [ $gdb onecolumn {
+    	select diagram_id
+    	from items
+    	where item_id = :item_id
+    	} ]
+    #item 4313
+    graph::p.error $diagram_id $item_id $message
+}
+
 proc traverse_links { gdb id } {
     #item 2449
     if {$id == ""} {
@@ -3468,6 +3581,25 @@ proc traverse_links { gdb id } {
         traverse_links $gdb $d1
         #item 2447
         traverse_links $gdb $d2
+    }
+}
+
+proc trim_item_id { str } {
+    #item 4360
+    set len [ string length $str ]
+    #item 4357
+    if {[ ends_with $str "000" ]} {
+        #item 4361
+        return [ string range $str 0 end-3 ]
+    } else {
+        #item 4363
+        if {[ ends_with $str "0001" ]} {
+            #item 4365
+            return [ string range $str 0 end-4 ]
+        } else {
+            #item 4362
+            return $str
+        }
     }
 }
 

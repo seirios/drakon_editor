@@ -174,55 +174,20 @@ proc p.try_extract_header { line } {
 	return $header
 }
 
-proc process_shelf { gdb item_id shelf_proc } {
+proc icon_to_action { gdb item_id processor } {
 	lassign [ $gdb eval {
 		select text, text2
 		from items
 		where item_id = :item_id
 	} ] text text2
 	
-	set new_text [ $shelf_proc $text $text2 ]
-	
-
-	
-	$gdb eval {
-		update vertices
-		set text = :new_text,
-			type = 'action'
-		where item_id = :item_id
-	}
-}
-
-proc process_output { gdb item_id output_proc } {
-	lassign [ $gdb eval {
-		select text, text2
-		from items
-		where item_id = :item_id
-	} ] text text2
-
-	if { $output_proc != "" } {
-		set new_text [ $output_proc $text $text2 ]
-	} else {
+	if { $processor == "" } {
 		set new_text $text
+	} else {
+		set new_text [ $processor $text $text2 ]
 	}
 
-	$gdb eval {
-		update vertices
-		set text = :new_text,
-			type = 'action'
-		where item_id = :item_id
-	}
-}
-
-proc process_insertion { gdb item_id } {
-	set text [ $gdb eval {
-		select text
-		from items
-		where item_id = :item_id
-	} ]
-
-	set new_text $text
-
+	
 	$gdb eval {
 		update vertices
 		set text = :new_text,
@@ -418,20 +383,26 @@ proc fix_diagram_for_rules { gdb diagram_id } {
 
 proc fix_graph_stage_1_core { gdb callbacks append_semicolon diagram_id do_selects } {
 
-	set shelf_proc [ get_callback $callbacks shelf ]
-	
 	set shelves [ $gdb eval {
 		select item_id
 		from items
 		where diagram_id = :diagram_id
 		and type = 'shelf'
 	} ]
-	
-	foreach shelv $shelves {
-		process_shelf $gdb $shelv $shelf_proc
-	}
 
-	set output_proc [ get_optional_callback $callbacks output ]
+	set own_shelves [ get_optional_callback $callbacks own_shelves ]
+	# If generator does not own shelves, convert to actions
+	if { $own_shelves == "" } {
+		set shelf_proc [ get_callback $callbacks shelf ]
+
+		foreach id $shelves {
+			icon_to_action $gdb $id $shelf_proc
+		}
+	} else {
+		foreach id $shelves {
+			$own_shelves $gdb $id
+		}
+	}
 
 	set output_icons [ $gdb eval {
 		select item_id
@@ -440,22 +411,38 @@ proc fix_graph_stage_1_core { gdb callbacks append_semicolon diagram_id do_selec
 		and type = 'output'
 	} ]
 
-	foreach out $output_icons {
-		process_output $gdb $out $output_proc
+	set own_outputs [ get_optional_callback $callbacks own_outputs ]
+	# If generator does not own outputs, convert to actions
+	if { $own_outputs == "" } {
+		set output_proc [ get_optional_callback $callbacks output ]
+
+		foreach id $output_icons {
+			icon_to_action $gdb $id $output_proc
+		}
+	} else {
+		foreach id $output_icons {
+			$own_outputs $gdb $id
+		}
 	}
+
+	set insertion_icons [ $gdb eval {
+		select item_id
+		from items
+		where diagram_id = :diagram_id
+		and type = 'insertion'
+	} ]
 
 	set own_insertions [ get_optional_callback $callbacks own_insertions ]
 	# If generator does not own insertions, convert to actions
 	if { $own_insertions == "" } {
-		set insertion_icons [ $gdb eval {
-			select item_id
-			from items
-			where diagram_id = :diagram_id
-			and type = 'insertion'
-		} ]
+		set insertion_proc [ get_optional_callback $callbacks insertion ]
 
-		foreach ins $insertion_icons {
-			process_insertion $gdb $ins
+		foreach id $insertion_icons {
+			icon_to_action $gdb $id $insertion_proc
+		}
+	} else {
+		foreach id $insertion_icons {
+			$own_insertions $gdb $id
 		}
 	}
 
@@ -2753,8 +2740,11 @@ proc p.keywords { } {
 		can_glue
 		exit_door
 		if_block_end
-		output
 		tab_convert
+		output
+		insertion
+		own_shelves
+		own_outputs
 		own_insertions
 	}
 }
