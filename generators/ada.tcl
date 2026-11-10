@@ -104,6 +104,7 @@ variable drn_kw_bool {
 	abstract
 	local
 	protected
+	separate
 	tagged
 }
 
@@ -364,6 +365,7 @@ proc classify_keywords { keywords name } {
     set props(local) $local
     set props(protected) $protected
     set props(tagged) $tagged
+    set props(separate) $separate
     #item 4480
     set props(limited) $limited
     set props(order) $order
@@ -1168,7 +1170,7 @@ proc gen_special { db item_id } {
     return [ list $result $next ]
 }
 
-proc gen_subprogram_kernel { depth static type abstract overriding returns name parameters body print_body spec_header spec_footer body_header body_footer } {
+proc gen_subprogram_kernel { depth type abstract overriding separate returns name parameters body print_body spec_header spec_footer body_header body_footer } {
     #item 546
     set result {}
     set line ""
@@ -1250,61 +1252,19 @@ proc gen_subprogram_kernel { depth static type abstract overriding returns name 
     }
     #item 1059
     lappend result $line
-    #item 1004
-    if {$abstract} {
-        #item 1005
-        lappend result "is abstract"
-    } else {
-        #item 4381
-        if {[ is_null $body ]} {
-            #item 4397
-            lappend result "is null"
-        } else {
-            #item 4383
-            if {$print_body} {
-                #item 4384
-                lassign \
-                [ extract_is $body ] \
-                body is_lines
-                #item 4389
-                if {[ llength $is_lines ] == 0} {
-                    #item 4393
-                    lappend result "is begin"
-                    #item 3052
-                    set body [ parse_body \
-                    	$body $depth $name ]
-                    foreach line $body {
-                        #item 611
-                        lappend result $line
-                    }
-                    #item 614
-                    lappend result "end $name"
-                } else {
-                    #item 4385
-                    lappend result "is"
-                    foreach line $is_lines {
-                        #item 4386
-                        lappend result "${indent}$line"
-                    }
-                    #item 4394
-                    if {[ llength $body ] == 0} {
-                        
-                    } else {
-                        #item 4392
-                        lappend result "begin"
-                        #item 3052
-                        set body [ parse_body \
-                        	$body $depth $name ]
-                        foreach line $body {
-                            #item 611
-                            lappend result $line
-                        }
-                        #item 614
-                        lappend result "end $name"
-                    }
-                }
-            }
+    #item 4535
+    if {[ handle_is result body $depth \
+	$abstract $separate \
+	$print_body ]} {
+        #item 3052
+        set body [ parse_body \
+        	$body $depth $name ]
+        foreach line $body {
+            #item 611
+            lappend result $line
         }
+        #item 614
+        lappend result "end $name"
     }
     #item 4059
     add_last_semicolon result
@@ -1580,6 +1540,73 @@ proc get_preset_desc { preset } {
         } else {
             #item 3843
             return ""
+        }
+    }
+}
+
+proc handle_is { result_var body_var depth abstract separate print_body } {
+    #item 4509
+    upvar 1 $result_var result
+    upvar 1 $body_var body
+    #item 4537
+    set indent \
+    	[ gen::make_indent $depth ]
+    #item 4541
+    if {$separate} {
+        #item 4542
+        lappend result "is separate"
+        #item 4531
+        return 0
+    } else {
+        #item 4510
+        if {$abstract} {
+            #item 4511
+            lappend result "is abstract"
+            #item 4532
+            return 0
+        } else {
+            #item 4539
+            if {[ is_null $body ]} {
+                #item 4540
+                lappend result "is null"
+                #item 4543
+                return 0
+            } else {
+                #item 4515
+                if {$print_body} {
+                    #item 4516
+                    lassign \
+                    [ extract_is $body ] \
+                    body is_lines
+                    #item 4521
+                    if {[ llength $is_lines ] == 0} {
+                        #item 4525
+                        lappend result "is begin"
+                        #item 4534
+                        return 1
+                    } else {
+                        #item 4517
+                        lappend result "is"
+                        foreach line $is_lines {
+                            #item 4518
+                            lappend result "${indent}$line"
+                        }
+                        #item 4526
+                        if {[ llength $body ] == 0} {
+                            #item 4533
+                            return 0
+                        } else {
+                            #item 4524
+                            lappend result "begin"
+                            #item 4534
+                            return 1
+                        }
+                    }
+                } else {
+                    #item 4533
+                    return 0
+                }
+            }
         }
     }
 }
@@ -3236,22 +3263,18 @@ proc print_node_core { texts node callbacks depth } {
                                     type prop_list parameters returns
                                     #item 4014
                                     array set props $prop_list
-                                    #item 4017
-                                    set static 1
-                                    set print_body 1
                                     #item 4018
                                     set ins_body [ gen_subprogram_kernel \
                                     	$next_depth \
-                                    	$static \
                                     	$props(subtype) \
                                     	$props(abstract) \
                                     	$props(overriding) \
+                                    	$props(separate) \
                                     	$returns \
                                     	$name \
                                     	$parameters \
                                     	$body \
-                                    	$print_body \
-                                    	"" "" "" "" ]
+                                    	1 "" "" "" "" ]
                                     #item 4020
                                     lappend result "##@@BEGIN_IS@@##"
                                     #item 3978
@@ -3394,16 +3417,15 @@ proc print_subprogram { db fhandle component in_spec } {
         
     } else {
         #item 510
-        set static [ expr { $props(access) != "public" } ]
         set print_body [ expr !$in_spec ]
         set depth 1
         #item 511
         set result [ gen_subprogram_kernel \
         	$depth \
-        	$static \
         	$props(subtype) \
         	$props(abstract) \
         	$props(overriding) \
+        	$props(separate) \
         	$returns \
         	$name \
         	$parameters \

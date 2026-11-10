@@ -1,4 +1,9 @@
 * Ada generator
+** TODO Add other description sections
++ === unit === with value: subprogram, package or task.
++ === context === containing toplevel with and use clauses.
++ === body_context === for body-only context.
++ === generic === containing generic section.
 ** TODO Add support for 'pragma'
 ** TODO Add support for 'select' in select icon
 + Use regular if-else tree
