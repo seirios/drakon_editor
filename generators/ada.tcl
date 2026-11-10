@@ -136,18 +136,6 @@ proc add_last_semicolon { list_var } {
     	$result $last $last "$lastline;" ]
 }
 
-proc append_notempty { list_var str } {
-    #item 1217
-    upvar 1 $list_var result
-    #item 1213
-    if {$str == ""} {
-        
-    } else {
-        #item 1216
-        lappend result $str
-    }
-}
-
 proc case_tree_to_case_list { node extra } {
     #item 2726
     set result {}
@@ -1182,11 +1170,11 @@ proc gen_subprogram_kernel { depth type abstract overriding separate returns nam
     #item 949
     if {$print_body} {
         #item 950
-        append_notempty \
+        lappend_notempty \
         	result $body_header
     } else {
         #item 951
-        append_notempty \
+        lappend_notempty \
         	result $spec_header
     }
     #item 3181
@@ -1271,11 +1259,11 @@ proc gen_subprogram_kernel { depth type abstract overriding separate returns nam
     #item 976
     if {$print_body} {
         #item 977
-        append_notempty \
+        lappend_notempty \
         	result $body_footer
     } else {
         #item 978
-        append_notempty \
+        lappend_notempty \
         	result $spec_footer
     }
     #item 4012
@@ -1292,7 +1280,7 @@ proc gen_type_kernel { depth type access abstract limited tagged name body print
     #item 4063
     lappend result ""
     #item 3099
-    append_notempty \
+    lappend_notempty \
     	result $spec_header
     #item 858
     append line "$type"
@@ -1328,7 +1316,7 @@ proc gen_type_kernel { depth type access abstract limited tagged name body print
     #item 4062
     add_last_semicolon result
     #item 3110
-    append_notempty \
+    lappend_notempty \
     	result $spec_footer
     #item 4064
     return $result
@@ -1988,6 +1976,18 @@ proc join_lists { list_of_lists separator } {
     return $result
 }
 
+proc lappend_notempty { list_var str } {
+    #item 1217
+    upvar 1 $list_var result
+    #item 1213
+    if {$str == ""} {
+        
+    } else {
+        #item 1216
+        lappend result $str
+    }
+}
+
 proc loop_statement { name body depth } {
     #item 3366
     set indent [ gen::make_indent $depth ]
@@ -2257,7 +2257,7 @@ proc own_shelves { gdb item_id } {
                             #item 4270
                             lappend lines "##@@BEGIN_END@@##"
                             #item 4273
-                            append_notempty lines $primary
+                            lappend_notempty lines $primary
                             #item 4272
                             lappend lines "##@@END_END@@##"
                             #item 4271
