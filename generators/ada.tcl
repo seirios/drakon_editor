@@ -19,6 +19,7 @@ variable drn_kw_bool {
 # keyword set_default_value
 variable drn_kw_keyval {
 	limited		implicit
+	name		""
 	order		0
 	overriding		yes
 }
@@ -28,7 +29,7 @@ variable drn_kw_access {
 }
 
 variable drn_kw_etype {
-	type subtype
+	type subtype subprogram
 }
 
 variable ada_keywords {
@@ -242,11 +243,15 @@ proc check_keywords_keyval { words keywords } {
                 #item 4470
                 set keyvar $val
             }
+        } else {
+            
         }
     }
 }
 
-proc classify_keywords { keywords name } {
+proc classify_keywords { keywords dia_name } {
+    #item 4420
+    set errors {}
     #item 4498
     variable drn_kw_bool
     #item 2177
@@ -257,14 +262,26 @@ proc classify_keywords { keywords name } {
     check_keywords_keyval $keywords $drn_kw_keyval
     #item 4474
     if {$order == ""} {
-        #item 4477
+        #item 4560
         set order 0
+    } else {
+        #item 4561
+        if {[ string is integer $order ]} {
+            
+        } else {
+            #item 4563
+            lappend errors \
+             "$name: order must be an integer"
+        }
+    }
+    #item 4556
+    if {$name == ""} {
+        #item 4558
+        set name $dia_name
     }
     #item 4501
     variable drn_kw_access
     variable drn_kw_etype
-    #item 4420
-    set errors {}
     #item 4422
     set access [ find_keywords \
     	$keywords $drn_kw_access ]
@@ -563,6 +580,7 @@ proc extract_signature { text name } {
     #item 4503
     set props(order) 0
     set props(access) local
+    set props(name) $name
     #item 4502
     set error_message ""
     #item 4479
@@ -1158,7 +1176,7 @@ proc gen_special { db item_id } {
     return [ list $result $next ]
 }
 
-proc gen_subprogram_kernel { depth type abstract overriding separate returns name parameters body print_body spec_header spec_footer body_header body_footer } {
+proc gen_subprogram_kernel { depth type abstract overriding separate name returns parameters body print_body spec_header spec_footer body_header body_footer } {
     #item 546
     set result {}
     set line ""
@@ -1712,7 +1730,7 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
     #item 3696
     set kw_extra {
     	comment returns
-    	order nested 
+    	nested name order
     	local visible }
     #item 3616
     set consts { True False }
@@ -3270,8 +3288,8 @@ proc print_node_core { texts node callbacks depth } {
                                     	$props(abstract) \
                                     	$props(overriding) \
                                     	$props(separate) \
+                                    	$props(name) \
                                     	$returns \
-                                    	$name \
                                     	$parameters \
                                     	$body \
                                     	1 "" "" "" "" ]
@@ -3426,8 +3444,8 @@ proc print_subprogram { db fhandle component in_spec } {
         	$props(abstract) \
         	$props(overriding) \
         	$props(separate) \
+        	$props(name) \
         	$returns \
-        	$name \
         	$parameters \
         	$body \
         	$print_body \
