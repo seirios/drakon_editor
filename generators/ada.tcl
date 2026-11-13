@@ -1423,6 +1423,13 @@ proc generate { db gdb filename } {
         lassign \
         [ gen::scan_file_description $db $sections ] \
         spec_header spec_footer body_header body_footer
+        #item 4594
+        set tab_convert [ gen::get_callback $callbacks tab_convert ]
+        foreach section $sections {
+            #item 4593
+            set $section [ gen::tab_convert \
+            	$tab_convert [ set $section ] ]
+        }
         #item 2228
         if {[ is_empty_spec \
 	$components $spec_header $spec_footer ]} {
@@ -1569,6 +1576,17 @@ proc generate_item { db item_id parent_loop } {
             }
         }
     }
+}
+
+proc get_indent { str } {
+    #item 4603
+    set symbol [ unindent $str ]
+    #item 4605
+    set loc [ string first $symbol $str ]
+    #item 4604
+    set blank [ string range $str 0 $loc-1 ]
+    #item 4602
+    return [ list $symbol $blank ]
 }
 
 proc get_preset_desc { preset } {
@@ -2246,9 +2264,6 @@ proc own_shelves { gdb item_id } {
     set plines [ split $primary "\n" ]
     set sterms [ split $secondary " " ]
     set kind [ lindex $sterms 0 ]
-    #item 4340
-    set comment [ commentator \
-    	"Item $item_id" ]
     #item 42470001
     if {$kind == "enum"} {
         #item 4306
@@ -2286,8 +2301,6 @@ proc own_shelves { gdb item_id } {
                 if {$kind == "is"} {
                     #item 4255
                     lappend lines "##@@BEGIN_IS@@##"
-                    #item 4341
-                    lappend lines $comment
                     #item 4279
                     set lines [ concat $lines $plines ]
                     #item 4257
@@ -2299,8 +2312,6 @@ proc own_shelves { gdb item_id } {
                     if {$kind == "declare"} {
                         #item 4265
                         lappend lines "##@@BEGIN_DECLARE@@##"
-                        #item 4342
-                        lappend lines $comment
                         #item 4281
                         set lines [ concat $lines $plines ]
                         #item 4267
@@ -2830,31 +2841,40 @@ proc parse_body { body depth name } {
         }
         #item 3074
         set line [ lindex $body $i ]
+        #item 4596
+        lassign \
+        [ get_indent $line ] \
+        symbol blank
         #item 30630001
-        if {$line == "##@@BEGIN_DECLARE@@##"} {
+        if {$symbol == "##@@BEGIN_DECLARE@@##"} {
             #item 3290
             incr i
             #item 3295
             lassign \
             [ collect_until $body $i "##@@END_DECLARE@@##" 0 ] \
             i lines
-            #item 3079
-            lappend result "${indent}declare"
-            #item 3316
-            incr_indent indent depth
-            foreach line $lines {
-                #item 3078
-                lappend result "${indent}$line"
+            #item 4606
+            if {[ llength $lines ] == 0} {
+                
+            } else {
+                #item 3079
+                lappend result "${blank}${indent}declare"
+                #item 3316
+                incr_indent indent depth
+                foreach line $lines {
+                    #item 3078
+                    lappend result "${indent}$line"
+                }
+                #item 3324
+                decr_indent indent depth
             }
-            #item 3324
-            decr_indent indent depth
             #item 3085
-            lappend result "${indent}begin"
+            lappend result "${blank}${indent}begin"
             #item 3325
             incr_indent indent depth
         } else {
             #item 30630002
-            if {$line == "##@@BEGIN_END@@##"} {
+            if {$symbol == "##@@BEGIN_END@@##"} {
                 #item 3291
                 incr i
                 #item 3294
@@ -2873,10 +2893,10 @@ proc parse_body { body depth name } {
                 #item 3326
                 decr_indent indent depth
                 #item 3088
-                lappend result "${indent}end${loopname};"
+                lappend result "${blank}${indent}end${loopname};"
             } else {
                 #item 30630003
-                if {$line == "##@@BEGIN_WITH@@##"} {
+                if {$symbol == "##@@BEGIN_WITH@@##"} {
                     #item 3495
                     lassign \
                     [ multi_extract $body $i \
@@ -2891,7 +2911,7 @@ proc parse_body { body depth name } {
                     }
                 } else {
                     #item 30630004
-                    if {$line == "##@@BEGIN_RECORD@@##"} {
+                    if {$symbol == "##@@BEGIN_RECORD@@##"} {
                         #item 3336
                         incr i
                         #item 3337
@@ -2920,7 +2940,7 @@ proc parse_body { body depth name } {
                         }
                     } else {
                         #item 30630005
-                        if {$line == "##@@BEGIN_FOR@@##"} {
+                        if {$symbol == "##@@BEGIN_FOR@@##"} {
                             #item 3536
                             incr i
                             #item 3537
@@ -2940,7 +2960,7 @@ proc parse_body { body depth name } {
                             lappend result "for $elem $lines"
                         } else {
                             #item 30630006
-                            if {$line == "##@@BEGIN_RETURN@@##"} {
+                            if {$symbol == "##@@BEGIN_RETURN@@##"} {
                                 #item 3675
                                 incr i
                                 #item 3676
@@ -2964,7 +2984,7 @@ proc parse_body { body depth name } {
                                 lappend result "${indent}end return;"
                             } else {
                                 #item 30630007
-                                if {$line == "##@@BEGIN_ENUM@@##"} {
+                                if {$symbol == "##@@BEGIN_ENUM@@##"} {
                                     #item 3709
                                     lassign \
                                     [ multi_extract $body $i \
@@ -3256,7 +3276,9 @@ proc print_node_core { texts node callbacks depth } {
                     #item 1774
                     set body [ print_node_core \
                     	$texts $current $callbacks $next_depth ]
-                    set loop_stmt [ loop_statement $name $body $depth ]
+                    #item 4595
+                    set loop_stmt [ loop_statement \
+                    	$name $body $depth ]
                     #item 3242
                     set result [ concat $result $loop_stmt ]
                 } else {
