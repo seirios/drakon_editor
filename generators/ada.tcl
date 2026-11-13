@@ -436,6 +436,46 @@ proc complain_dia { name message } {
     graph::p.error $id {} $message
 }
 
+proc condition_lines { cond_text } {
+    #item 4583
+    set result {}
+    #item 4572
+    set cond_lines [ split $cond_text "\n" ]
+    set nlines [ llength $cond_lines ]
+    #item 4573
+    if {$nlines > 1} {
+        #item 45770001
+        set i 0
+        while { 1 } {
+            #item 45770002
+            if {$i < $nlines} {
+                
+            } else {
+                break
+            }
+            #item 4579
+            set line [ lindex $cond_lines $i ]
+            #item 4580
+            if {$i == 0} {
+                #item 4586
+                lappend result "if $line"
+            } else {
+                #item 4587
+                lappend result $line
+            }
+            #item 45770003
+            incr i
+        }
+        #item 4584
+        lappend result "then"
+    } else {
+        #item 4576
+        lappend result "if $cond_text then"
+    }
+    #item 4588
+    return $result
+}
+
 proc create_tree { prefix tree } {
     #item 3747
     lassign \
@@ -2061,8 +2101,6 @@ proc make_callbacks { } {
     gen::put_callback callbacks else_start          gen_ada::p.else_start
     gen::put_callback callbacks elseif_start        gen_ada::p.elseif_start
     gen::put_callback callbacks while_start         gen_ada::p.while_start
-    gen::put_callback callbacks if_start            gen_ada::p.if_start
-    gen::put_callback callbacks if_end              gen_ada::p.if_end
     gen::put_callback callbacks if_block_end        gen_ada::p.if_block_end
     
     gen::put_callback callbacks body                gen_ada::generate_body
@@ -2408,16 +2446,6 @@ proc p.if_block_end { output depth } {
     append line "end if;"
     #item 1823
     lappend result $line
-}
-
-proc p.if_end { } {
-    #item 1538
-    return " then"
-}
-
-proc p.if_start { } {
-    #item 1532
-    return "if "
 }
 
 proc p.indentation { } {
@@ -3181,13 +3209,15 @@ proc print_node_core { texts node callbacks depth } {
                 #item 1799
                 set cond_text [ gen::get_text_lines $texts $cond_item ]
                 set cond_text [ gen::tab_convert $tab_convert $cond_text ]
-                set cond [ gen::condition_line $callbacks $cond_text ]
+                set cond_lines [ condition_lines $cond_text ]
                 #item 4351
                 set comment [ commentator "Item $cond_item" ]
                 #item 4350
                 lappend result "${indent}$comment"
-                #item 1800
-                lappend result "${indent}$cond"
+                foreach line $cond_lines {
+                    #item 1800
+                    lappend result "${indent}$line"
+                }
                 #item 1801
                 set then_node [ lindex $current 3 ]
                 set else_node [ lindex $current 2 ]
