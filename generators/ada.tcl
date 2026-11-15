@@ -510,6 +510,17 @@ proc create_structure_tree { prefix tree } {
     }
 }
 
+proc decrease_indent { ind d nd } {
+    #item 6258
+    upvar 1 $ind indent
+    upvar 1 $d depth
+    upvar 1 $nd next_depth
+    #item 6257
+    incr depth -1
+    incr next_depth -1
+    set indent [ gen::make_indent $depth ]
+}
+
 proc do_monkey_patch { } {
     #item 2290
     set direction "forward"
@@ -2039,14 +2050,14 @@ proc if_break_to_exit_when { node } {
     return $result
 }
 
-proc indent_decrease { ind d nd } {
-    #item 6258
+proc increase_indent { ind d nd } {
+    #item 3315
     upvar 1 $ind indent
     upvar 1 $d depth
     upvar 1 $nd next_depth
-    #item 6257
-    incr depth -1
-    incr next_depth -1
+    #item 3314
+    incr depth
+    incr next_depth
     set indent [ gen::make_indent $depth ]
 }
 
@@ -2091,17 +2102,6 @@ proc indent_group { lines prefix depth endchar } {
     }
     #item 3433
     return $result
-}
-
-proc indent_increase { ind d nd } {
-    #item 3315
-    upvar 1 $ind indent
-    upvar 1 $d depth
-    upvar 1 $nd next_depth
-    #item 3314
-    incr depth
-    incr next_depth
-    set indent [ gen::make_indent $depth ]
 }
 
 proc init_description { } {
@@ -2522,7 +2522,7 @@ proc p.proc_shelf { gdb item_id diagram_id } {
     set type [ lindex $secondary 0 ]
     set last [ lindex $secondary end ]
     #item 48740001
-    if {((((((($type == "end") || ($type == "declare")) || ($type == "return")) || ($type == "when")) || ($type == "enum")) || ($type == "record")) || ($type == "with")) || ($type == "is")} {
+    if {(((((((($type == "end") || ($type == "declare")) || ($type == "begin")) || ($type == "return")) || ($type == "when")) || ($type == "enum")) || ($type == "record")) || ($type == "with")) || ($type == "is")} {
         #item 4900
         if {[ llength $secondary ] == 1} {
             #item 4896
@@ -3201,16 +3201,16 @@ proc print_node_core { texts node callbacks depth } {
                                         set lines [ gen::get_text_lines \
                                         	$texts $id ]
                                         #item 6064
-                                        if {[ llength $lines ] > 0} {
+                                        if {[ llength $lines ] == 0} {
+                                            #item 6065
+                                            set loopname ""
+                                        } else {
                                             #item 6063
                                             set loopname [ lindex $lines 0 ]
                                             set loopname " $loopname"
-                                        } else {
-                                            #item 6065
-                                            set loopname ""
                                         }
                                         #item 6121
-                                        indent_decrease indent depth next_depth
+                                        decrease_indent indent depth next_depth
                                         #item 6062
                                         lappend result "${indent}end${loopname};"
                                     } else {
@@ -3237,7 +3237,7 @@ proc print_node_core { texts node callbacks depth } {
                                                 #item 6082
                                                 lappend result "${indent}record"
                                                 #item 6085
-                                                indent_increase indent depth next_depth
+                                                increase_indent indent depth next_depth
                                                 #item 6267
                                                 lappend result "${indent}$comment"
                                                 foreach line $lines {
@@ -3245,7 +3245,7 @@ proc print_node_core { texts node callbacks depth } {
                                                     lappend result "${indent}$line"
                                                 }
                                                 #item 6259
-                                                indent_decrease indent depth next_depth
+                                                decrease_indent indent depth next_depth
                                                 #item 6087
                                                 lappend result "${indent}end record;"
                                             }
@@ -3267,7 +3267,7 @@ proc print_node_core { texts node callbacks depth } {
                                                 #item 6249
                                                 set result [ concat $result $lines ]
                                                 #item 6261
-                                                indent_increase indent depth next_depth
+                                                increase_indent indent depth next_depth
                                             } else {
                                                 #item 59660010
                                                 if {$_sw59660000_ == "declare"} {
@@ -3287,99 +3287,107 @@ proc print_node_core { texts node callbacks depth } {
                                                         #item 6107
                                                         lappend result "${indent}declare"
                                                         #item 6263
-                                                        indent_increase indent depth next_depth
+                                                        increase_indent indent depth next_depth
                                                         foreach line $lines {
                                                             #item 6106
                                                             lappend result "${indent}$line"
                                                         }
                                                         #item 6260
-                                                        indent_decrease indent depth next_depth
+                                                        decrease_indent indent depth next_depth
                                                     }
                                                     #item 6108
                                                     lappend result "${indent}begin"
                                                     #item 6262
-                                                    indent_increase indent depth next_depth
+                                                    increase_indent indent depth next_depth
                                                 } else {
                                                     #item 59660011
-                                                    if {$_sw59660000_ == "when"} {
-                                                        #item 6124
-                                                        set id [ lindex $current 1 ]
-                                                        #item 6125
-                                                        set text [ gen::get_text_lines \
-                                                        	$texts $id ]
-                                                        set text [ gen::tab_convert \
-                                                        	$tab_convert $text ]
-                                                        #item 6126
-                                                        set lines [ split $text "\n" ]
-                                                        #item 6131
-                                                        set lines [ indent_group \
-                                                        	$lines "when" $next_depth "" ]
-                                                        #item 6133
-                                                        set result [ concat $result $lines ]
+                                                    if {$_sw59660000_ == "begin"} {
+                                                        #item 6287
+                                                        lappend result "${indent}begin"
+                                                        #item 6288
+                                                        increase_indent indent depth next_depth
                                                     } else {
                                                         #item 59660012
-                                                        if {$_sw59660000_ == "selection"} {
-                                                            #item 5993
-                                                            set var_item [ lindex $current 1 ]
-                                                            set cases [ lindex $current 2 ]
-                                                            #item 5995
-                                                            set var_text [ gen::get_text_lines \
-                                                            	$texts $var_item ]
-                                                            #item 6037
-                                                            set comm_item [ trim_item_id $var_item ]
-                                                            set comment [ commentator "Item $comm_item" ]
-                                                            #item 6036
-                                                            lappend result "${indent}$comment"
-                                                            #item 5994
-                                                            lappend result "${indent}case $var_text is"
-                                                            #item 5997
-                                                            set body [ print_node_core \
-                                                            	$texts $cases $callbacks $depth ]
-                                                            #item 6004
-                                                            set result [ concat $result $body ]
-                                                            #item 5996
-                                                            lappend result "${indent}end case;"
+                                                        if {$_sw59660000_ == "when"} {
+                                                            #item 6124
+                                                            set id [ lindex $current 1 ]
+                                                            #item 6125
+                                                            set text [ gen::get_text_lines \
+                                                            	$texts $id ]
+                                                            set text [ gen::tab_convert \
+                                                            	$tab_convert $text ]
+                                                            #item 6126
+                                                            set lines [ split $text "\n" ]
+                                                            #item 6131
+                                                            set lines [ indent_group \
+                                                            	$lines "when" $next_depth "" ]
+                                                            #item 6133
+                                                            set result [ concat $result $lines ]
                                                         } else {
                                                             #item 59660013
-                                                            if {$_sw59660000_ == "exception"} {
-                                                                #item 6277
+                                                            if {$_sw59660000_ == "selection"} {
+                                                                #item 5993
                                                                 set var_item [ lindex $current 1 ]
                                                                 set cases [ lindex $current 2 ]
-                                                                #item 6278
+                                                                #item 5995
+                                                                set var_text [ gen::get_text_lines \
+                                                                	$texts $var_item ]
+                                                                #item 6037
                                                                 set comm_item [ trim_item_id $var_item ]
                                                                 set comment [ commentator "Item $comm_item" ]
-                                                                #item 6279
-                                                                lappend result $comment
-                                                                #item 6280
-                                                                lappend result "exception"
-                                                                #item 6281
+                                                                #item 6036
+                                                                lappend result "${indent}$comment"
+                                                                #item 5994
+                                                                lappend result "${indent}case $var_text is"
+                                                                #item 5997
                                                                 set body [ print_node_core \
                                                                 	$texts $cases $callbacks $depth ]
-                                                                #item 6282
+                                                                #item 6004
                                                                 set result [ concat $result $body ]
+                                                                #item 5996
+                                                                lappend result "${indent}end case;"
                                                             } else {
                                                                 #item 59660014
-                                                                if {$_sw59660000_ == "case"} {
-                                                                    
+                                                                if {$_sw59660000_ == "exception"} {
+                                                                    #item 6277
+                                                                    set var_item [ lindex $current 1 ]
+                                                                    set cases [ lindex $current 2 ]
+                                                                    #item 6278
+                                                                    set comm_item [ trim_item_id $var_item ]
+                                                                    set comment [ commentator "Item $comm_item" ]
+                                                                    #item 6279
+                                                                    lappend result $comment
+                                                                    #item 6280
+                                                                    lappend result "exception"
+                                                                    #item 6281
+                                                                    set body [ print_node_core \
+                                                                    	$texts $cases $callbacks $depth ]
+                                                                    #item 6282
+                                                                    set result [ concat $result $body ]
                                                                 } else {
                                                                     #item 59660015
-                                                                    error "Unexpected switch value: $_sw59660000_"
+                                                                    if {$_sw59660000_ == "case"} {
+                                                                        
+                                                                    } else {
+                                                                        #item 59660016
+                                                                        error "Unexpected switch value: $_sw59660000_"
+                                                                    }
+                                                                    #item 6000
+                                                                    set cond_item [ lindex $current 1 ]
+                                                                    set actions [ lindex $current 2 ]
+                                                                    #item 6001
+                                                                    set cond_text [ gen::get_text_lines \
+                                                                    	$texts $cond_item ]
+                                                                    #item 6002
+                                                                    set when_text [ when_line $cond_text ]
+                                                                    #item 6003
+                                                                    lappend result "${indent}$when_text"
+                                                                    #item 6005
+                                                                    set body [ print_node_core \
+                                                                    	$texts $actions $callbacks $next_depth ]
+                                                                    #item 6006
+                                                                    set result [ concat $result $body ]
                                                                 }
-                                                                #item 6000
-                                                                set cond_item [ lindex $current 1 ]
-                                                                set actions [ lindex $current 2 ]
-                                                                #item 6001
-                                                                set cond_text [ gen::get_text_lines \
-                                                                	$texts $cond_item ]
-                                                                #item 6002
-                                                                set when_text [ when_line $cond_text ]
-                                                                #item 6003
-                                                                lappend result "${indent}$when_text"
-                                                                #item 6005
-                                                                set body [ print_node_core \
-                                                                	$texts $actions $callbacks $next_depth ]
-                                                                #item 6006
-                                                                set result [ concat $result $body ]
                                                             }
                                                         }
                                                     }
