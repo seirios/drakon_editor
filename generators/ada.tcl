@@ -1151,9 +1151,7 @@ proc gen_insertion { db item_id } {
     #item 4782
     set next [ nogoto::get_next_node $db $item_id 0 ]
     #item 4785
-    set text [ $db eval { \
-    	select text_lines from nodes where item_id = :item_id } ]
-    set text [ lindex $text 0 ]
+    set text [ get_node_text $db $item_id ]
     #item 4786
     set name [ lindex $text 1 ]
     #item 4787
@@ -1219,21 +1217,29 @@ proc gen_loop { db item_id } {
     return $item
 }
 
-proc gen_sel { db item_id } {
+proc gen_selection { db item_id } {
     #item 4728
     set next0 [ nogoto::get_next_node $db $item_id 0 ]
+    #item 6270
+    set text [ get_node_text $db $item_id ]
     #item 4729
     set inner [ generate_item $db $next0 "" ]
     set tree [ lindex $inner 0 ]
-    set after [ lindex $inner 1 ]
+    set next [ lindex $inner 1 ]
     #item 4733
     set cases [ case_tree_to_case_list $tree {} ]
     #item 4734
     set cases [ concat {seq} $cases ]
-    #item 4727
-    set result [ list "sel" $item_id $cases ]
+    #item 6271
+    if {[ string tolower $text ] == "exception"} {
+        #item 6274
+        set result [ list "exception" $item_id $cases ]
+    } else {
+        #item 4727
+        set result [ list "selection" $item_id $cases ]
+    }
     #item 4730
-    set item [ list $result $after ]
+    set item [ list $result $next ]
     #item 4731
     return $item
 }
@@ -1627,9 +1633,9 @@ proc generate_item { db item_id parent_loop } {
                         	$db $item_id ]
                     } else {
                         #item 46430006
-                        if {$type == "sel"} {
+                        if {$type == "selection"} {
                             #item 4659
-                            return [ gen_sel \
+                            return [ gen_selection \
                             	$db $item_id ]
                         } else {
                             #item 4669
@@ -2513,13 +2519,12 @@ proc p.proc_shelf { gdb item_id diagram_id } {
         	"Top text must be single line."
     }
     #item 4878
-    set sterms [ split $secondary " " ]
-    set type [ lindex $sterms 0 ]
-    set last [ lindex $sterms end ]
+    set type [ lindex $secondary 0 ]
+    set last [ lindex $secondary end ]
     #item 48740001
-    if {((((((($type == "end") || ($type == "return")) || ($type == "declare")) || ($type == "when")) || ($type == "enum")) || ($type == "record")) || ($type == "with")) || ($type == "is")} {
+    if {((((((($type == "end") || ($type == "declare")) || ($type == "return")) || ($type == "when")) || ($type == "enum")) || ($type == "record")) || ($type == "with")) || ($type == "is")} {
         #item 4900
-        if {[ llength $sterms ] == 1} {
+        if {[ llength $secondary ] == 1} {
             #item 4896
             set text $primary
         } else {
@@ -2554,7 +2559,7 @@ proc p.replace_select_ifs { gdb select ordinals callbacks } {
     set item_id [ expr { $select_item * 1000 } ]
     #item 2537
     set sel_id [ gen::p.insert_vertex \
-    	$gdb $diagram_id $item_id sel $select_text "" 0 ]
+    	$gdb $diagram_id $item_id "selection" $select_text "" 0 ]
     #item 2538
     gen::p.relink $gdb $select $sel_id
     #item 2354
@@ -2593,13 +2598,13 @@ proc p.replace_select_ifs { gdb select ordinals callbacks } {
             #item 2339
             incr item_id
             set case_id [ gen::p.insert_vertex \
-            	$gdb $diagram_id $item_id case $comp_text "" 0 ]
+            	$gdb $diagram_id $item_id "case" $comp_text "" 0 ]
             #item 2346
             if {$i == $last} {
                 #item 2352
                 incr item_id
                 set others_id [ gen::p.insert_vertex \
-                	$gdb $diagram_id $item_id action "others" "" 0 ]
+                	$gdb $diagram_id $item_id "action" "others" "" 0 ]
                 #item 2353
                 gen::p.link $gdb $case_id 2 $dst
                 gen::p.link $gdb $case_id 1 $others_id
@@ -3313,7 +3318,7 @@ proc print_node_core { texts node callbacks depth } {
                                                         set result [ concat $result $lines ]
                                                     } else {
                                                         #item 59660012
-                                                        if {$_sw59660000_ == "sel"} {
+                                                        if {$_sw59660000_ == "selection"} {
                                                             #item 5993
                                                             set var_item [ lindex $current 1 ]
                                                             set cases [ lindex $current 2 ]
@@ -3336,27 +3341,46 @@ proc print_node_core { texts node callbacks depth } {
                                                             lappend result "${indent}end case;"
                                                         } else {
                                                             #item 59660013
-                                                            if {$_sw59660000_ == "case"} {
-                                                                
+                                                            if {$_sw59660000_ == "exception"} {
+                                                                #item 6277
+                                                                set var_item [ lindex $current 1 ]
+                                                                set cases [ lindex $current 2 ]
+                                                                #item 6278
+                                                                set comm_item [ trim_item_id $var_item ]
+                                                                set comment [ commentator "Item $comm_item" ]
+                                                                #item 6279
+                                                                lappend result $comment
+                                                                #item 6280
+                                                                lappend result "exception"
+                                                                #item 6281
+                                                                set body [ print_node_core \
+                                                                	$texts $cases $callbacks $depth ]
+                                                                #item 6282
+                                                                set result [ concat $result $body ]
                                                             } else {
                                                                 #item 59660014
-                                                                error "Unexpected switch value: $_sw59660000_"
+                                                                if {$_sw59660000_ == "case"} {
+                                                                    
+                                                                } else {
+                                                                    #item 59660015
+                                                                    error "Unexpected switch value: $_sw59660000_"
+                                                                }
+                                                                #item 6000
+                                                                set cond_item [ lindex $current 1 ]
+                                                                set actions [ lindex $current 2 ]
+                                                                #item 6001
+                                                                set cond_text [ gen::get_text_lines \
+                                                                	$texts $cond_item ]
+                                                                #item 6002
+                                                                set when_text [ when_line $cond_text ]
+                                                                #item 6003
+                                                                lappend result "${indent}$when_text"
+                                                                #item 6005
+                                                                set body [ print_node_core \
+                                                                	$texts $actions $callbacks $next_depth ]
+                                                                #item 6006
+                                                                set result [ concat $result $body ]
                                                             }
-                                                            #item 6000
-                                                            set cond_item [ lindex $current 1 ]
-                                                            set actions [ lindex $current 2 ]
-                                                            #item 6001
-                                                            set cond_text [ gen::get_text_lines \
-                                                            	$texts $cond_item ]
-                                                            #item 6002
-                                                            set when_text [ when_line $cond_text ]
-                                                            #item 6003
-                                                            lappend result "${indent}$when_text"
-                                                            #item 6005
-                                                            set body [ print_node_core \
-                                                            	$texts $actions $callbacks $next_depth ]
-                                                            #item 6006
-                                                            set result [ concat $result $body ]
                                                         }
                                                     }
                                                 }
