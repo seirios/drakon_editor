@@ -3298,25 +3298,16 @@ proc print_node_core { texts node callbacks depth } {
                                                     	$tab_convert $text ]
                                                     #item 6127
                                                     set lines [ split $text "\n" ]
-                                                    #item 6114
-                                                    if {[ llength $lines ] == 0} {
-                                                        
-                                                    } else {
-                                                        #item 6107
-                                                        lappend result "${indent}declare"
-                                                        #item 6263
-                                                        increase_indent indent depth next_depth
-                                                        foreach line $lines {
-                                                            #item 6106
-                                                            lappend result "${indent}$line"
-                                                        }
-                                                        #item 6260
-                                                        decrease_indent indent depth next_depth
-                                                    }
-                                                    #item 6108
-                                                    lappend result "${indent}begin"
-                                                    #item 6262
+                                                    #item 6107
+                                                    lappend result "${indent}declare"
+                                                    #item 6263
                                                     increase_indent indent depth next_depth
+                                                    foreach line $lines {
+                                                        #item 6106
+                                                        lappend result "${indent}$line"
+                                                    }
+                                                    #item 6260
+                                                    decrease_indent indent depth next_depth
                                                 } else {
                                                     #item 59660011
                                                     if {$_sw59660000_ == "begin"} {

@@ -50,6 +50,9 @@
 ** TODO Add test cases
 ** DONE Add C++ support
 * Canvas
+** TODO Introduce block start/end icons (?)
++ Could help with scoping in C3 generator
++ Avoid begin/end shelves in Ada generator
 ** TODO Show branches in order in 'go to branch...' (?)
 + Problem is order not known until generation time
 ** TODO Allow enabling/disabling branches (?)
