@@ -510,14 +510,6 @@ proc create_structure_tree { prefix tree } {
     }
 }
 
-proc decr_indent { ind d } {
-    #item 3323
-    upvar 1 $d depth $ind indent
-    #item 3322
-    incr depth -1
-    set indent [ gen::make_indent $depth ]
-}
-
 proc do_monkey_patch { } {
     #item 2290
     set direction "forward"
@@ -1694,10 +1686,10 @@ proc glue_special { gdb diagram_id } {
     set vertices [ $gdb eval {
     	select vertex_id
     	from vertices
-    	where type == 'is'
+    	where type == 'enum'
     	or type == 'when'
     	or type == 'with'
-    	or type == 'enum'
+    	or type == 'is'
     	and diagram_id = :diagram_id
     } ]
     foreach vertex_id $vertices {
@@ -2034,11 +2026,14 @@ proc if_break_to_exit_when { node } {
     return $result
 }
 
-proc incr_indent { ind d } {
-    #item 3315
-    upvar 1 $d depth $ind indent
-    #item 3314
-    incr depth
+proc indent_decrease { ind d nd } {
+    #item 6258
+    upvar 1 $ind indent
+    upvar 1 $d depth
+    upvar 1 $nd next_depth
+    #item 6257
+    incr depth -1
+    incr next_depth -1
     set indent [ gen::make_indent $depth ]
 }
 
@@ -2083,6 +2078,17 @@ proc indent_group { lines prefix depth endchar } {
     }
     #item 3433
     return $result
+}
+
+proc indent_increase { ind d nd } {
+    #item 3315
+    upvar 1 $ind indent
+    upvar 1 $d depth
+    upvar 1 $nd next_depth
+    #item 3314
+    incr depth
+    incr next_depth
+    set indent [ gen::make_indent $depth ]
 }
 
 proc init_description { } {
@@ -2504,36 +2510,20 @@ proc p.proc_shelf { gdb item_id diagram_id } {
     set type [ lindex $sterms 0 ]
     set last [ lindex $sterms end ]
     #item 48740001
-    if {$type == "return"} {
-        #item 4906
-        if {$last == "do"} {
-            #item 4962
-            set stail [ join \
-            	[ lrange $sterms 1 end ] " " ]
-            #item 4961
-            set text "$stail\n$primary"
+    if {((((((($type == "end") || ($type == "return")) || ($type == "declare")) || ($type == "record")) || ($type == "enum")) || ($type == "when")) || ($type == "with")) || ($type == "is")} {
+        #item 4900
+        if {[ llength $sterms ] == 1} {
+            #item 4896
+            set text $primary
         } else {
-            #item 4908
+            #item 4902
             graph::p.error $diagram_id $item_id \
-            	"Incorrect arguments in shelf of type '$type'."
+            	"Extra arguments in shelf of type '$type'."
         }
     } else {
-        #item 48740002
-        if {(((((($type == "enum") || ($type == "record")) || ($type == "declare")) || ($type == "end")) || ($type == "when")) || ($type == "with")) || ($type == "is")} {
-            #item 4900
-            if {[ llength $sterms ] == 1} {
-                #item 4896
-                set text $primary
-            } else {
-                #item 4902
-                graph::p.error $diagram_id $item_id \
-                	"Extra arguments in shelf of type '$type'."
-            }
-        } else {
-            #item 4873
-            graph::p.error $diagram_id $item_id \
-            	"Invalid shelf of type '$type'."
-        }
+        #item 4873
+        graph::p.error $diagram_id $item_id \
+        	"Invalid shelf of type '$type'."
     }
     #item 4872
     gdb eval {
@@ -3023,6 +3013,7 @@ proc print_node_core { texts node callbacks depth } {
     set pass [ gen::get_callback $callbacks pass ]
     #item 6142
     set result {}
+    #item 6251
     set indent [ gen::make_indent $depth ]
     set next_depth [ expr { $depth + 1 } ]
     #item 5954
@@ -3207,7 +3198,7 @@ proc print_node_core { texts node callbacks depth } {
                                             set loopname ""
                                         }
                                         #item 6121
-                                        decr_indent indent depth
+                                        indent_decrease indent depth next_depth
                                         #item 6062
                                         lappend result "${indent}end${loopname};"
                                     } else {
@@ -3230,13 +3221,13 @@ proc print_node_core { texts node callbacks depth } {
                                                 #item 6082
                                                 lappend result "${indent}record"
                                                 #item 6085
-                                                incr_indent indent depth
+                                                indent_increase indent depth next_depth
                                                 foreach line $lines {
                                                     #item 6081
                                                     lappend result "${indent}$line"
                                                 }
-                                                #item 6086
-                                                decr_indent indent depth
+                                                #item 6259
+                                                indent_decrease indent depth next_depth
                                                 #item 6087
                                                 lappend result "${indent}end record;"
                                             }
@@ -3252,21 +3243,13 @@ proc print_node_core { texts node callbacks depth } {
                                                 	$tab_convert $text ]
                                                 #item 6128
                                                 set lines [ split $text "\n" ]
-                                                #item 6097
-                                                set first [ lindex $lines 0 ]
-                                                set lines [ lrange $lines 1 end ]
-                                                #item 6099
-                                                lappend result "${indent}return $first"
-                                                #item 6102
-                                                incr_indent indent depth
-                                                foreach line $lines {
-                                                    #item 6098
-                                                    lappend result "${indent}$line"
-                                                }
-                                                #item 6103
-                                                decr_indent indent depth
-                                                #item 6104
-                                                lappend result "${indent}end return;"
+                                                #item 6248
+                                                set lines [ indent_group \
+                                                	$lines "return" $depth " do" ]
+                                                #item 6249
+                                                set result [ concat $result $lines ]
+                                                #item 6261
+                                                indent_increase indent depth next_depth
                                             } else {
                                                 #item 59660010
                                                 if {$_sw59660000_ == "declare"} {
@@ -3285,19 +3268,19 @@ proc print_node_core { texts node callbacks depth } {
                                                     } else {
                                                         #item 6107
                                                         lappend result "${indent}declare"
-                                                        #item 6111
-                                                        incr_indent indent depth
+                                                        #item 6263
+                                                        indent_increase indent depth next_depth
                                                         foreach line $lines {
                                                             #item 6106
                                                             lappend result "${indent}$line"
                                                         }
-                                                        #item 6112
-                                                        decr_indent indent depth
+                                                        #item 6260
+                                                        indent_decrease indent depth next_depth
                                                     }
                                                     #item 6108
                                                     lappend result "${indent}begin"
-                                                    #item 6113
-                                                    incr_indent indent depth
+                                                    #item 6262
+                                                    indent_increase indent depth next_depth
                                                 } else {
                                                     #item 59660011
                                                     if {$_sw59660000_ == "when"} {
