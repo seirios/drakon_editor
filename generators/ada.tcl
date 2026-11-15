@@ -1709,6 +1709,7 @@ proc glue_special { gdb diagram_id } {
     	or type == 'exception'
     	or type == 'with'
     	or type == 'is'
+    	or type == 'declare'
     	and diagram_id = :diagram_id
     } ]
     foreach vertex_id $vertices {
@@ -1747,13 +1748,19 @@ proc glue_special { gdb diagram_id } {
                             } else {
                                 #item 50170006
                                 if {$type == "is"} {
-                                    
+                                    #item 6319
+                                    set line_end ""
                                 } else {
                                     #item 50170007
-                                    error "Unexpected switch value: $type"
+                                    if {$type == "declare"} {
+                                        
+                                    } else {
+                                        #item 50170008
+                                        error "Unexpected switch value: $type"
+                                    }
+                                    #item 5027
+                                    set line_end ""
                                 }
-                                #item 5027
-                                set line_end ""
                             }
                         }
                     }
@@ -3298,10 +3305,14 @@ proc print_node_core { texts node callbacks depth } {
                                                     	$tab_convert $text ]
                                                     #item 6127
                                                     set lines [ split $text "\n" ]
+                                                    #item 6320
+                                                    set comment [ commentator "Item $id" ]
                                                     #item 6107
                                                     lappend result "${indent}declare"
                                                     #item 6263
                                                     increase_indent indent depth next_depth
+                                                    #item 6321
+                                                    lappend result "${indent}$comment"
                                                     foreach line $lines {
                                                         #item 6106
                                                         lappend result "${indent}$line"
