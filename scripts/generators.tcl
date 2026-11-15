@@ -1061,19 +1061,20 @@ proc p.merge_vertices { gdb vertex_id next commentator line_end } {
 	set this_text [ p.vertex_text $gdb $vertex_id ]
 	set that_text [ p.vertex_text $gdb $next ]
 	set that_item [ p.vertex_item $gdb $next ]
-	set marker [ $commentator "item $that_item" ]	
+	set marker [ $commentator "item $that_item" ]
+	if { $marker != "" } {
+		set marker "$marker\n"
+	}
 	set this [ string trim $this_text ]
 	set that [ string trim $that_text ]
 	if { $this == "" && $that == "" } {
 		set new_text ""
 	} elseif { $this == "" && $that != "" } {
-		#set new_text "$marker\n$that_text"
-		set new_text "$that_text"
+		set new_text "$marker$that_text"
 	} elseif { $this != "" && $that == "" } {
 		set new_text $this_text
 	} else {
-		#set new_text "$this_text$line_end\n$marker\n$that_text"
-		set new_text "$this_text$line_end\n$that_text"
+		set new_text "$this_text$line_end\n$marker$that_text"
 	}
 	$gdb eval {
 		update vertices
@@ -2420,8 +2421,10 @@ proc print_node_core { texts node callback depth break_var } {
 				set parts [ split $text "\n" ]
 				if { [ llength $parts ] != 0 } {
 					append_line_end result $i $line_end			
-					set comment [ $commentator "item $current" ]
-					lappend result $indent$comment
+					set marker [ $commentator "item $current" ]
+					if { $marker != "" } {
+						lappend result $indent$marker
+					}
 				}
 
 				foreach part $parts {
@@ -2452,8 +2455,10 @@ proc print_node_core { texts node callback depth break_var } {
 			if { $start_item_info == "" } {
 				set cond_text [ get_text_lines $texts $cond_item ]
 				set cond_text [ tab_convert $tab_convert $cond_text ]
-				set comment [ $commentator "item $cond_item" ]
-				lappend result $indent$comment
+				set marker [ $commentator "item $cond_item" ]
+				if { $marker != "" } {
+					lappend result $indent$marker
+				}
 
 				set cond [ condition_line $callback $cond_text ]
 				lappend result $indent$cond

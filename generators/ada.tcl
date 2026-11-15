@@ -137,6 +137,11 @@ proc add_last_semicolon { list_var } {
     	$result $last $last "$lastline;" ]
 }
 
+proc blank { arg } {
+    #item 6219
+    return ""
+}
+
 proc case_tree_to_case_list { node extra } {
     #item 2726
     set result {}
@@ -1698,14 +1703,33 @@ proc glue_special { gdb diagram_id } {
             if {$type == "when"} {
                 #item 5025
                 set line_end " and then"
+                #item 6223
+                set commentator gen_ada::blank
             } else {
                 #item 50170002
-                if {$type == "with"} {
-                    #item 5026
-                    set line_end ","
-                } else {
-                    #item 5027
+                if {$type == "enum"} {
+                    #item 6222
                     set line_end ""
+                    #item 6223
+                    set commentator gen_ada::blank
+                } else {
+                    #item 50170003
+                    if {$type == "with"} {
+                        #item 5026
+                        set line_end ","
+                    } else {
+                        #item 50170004
+                        if {$type == "is"} {
+                            
+                        } else {
+                            #item 50170005
+                            error "Unexpected switch value: $type"
+                        }
+                        #item 5027
+                        set line_end ""
+                    }
+                    #item 6226
+                    set commentator gen_ada::commentator
                 }
             }
             #item 4990
@@ -1719,8 +1743,8 @@ proc glue_special { gdb diagram_id } {
                     break
                 }
                 #item 4995
-                gen::p.merge_vertices \
-                	$gdb $vertex_id $next gen_ada::noop $line_end
+                gen::p.merge_vertices $gdb $vertex_id $next \
+                	$commentator $line_end
                 #item 4994
                 set next [ gen::p.get_single_next $gdb $vertex_id ]
             }
@@ -2296,10 +2320,6 @@ proc monkey_patch_nogoto { direction } {
     	::nogoto::find_if_end_impl ]
     #item 2299
     monkey_patch $direction $functions
-}
-
-proc noop { arg } {
-    
 }
 
 proc p.and { left right } {
