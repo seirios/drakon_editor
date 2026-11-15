@@ -133,8 +133,14 @@ proc add_last_semicolon { list_var } {
     set nline [ llength $result ]
     set last [ expr { $nline - 1 } ]
     set lastline [ lindex $result $last ]
-    set result [ lreplace \
-    	$result $last $last "$lastline;" ]
+    #item 6243
+    if {[ string range $lastline end end ] == ";"} {
+        
+    } else {
+        #item 6246
+        set result [ lreplace \
+        	$result $last $last "$lastline;" ]
+    }
 }
 
 proc blank { arg } {
@@ -2995,31 +3001,31 @@ proc print_body { db filename fhandle components header footer } {
 }
 
 proc print_component { fhandle depth result } {
-    #item 4074
+    #item 6237
     set indent \
     	[ gen::make_indent $depth ]
-    #item 4072
+    #item 6235
     set nline [ llength $result ]
-    #item 40710001
+    #item 62340001
     set i 0
     while { 1 } {
-        #item 40710002
+        #item 62340002
         if {$i < $nline} {
             
         } else {
             break
         }
-        #item 4075
+        #item 6238
         set line [ lindex $result $i ]
-        #item 4076
+        #item 6239
         if {[ string is space $line ]} {
-            #item 4079
+            #item 6242
             puts $fhandle ""
         } else {
-            #item 4073
+            #item 6236
             puts $fhandle "${indent}$line"
         }
-        #item 40710003
+        #item 62340003
         incr i
     }
 }
@@ -3253,7 +3259,7 @@ proc print_node_core { texts node callbacks depth } {
                                                 #item 6088
                                                 if {$first == "null"} {
                                                     #item 6091
-                                                    lappend result "${indent}null record"
+                                                    lappend result "${indent}null record;"
                                                 } else {
                                                     #item 6082
                                                     lappend result "${indent}record"
@@ -3266,7 +3272,7 @@ proc print_node_core { texts node callbacks depth } {
                                                     #item 6086
                                                     decr_indent indent depth
                                                     #item 6087
-                                                    lappend result "${indent}end record"
+                                                    lappend result "${indent}end record;"
                                                 }
                                             } else {
                                                 #item 59660010
