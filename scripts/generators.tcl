@@ -390,60 +390,36 @@ proc fix_graph_stage_1_core { gdb callbacks append_semicolon diagram_id do_selec
 		and type = 'shelf'
 	} ]
 
-	set own_shelves [ get_optional_callback $callbacks own_shelves ]
-	# If generator does not own shelves, convert to actions
-	if { $own_shelves == "" } {
-		set shelf_proc [ get_callback $callbacks shelf ]
+	set shelf_proc [ get_callback $callbacks shelf ]
 
-		foreach id $shelves {
-			icon_to_action $gdb $id $shelf_proc
-		}
-	} else {
-		foreach id $shelves {
-			$own_shelves $gdb $id
-		}
+	foreach id $shelves {
+		icon_to_action $gdb $id $shelf_proc
 	}
 
-	set output_icons [ $gdb eval {
+	set outputs [ $gdb eval {
 		select item_id
 		from items
 		where diagram_id = :diagram_id
 		and type = 'output'
 	} ]
 
-	set own_outputs [ get_optional_callback $callbacks own_outputs ]
-	# If generator does not own outputs, convert to actions
-	if { $own_outputs == "" } {
-		set output_proc [ get_optional_callback $callbacks output ]
+	set output_proc [ get_optional_callback $callbacks output ]
 
-		foreach id $output_icons {
-			icon_to_action $gdb $id $output_proc
-		}
-	} else {
-		foreach id $output_icons {
-			$own_outputs $gdb $id
-		}
+	foreach id $outputs {
+		icon_to_action $gdb $id $output_proc
 	}
 
-	set insertion_icons [ $gdb eval {
+	set insertions [ $gdb eval {
 		select item_id
 		from items
 		where diagram_id = :diagram_id
 		and type = 'insertion'
 	} ]
 
-	set own_insertions [ get_optional_callback $callbacks own_insertions ]
-	# If generator does not own insertions, convert to actions
-	if { $own_insertions == "" } {
-		set insertion_proc [ get_optional_callback $callbacks insertion ]
+	set insertion_proc [ get_optional_callback $callbacks insertion ]
 
-		foreach id $insertion_icons {
-			icon_to_action $gdb $id $insertion_proc
-		}
-	} else {
-		foreach id $insertion_icons {
-			$own_insertions $gdb $id
-		}
+	foreach id $insertions {
+		icon_to_action $gdb $id $insertion_proc
 	}
 
 	if { $do_selects } {
@@ -2743,9 +2719,6 @@ proc p.keywords { } {
 		tab_convert
 		output
 		insertion
-		own_shelves
-		own_outputs
-		own_insertions
 	}
 }
 
