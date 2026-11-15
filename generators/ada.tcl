@@ -530,22 +530,6 @@ proc ends_with { str end } {
     }
 }
 
-proc enforce_nogoto { name } {
-    #item 4093
-    variable g_errmsg
-    #item 4097
-    if {$g_errmsg == ""} {
-        #item 4100
-        set errmsg "Too complex for nogoto generator."
-    } else {
-        #item 4101
-        set errmsg $g_errmsg
-    }
-    #item 2807
-    complain_dia $name \
-    "Could not generate code for function '$name'. $errmsg"
-}
-
 proc enum_lines { lines } {
     #item 3720
     set result {}
@@ -1537,18 +1521,60 @@ proc generate { db gdb filename } {
     }
 }
 
-proc generate_body { gdb diagram_id start_item node_list sorted incoming } {
-    #item 4082
-    return ""
+proc generate_component { gdb diagram_id callbacks } {
+    #item 5291
+    variable g_errmsg
+    #item 5248
+    set extract_signature [ gen::get_callback $callbacks signature ]
+    set commentator [ gen::get_callback $callbacks comment ]
+    #item 5249
+    set start_info [ gen::get_start_info $gdb $diagram_id ]
+    #item 5254
+    lassign \
+    $start_info \
+    start_icon params_icon name params_text start_item
+    #item 5250
+    set signature [ $extract_signature $params_text $name ]
+    #item 5255
+    lassign \
+    $signature \
+    errorMessage real_sign
+    #item 5256
+    if {$errorMessage != ""} {
+        #item 5259
+        gen::report_error $diagram_id {} $errorMessage
+    }
+    #item 5260
+    set tree ""
+    set body ""
+    #item 5297
+    set body \
+    [ try_nogoto $gdb $diagram_id $callbacks $name ]
+    #item 5261
+    if {$body == ""} {
+        #item 5292
+        if {$g_errmsg == ""} {
+            #item 5294
+            set errmsg "Too complex for nogoto generator."
+        } else {
+            #item 5295
+            set errmsg $g_errmsg
+        }
+        #item 5290
+        complain_dia $name \
+        "Could not generate code for function '$name'. $errmsg"
+    }
+    #item 5253
+    return [ list $diagram_id $name $real_sign $body ]
 }
 
 proc generate_components { db gdb callbacks } {
-    #item 3967
+    #item 5277
     variable g_no_ins
-    #item 3929
+    #item 5274
     set no_ins_ids {}
     set ins_ids {}
-    #item 3928
+    #item 5273
     $gdb eval {
     	select diagram_id
     	from diagrams
@@ -1563,22 +1589,22 @@ proc generate_components { db gdb callbacks } {
     		}
     	}
     }
-    #item 4049
+    #item 5282
     set no_ins {}
     set ins {}
     foreach diagram_id $no_ins_ids {
-        #item 4048
-        lappend no_ins [ gen::generate_function \
-        	$gdb $diagram_id $callbacks 1 0 ]
+        #item 5281
+        lappend no_ins [ generate_component \
+        	$gdb $diagram_id $callbacks ]
     }
-    #item 3966
+    #item 5276
     set g_no_ins $no_ins
     foreach diagram_id $ins_ids {
-        #item 4054
-        lappend ins [ gen::generate_function \
-        	$gdb $diagram_id $callbacks 1 0 ]
+        #item 5287
+        lappend ins [ generate_component \
+        	$gdb $diagram_id $callbacks ]
     }
-    #item 3930
+    #item 5275
     return [ concat $no_ins $ins ]
 }
 
@@ -2224,9 +2250,7 @@ proc make_callbacks { } {
     gen::put_callback callbacks while_start         gen_ada::p.while_start
     gen::put_callback callbacks if_block_end        gen_ada::p.if_block_end
     
-    gen::put_callback callbacks body                gen_ada::generate_body
     gen::put_callback callbacks signature           gen_ada::extract_signature
-    gen::put_callback callbacks enforce_nogoto      gen_ada::enforce_nogoto
     gen::put_callback callbacks tab_convert         gen_ada::p.indentation
     #item 7
     return $callbacks
@@ -3786,6 +3810,39 @@ proc trim_item_id { str } {
             return $str
         }
     }
+}
+
+proc try_nogoto { gdb diagram_id callbacks name } {
+    #item 5303
+    set db "gen-body"
+    #item 5304
+    set start_vertex [ gen::find_start_vertex \
+    	$gdb $diagram_id ]
+    set start_item [ gen::p.vertex_item \
+    	$gdb $start_vertex ]
+    #item 5305
+    nogoto::create_db $db
+    #item 5306
+    set log [ expr { $name == "xxxx" } ]
+    #item 5307
+    gen::add_to_graph $gdb $db $start_vertex $log
+    #item 5308
+    set tree [ nogoto::generate $db $start_item ]
+    #item 5309
+    if {$tree == ""} {
+        #item 5312
+        gen::report_error $diagram_id {} \
+        	"Could not generate with nogoto"
+        #item 5313
+        return ""
+    }
+    #item 5315
+    set texts [ gen::extract_texts $db ]
+    #item 5316
+    set result [ gen::print_node \
+    	$texts $tree $callbacks 0 ]
+    #item 5317
+    return $result
 }
 
 proc undo_monkey_patch { } {
