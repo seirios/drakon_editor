@@ -1686,8 +1686,9 @@ proc glue_special { gdb diagram_id } {
     set vertices [ $gdb eval {
     	select vertex_id
     	from vertices
-    	where type == 'enum'
-    	or type == 'when'
+    	where type == 'when'
+    	or type == 'enum'
+    	or type == 'record'
     	or type == 'with'
     	or type == 'is'
     	and diagram_id = :diagram_id
@@ -1712,19 +1713,25 @@ proc glue_special { gdb diagram_id } {
                     set commentator gen_ada::blank
                 } else {
                     #item 50170003
-                    if {$type == "with"} {
+                    if {$type == "record"} {
                         #item 5026
-                        set line_end ","
+                        set line_end ""
                     } else {
                         #item 50170004
-                        if {$type == "is"} {
-                            
+                        if {$type == "with"} {
+                            #item 6266
+                            set line_end ","
                         } else {
                             #item 50170005
-                            error "Unexpected switch value: $type"
+                            if {$type == "is"} {
+                                
+                            } else {
+                                #item 50170006
+                                error "Unexpected switch value: $type"
+                            }
+                            #item 5027
+                            set line_end ""
                         }
-                        #item 5027
-                        set line_end ""
                     }
                     #item 6226
                     set commentator gen_ada::commentator
@@ -2510,7 +2517,7 @@ proc p.proc_shelf { gdb item_id diagram_id } {
     set type [ lindex $sterms 0 ]
     set last [ lindex $sterms end ]
     #item 48740001
-    if {((((((($type == "end") || ($type == "return")) || ($type == "declare")) || ($type == "record")) || ($type == "enum")) || ($type == "when")) || ($type == "with")) || ($type == "is")} {
+    if {((((((($type == "end") || ($type == "return")) || ($type == "declare")) || ($type == "when")) || ($type == "enum")) || ($type == "record")) || ($type == "with")) || ($type == "is")} {
         #item 4900
         if {[ llength $sterms ] == 1} {
             #item 4896
@@ -3206,11 +3213,15 @@ proc print_node_core { texts node callbacks depth } {
                                         if {$_sw59660000_ == "record"} {
                                             #item 6080
                                             set id [ lindex $current 1 ]
-                                            #item 6093
+                                            #item 6269
                                             set text [ gen::get_text_lines \
                                             	$texts $id ]
+                                            set text [ gen::tab_convert \
+                                            	$tab_convert $text ]
                                             #item 6129
                                             set lines [ split $text "\n" ]
+                                            #item 6268
+                                            set comment [ commentator "Item $id" ]
                                             #item 6092
                                             set first [ lindex $lines 0 ]
                                             #item 6088
@@ -3222,6 +3233,8 @@ proc print_node_core { texts node callbacks depth } {
                                                 lappend result "${indent}record"
                                                 #item 6085
                                                 indent_increase indent depth next_depth
+                                                #item 6267
+                                                lappend result "${indent}$comment"
                                                 foreach line $lines {
                                                     #item 6081
                                                     lappend result "${indent}$line"
