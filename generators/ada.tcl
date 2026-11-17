@@ -863,77 +863,66 @@ proc extract_signature { text name } {
 }
 
 proc filter_components { components access } {
-    #item 4152
+    #item 4153
+    return [ filter_components_core \
+    	$components "" "" $access ]
+}
+
+proc filter_components_core { components flt_type flt_subtype flt_access } {
+    #item 6396
     set result {}
     foreach component $components {
-        #item 4161
+        #item 6423
+        set cur_type $flt_type
+        set cur_subtype $flt_subtype
+        set cur_access $flt_access
+        #item 6404
         lassign \
         $component \
-        diagram_id name signature body is_part with_part
-        #item 4162
+        diagram_id name signature
+        #item 6405
         lassign \
         $signature \
         type prop_list parameters returns
-        #item 4155
+        #item 6399
         array set props $prop_list
-        #item 4156
-        if {$props(access) == $access} {
-            #item 4157
+        #item 6408
+        if {$cur_type == ""} {
+            #item 6411
+            set cur_type $type
+        }
+        #item 6412
+        if {$cur_subtype == ""} {
+            #item 6415
+            set cur_subtype $props(subtype)
+        }
+        #item 6416
+        if {$cur_access == ""} {
+            #item 6419
+            set cur_access $props(access)
+        }
+        #item 6406
+        if {(($type == $cur_type) && ($props(subtype) == $cur_subtype)) && ($props(access) == $cur_access)} {
+            #item 6401
             lappend result $component
         }
     }
-    #item 4153
+    #item 6397
     return $result
 }
 
 proc filter_subprograms { components access } {
-    #item 3754
-    set result {}
-    foreach component $components {
-        #item 3764
-        lassign \
-        $component \
-        diagram_id name signature body is_part with_part
-        #item 3765
-        lassign \
-        $signature \
-        type prop_list parameters returns
-        #item 3757
-        array set props $prop_list
-        #item 3763
-        if {($type == "subprogram") && ($props(access) == $access)} {
-            #item 3760
-            lappend result $component
-        }
-    }
-    #item 3755
-    return $result
+    #item 6424
+    return [ filter_components_core \
+    	$components subprogram "" $access ]
 }
 
 proc filter_types { components subtype access } {
-    #item 3772
-    set result {}
-    foreach component $components {
-        #item 3780
-        lassign \
-        $component \
-        diagram_id name signature body is_part with_part
-        #item 3781
-        lassign \
-        $signature \
-        type prop_list parameters returns
-        #item 3775
-        array set props $prop_list
-        #item 3779
-        if {(($type == "type") && ($props(subtype) == $subtype)) && ($props(access) == $access)} {
-            #item 3776
-            lappend result $component
-        }
-    }
+    #item 6422
+    set result [ filter_components_core \
+    	$components type $subtype $access ]
     #item 3787
-    set result [ sort_types $result ]
-    #item 3773
-    return $result
+    return [ sort_components $result ]
 }
 
 proc find_if_end_impl { db parent_id ordinal path loops } {
@@ -999,7 +988,7 @@ proc find_insertion { needle } {
         #item 3982
         lassign \
         $func \
-        diagram_id name signature body is_part with_part
+        diagram_id name
         #item 3983
         if {$name == $needle} {
             #item 3988
@@ -1348,10 +1337,9 @@ proc gen_subprogram_kernel { depth type abstract overriding separate name return
     if {[ handle_is result $body $is_part \
 	$depth $abstract $separate \
 	$print_body ]} {
-        foreach line $body {
-            #item 5502
-            lappend result "${indent}$line"
-        }
+        #item 6447
+        lappend_indent result \
+        	$body $indent
         #item 5505
         lappend result "end $name"
     }
@@ -1378,9 +1366,12 @@ proc gen_type_kernel { depth type access abstract limited tagged name body print
     #item 5587
     set indent \
     	[ gen::make_indent $depth ]
-    #item 5589
-    lappend_notempty \
-    	result $spec_header
+    #item 6444
+    if {$print_body} {
+        #item 5589
+        lappend_notempty \
+        	result $spec_header
+    }
     #item 5555
     append line "$type"
     #item 5560
@@ -1392,28 +1383,43 @@ proc gen_type_kernel { depth type access abstract limited tagged name body print
         #item 5567
         append line " abstract"
     }
-    #item 5599
-    if {($access != "private" && $limited != "")
-	|| $limited == "explicit"} {
-        #item 5600
-        append line " limited"
-    }
     #item 5583
     if {$tagged} {
         #item 5584
         append line " tagged"
     }
-    #item 5569
-    lappend result $line
-    foreach line $body {
-        #item 5575
-        lappend result "${indent}$line"
+    #item 6436
+    if {$print_body} {
+        #item 6455
+        if {($access != "private" && $limited != "")
+	|| $limited == "explicit"} {
+            #item 6451
+            append line " limited"
+        }
+        #item 5569
+        lappend result $line
+        #item 6448
+        lappend_indent result \
+        	$body $indent
+    } else {
+        #item 6450
+        if {$limited != ""} {
+            #item 5600
+            append line " limited"
+        }
+        #item 6442
+        append line " private"
+        #item 6443
+        lappend result $line
     }
     #item 5596
     add_last_semicolon result
-    #item 5595
-    lappend_notempty \
-    	result $spec_footer
+    #item 6456
+    if {$print_body} {
+        #item 5595
+        lappend_notempty \
+        	result $spec_footer
+    }
     #item 5598
     return $result
 }
@@ -3004,6 +3010,10 @@ proc presets_desc { } {
 }
 
 proc print_body { db filename fhandle components header footer } {
+    #item 6431
+    set in_spec 0
+    #item 6432
+    set in_private 0
     #item 5403
     put_credits $fhandle
     #item 5404
@@ -3011,62 +3021,57 @@ proc print_body { db filename fhandle components header footer } {
     	$fhandle $header
     foreach type [ filter_types $components type local ] {
         #item 5423
-        print_type $db $fhandle $type 0
+        print_type $db $fhandle $type $in_private
     }
     foreach type [ filter_types $components subtype local ] {
         #item 5427
-        print_type $db $fhandle $type 0
+        print_type $db $fhandle $type $in_private
     }
     foreach subprogram [ filter_subprograms $components local ] {
         #item 5408
-        print_subprogram $db $fhandle $subprogram 0
+        print_subprogram $db $fhandle $subprogram $in_spec
     }
     foreach subprogram [ filter_subprograms $components visible ] {
-        #item 5412
-        print_subprogram $db $fhandle $subprogram 0
+        #item 6433
+        print_subprogram $db $fhandle $subprogram $in_spec
     }
     foreach subprogram [ filter_subprograms $components private ] {
-        #item 5416
-        print_subprogram $db $fhandle $subprogram 0
+        #item 6434
+        print_subprogram $db $fhandle $subprogram $in_spec
     }
     #item 5405
     puts_notempty \
     	$fhandle $footer
 }
 
-proc print_component { fhandle depth result } {
-    #item 6237
+proc print_lines { fhandle depth result } {
+    #item 6468
     set indent \
     	[ gen::make_indent $depth ]
-    #item 6235
+    #item 6474
+    puts $fhandle ""
+    #item 6466
     set nline [ llength $result ]
-    #item 6337
-    if {$nline == 0} {
-        
-    } else {
-        #item 6336
-        puts $fhandle ""
-    }
-    #item 62340001
+    #item 64650001
     set i 0
     while { 1 } {
-        #item 62340002
+        #item 64650002
         if {$i < $nline} {
             
         } else {
             break
         }
-        #item 6238
+        #item 6469
         set line [ lindex $result $i ]
-        #item 6239
+        #item 6470
         if {[ string is space $line ]} {
-            #item 6242
+            #item 6473
             puts $fhandle ""
         } else {
-            #item 6236
+            #item 6467
             puts $fhandle "${indent}$line"
         }
-        #item 62340003
+        #item 64650003
         incr i
     }
 }
@@ -3501,45 +3506,51 @@ $tnext == "insertion"} {
 }
 
 proc print_spec { db filename fhandle components header footer } {
+    #item 6430
+    set in_spec 1
     #item 5332
     put_credits $fhandle
     #item 5333
     puts_notempty \
     	$fhandle $header
+    #item 6425
+    set in_private 0
     foreach type [ filter_types $components type private ] {
         #item 5371
-        print_type $db $fhandle $type 0
+        print_type $db $fhandle $type $in_private
     }
     foreach type [ filter_types $components type visible ] {
-        #item 5351
-        print_type $db $fhandle $type 0
+        #item 6428
+        print_type $db $fhandle $type $in_private
     }
     foreach type [ filter_types $components subtype visible ] {
-        #item 5355
-        print_type $db $fhandle $type 0
+        #item 6429
+        print_type $db $fhandle $type $in_private
     }
     foreach subprogram [ filter_subprograms $components visible ] {
         #item 5336
-        print_subprogram $db $fhandle $subprogram 1
+        print_subprogram $db $fhandle $subprogram $in_spec
     }
     #item 5358
     if {[ llength [ filter_components $components private ] ] == 0} {
         
     } else {
+        #item 6426
+        set in_private 1
         #item 5352
         puts $fhandle ""
         puts $fhandle "private"
         foreach type [ filter_types $components type private ] {
             #item 5363
-            print_type $db $fhandle $type 1
+            print_type $db $fhandle $type $in_private
         }
         foreach type [ filter_types $components subtype private ] {
-            #item 5366
-            print_type $db $fhandle $type 1
+            #item 6427
+            print_type $db $fhandle $type $in_private
         }
         foreach subprogram [ filter_subprograms $components private ] {
             #item 5341
-            print_subprogram $db $fhandle $subprogram 1
+            print_subprogram $db $fhandle $subprogram $in_spec
         }
     }
     #item 5337
@@ -3570,8 +3581,8 @@ proc print_subprogram { db fhandle component in_spec } {
         
     } else {
         #item 5378
-        set print_body [ expr !$in_spec ]
         set depth 1
+        set print_body [ expr !$in_spec ]
         #item 5379
         set result [ gen_subprogram_kernel \
         	$depth \
@@ -3589,7 +3600,7 @@ proc print_subprogram { db fhandle component in_spec } {
         	$body_header \
         	$body_footer ]
         #item 5388
-        print_component $fhandle $depth $result
+        print_lines $fhandle $depth $result
     }
 }
 
@@ -3613,47 +3624,30 @@ proc print_type { db fhandle component in_private } {
     spec_header spec_footer body_header body_footer
     #item 5434
     set depth 1
-    set print_body 1
+    set print_body [ expr \
+    	{ $props(access) != "private" || $in_private } ]
     #item 5442
-    if {$props(access) == "private" && !$in_private} {
-        #item 5446
-        if {$props(local)} {
-            #item 5445
-            set result {}
-        } else {
-            #item 5448
-            set line "type $name is"
-            #item 5449
-            if {$props(limited) == ""} {
-                
-            } else {
-                #item 5452
-                append line " limited"
-            }
-            #item 5453
-            append line " private;"
-            #item 5454
-            set result [ list $line ]
-        }
+    if {$props(local) && ! $print_body} {
+        
     } else {
         #item 5435
         set result [ gen_type_kernel \
-        $depth \
-        $props(subtype) \
-        $props(access) \
-        $props(abstract) \
-        $props(limited) \
-        $props(tagged) \
-        $name \
-        $body \
-        $print_body \
-        $spec_header \
-        $spec_footer \
-        $body_header \
-        $body_footer ]
+        	$depth \
+        	$props(subtype) \
+        	$props(access) \
+        	$props(abstract) \
+        	$props(limited) \
+        	$props(tagged) \
+        	$props(name) \
+        	$body \
+        	$print_body \
+        	$spec_header \
+        	$spec_footer \
+        	$body_header \
+        	$body_footer ]
+        #item 6475
+        print_lines $fhandle $depth $result
     }
-    #item 5441
-    print_component $fhandle $depth $result
 }
 
 proc process_tree { tree } {
@@ -3786,7 +3780,7 @@ proc set_node_text { db item_id text } {
     }
 }
 
-proc sort_types { components } {
+proc sort_components { components } {
     #item 3796
     set result {}
     #item 3806
@@ -3799,7 +3793,7 @@ proc sort_types { components } {
             #item 3800
             lassign \
             $component \
-            diagram_id name signature body is_part with_part
+            diagram_id name signature
             #item 3801
             lassign \
             $signature \
