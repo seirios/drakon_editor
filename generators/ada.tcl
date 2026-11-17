@@ -611,7 +611,7 @@ proc extract_signature { text name } {
     #item 2069
     if {[ llength $lines ] == 0} {
         #item 31300001
-        if {$type == "subprogram"} {
+        if {($type == "subprogram") || ($type == "nested")} {
             #item 2109
             if {$returns == ""} {
                 #item 2111
@@ -621,36 +621,22 @@ proc extract_signature { text name } {
                 set props(subtype) "function"
             }
         } else {
-            #item 31300002
-            if {$type == "nested"} {
-                #item 3916
-                set type "nested"
-                #item 2109
-                if {$returns == ""} {
-                    #item 2111
-                    set props(subtype) "procedure"
-                } else {
-                    #item 2112
-                    set props(subtype) "function"
-                }
+            #item 31300003
+            if {$type == "type"} {
+                #item 3141
+                set props(subtype) "type"
             } else {
-                #item 31300003
-                if {$type == "type"} {
-                    #item 3141
-                    set props(subtype) "type"
+                #item 31300004
+                if {$type == "subtype"} {
+                    
                 } else {
-                    #item 31300004
-                    if {$type == "subtype"} {
-                        
-                    } else {
-                        #item 31300005
-                        error "Unexpected switch value: $type"
-                    }
-                    #item 3139
-                    set props(subtype) "subtype"
+                    #item 31300005
+                    error "Unexpected switch value: $type"
                 }
-                #item 3140
+                #item 6498
                 set type "type"
+                #item 3139
+                set props(subtype) "subtype"
             }
         }
     } else {
@@ -708,7 +694,7 @@ proc extract_signature { text name } {
                     incr i
                 }
                 #item 31300001
-                if {$type == "subprogram"} {
+                if {($type == "subprogram") || ($type == "nested")} {
                     #item 2109
                     if {$returns == ""} {
                         #item 2111
@@ -718,36 +704,22 @@ proc extract_signature { text name } {
                         set props(subtype) "function"
                     }
                 } else {
-                    #item 31300002
-                    if {$type == "nested"} {
-                        #item 3916
-                        set type "nested"
-                        #item 2109
-                        if {$returns == ""} {
-                            #item 2111
-                            set props(subtype) "procedure"
-                        } else {
-                            #item 2112
-                            set props(subtype) "function"
-                        }
+                    #item 31300003
+                    if {$type == "type"} {
+                        #item 3141
+                        set props(subtype) "type"
                     } else {
-                        #item 31300003
-                        if {$type == "type"} {
-                            #item 3141
-                            set props(subtype) "type"
+                        #item 31300004
+                        if {$type == "subtype"} {
+                            
                         } else {
-                            #item 31300004
-                            if {$type == "subtype"} {
-                                
-                            } else {
-                                #item 31300005
-                                error "Unexpected switch value: $type"
-                            }
-                            #item 3139
-                            set props(subtype) "subtype"
+                            #item 31300005
+                            error "Unexpected switch value: $type"
                         }
-                        #item 3140
+                        #item 6498
                         set type "type"
+                        #item 3139
+                        set props(subtype) "subtype"
                     }
                 }
             } else {
@@ -803,7 +775,7 @@ proc extract_signature { text name } {
                             incr i
                         }
                         #item 31300001
-                        if {$type == "subprogram"} {
+                        if {($type == "subprogram") || ($type == "nested")} {
                             #item 2109
                             if {$returns == ""} {
                                 #item 2111
@@ -813,36 +785,22 @@ proc extract_signature { text name } {
                                 set props(subtype) "function"
                             }
                         } else {
-                            #item 31300002
-                            if {$type == "nested"} {
-                                #item 3916
-                                set type "nested"
-                                #item 2109
-                                if {$returns == ""} {
-                                    #item 2111
-                                    set props(subtype) "procedure"
-                                } else {
-                                    #item 2112
-                                    set props(subtype) "function"
-                                }
+                            #item 31300003
+                            if {$type == "type"} {
+                                #item 3141
+                                set props(subtype) "type"
                             } else {
-                                #item 31300003
-                                if {$type == "type"} {
-                                    #item 3141
-                                    set props(subtype) "type"
+                                #item 31300004
+                                if {$type == "subtype"} {
+                                    
                                 } else {
-                                    #item 31300004
-                                    if {$type == "subtype"} {
-                                        
-                                    } else {
-                                        #item 31300005
-                                        error "Unexpected switch value: $type"
-                                    }
-                                    #item 3139
-                                    set props(subtype) "subtype"
+                                    #item 31300005
+                                    error "Unexpected switch value: $type"
                                 }
-                                #item 3140
+                                #item 6498
                                 set type "type"
+                                #item 3139
+                                set props(subtype) "subtype"
                             }
                         }
                     }
@@ -3010,38 +2968,120 @@ proc presets_desc { } {
 }
 
 proc print_body { db filename fhandle components header footer } {
-    #item 6431
-    set in_spec 0
-    #item 6432
-    set in_private 0
     #item 5403
     put_credits $fhandle
     #item 5404
     puts_notempty \
     	$fhandle $header
-    foreach type [ filter_types $components type local ] {
-        #item 5423
-        print_type $db $fhandle $type $in_private
-    }
-    foreach type [ filter_types $components subtype local ] {
-        #item 5427
-        print_type $db $fhandle $type $in_private
-    }
-    foreach subprogram [ filter_subprograms $components local ] {
-        #item 5408
-        print_subprogram $db $fhandle $subprogram $in_spec
-    }
-    foreach subprogram [ filter_subprograms $components visible ] {
-        #item 6433
-        print_subprogram $db $fhandle $subprogram $in_spec
-    }
-    foreach subprogram [ filter_subprograms $components private ] {
-        #item 6434
-        print_subprogram $db $fhandle $subprogram $in_spec
+    #item 6538
+    set filtered {}
+    #item 6431
+    set part "body"
+    #item 6542
+    set filtered [ concat $filtered \
+    	[ filter_types $components type local ] ]
+    #item 6543
+    set filtered [ concat $filtered \
+    	[ filter_types $components subtype local ] ]
+    #item 6544
+    set filtered [ concat $filtered \
+    	[ filter_subprograms $components local ] ]
+    #item 6545
+    set filtered [ concat $filtered \
+    	[ filter_subprograms $components visible ] ]
+    #item 6546
+    set filtered [ concat $filtered \
+    	[ filter_subprograms $components private ] ]
+    foreach component $filtered {
+        #item 6540
+        print_component $db $fhandle $component $part
     }
     #item 5405
     puts_notempty \
     	$fhandle $footer
+}
+
+proc print_component { db fhandle component part } {
+    #item 6488
+    lassign \
+    $component \
+    diagram_id name signature body is_part with_part
+    #item 6489
+    lassign \
+    $signature \
+    type prop_list parameters returns
+    #item 6480
+    array set props $prop_list
+    #item 6487
+    set sections {
+    	spec_header spec_footer body_header body_footer }
+    #item 6490
+    lassign \
+    [ gen::scan_diagram_description $db $diagram_id $sections ] \
+    spec_header spec_footer body_header body_footer
+    #item 6508
+    set depth 1
+    #item 64990001
+    if {$type == "subprogram"} {
+        #item 6512
+        set print_body [ expr { $part == "body" } ]
+        #item 6509
+        if {$props(abstract) && $print_body} {
+            #item 6511
+            return
+        } else {
+            #item 6513
+            set result [ gen_subprogram_kernel \
+            	$depth \
+            	$props(subtype) \
+            	$props(abstract) \
+            	$props(overriding) \
+            	$props(separate) \
+            	$props(name) \
+            	$returns \
+            	$parameters \
+            	$body $is_part $with_part \
+            	$print_body \
+            	$spec_header \
+            	$spec_footer \
+            	$body_header \
+            	$body_footer ]
+        }
+    } else {
+        #item 64990002
+        if {$type == "type"} {
+            
+        } else {
+            #item 64990003
+            error "Unexpected switch value: $type"
+        }
+        #item 6514
+        set print_body [ expr { $props(access) != "private" \
+        	|| $part == "private" } ]
+        #item 6516
+        if {$props(local) && ! $print_body} {
+            #item 6518
+            return
+        } else {
+            #item 6515
+            set result [ gen_type_kernel \
+            	$depth \
+            	$props(subtype) \
+            	$props(access) \
+            	$props(abstract) \
+            	$props(limited) \
+            	$props(tagged) \
+            	$props(name) \
+            	$body \
+            	$print_body \
+            	$spec_header \
+            	$spec_footer \
+            	$body_header \
+            	$body_footer ]
+        }
+    }
+    #item 6507
+    print_lines $fhandle $depth $result
 }
 
 proc print_lines { fhandle depth result } {
@@ -3506,148 +3546,60 @@ $tnext == "insertion"} {
 }
 
 proc print_spec { db filename fhandle components header footer } {
-    #item 6430
-    set in_spec 1
     #item 5332
     put_credits $fhandle
     #item 5333
     puts_notempty \
     	$fhandle $header
+    #item 6547
+    set filtered {}
     #item 6425
-    set in_private 0
-    foreach type [ filter_types $components type private ] {
-        #item 5371
-        print_type $db $fhandle $type $in_private
-    }
-    foreach type [ filter_types $components type visible ] {
-        #item 6428
-        print_type $db $fhandle $type $in_private
-    }
-    foreach type [ filter_types $components subtype visible ] {
-        #item 6429
-        print_type $db $fhandle $type $in_private
-    }
-    foreach subprogram [ filter_subprograms $components visible ] {
-        #item 5336
-        print_subprogram $db $fhandle $subprogram $in_spec
+    set part "visible"
+    #item 6548
+    set filtered [ concat $filtered \
+    	[ filter_types $components type private ] ]
+    #item 6549
+    set filtered [ concat $filtered \
+    	[ filter_types $components type visible ] ]
+    #item 6550
+    set filtered [ concat $filtered \
+    	[ filter_types $components subtype visible ] ]
+    #item 6551
+    set filtered [ concat $filtered \
+    	[ filter_subprograms $components visible ] ]
+    foreach component $filtered {
+        #item 6555
+        print_component $db $fhandle $component $part
     }
     #item 5358
-    if {[ llength [ filter_components $components private ] ] == 0} {
+    if {[ llength [ filter_components \
+	$components private ] ] == 0} {
         
     } else {
+        #item 6567
+        set filtered {}
         #item 6426
-        set in_private 1
+        set part "private"
         #item 5352
         puts $fhandle ""
         puts $fhandle "private"
-        foreach type [ filter_types $components type private ] {
-            #item 5363
-            print_type $db $fhandle $type $in_private
-        }
-        foreach type [ filter_types $components subtype private ] {
-            #item 6427
-            print_type $db $fhandle $type $in_private
-        }
-        foreach subprogram [ filter_subprograms $components private ] {
-            #item 5341
-            print_subprogram $db $fhandle $subprogram $in_spec
+        #item 6568
+        set filtered [ concat $filtered \
+        	[ filter_types $components type private ] ]
+        #item 6569
+        set filtered [ concat $filtered \
+        	[ filter_types $components subtype private ] ]
+        #item 6573
+        set filtered [ concat $filtered \
+        	[ filter_subprograms $components private ] ]
+        foreach component $filtered {
+            #item 6571
+            print_component $db $fhandle $component $part
         }
     }
     #item 5337
     puts_notempty \
     	$fhandle $footer
-}
-
-proc print_subprogram { db fhandle component in_spec } {
-    #item 5385
-    lassign \
-    $component \
-    diagram_id name signature body is_part with_part
-    #item 5386
-    lassign \
-    $signature \
-    type prop_list parameters returns
-    #item 5377
-    array set props $prop_list
-    #item 5384
-    set sections {
-    	spec_header spec_footer body_header body_footer }
-    #item 5387
-    lassign \
-    [ gen::scan_diagram_description $db $diagram_id $sections ] \
-    spec_header spec_footer body_header body_footer
-    #item 5381
-    if {$props(abstract) && !$in_spec} {
-        
-    } else {
-        #item 5378
-        set depth 1
-        set print_body [ expr !$in_spec ]
-        #item 5379
-        set result [ gen_subprogram_kernel \
-        	$depth \
-        	$props(subtype) \
-        	$props(abstract) \
-        	$props(overriding) \
-        	$props(separate) \
-        	$props(name) \
-        	$returns \
-        	$parameters \
-        	$body $is_part $with_part \
-        	$print_body \
-        	$spec_header \
-        	$spec_footer \
-        	$body_header \
-        	$body_footer ]
-        #item 5388
-        print_lines $fhandle $depth $result
-    }
-}
-
-proc print_type { db fhandle component in_private } {
-    #item 5437
-    lassign \
-    $component \
-    diagram_id name signature body is_part with_part
-    #item 5438
-    lassign \
-    $signature \
-    type prop_list parameters returns
-    #item 5433
-    array set props $prop_list
-    #item 5439
-    set sections {
-    	spec_header spec_footer body_header body_footer }
-    #item 5440
-    lassign \
-    [ gen::scan_diagram_description $db $diagram_id $sections ] \
-    spec_header spec_footer body_header body_footer
-    #item 5434
-    set depth 1
-    set print_body [ expr \
-    	{ $props(access) != "private" || $in_private } ]
-    #item 5442
-    if {$props(local) && ! $print_body} {
-        
-    } else {
-        #item 5435
-        set result [ gen_type_kernel \
-        	$depth \
-        	$props(subtype) \
-        	$props(access) \
-        	$props(abstract) \
-        	$props(limited) \
-        	$props(tagged) \
-        	$props(name) \
-        	$body \
-        	$print_body \
-        	$spec_header \
-        	$spec_footer \
-        	$body_header \
-        	$body_footer ]
-        #item 6475
-        print_lines $fhandle $depth $result
-    }
 }
 
 proc process_tree { tree } {
