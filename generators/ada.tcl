@@ -877,10 +877,8 @@ proc filter_subprograms { components access } {
 
 proc filter_types { components subtype access } {
     #item 6422
-    set result [ filter_components_core \
+    return [ filter_components_core \
     	$components type $subtype $access ]
-    #item 3787
-    return [ sort_components $result ]
 }
 
 proc find_if_end_impl { db parent_id ordinal path loops } {
@@ -2992,7 +2990,9 @@ proc print_body { db filename fhandle components header footer } {
     #item 6546
     set filtered [ concat $filtered \
     	[ filter_subprograms $components private ] ]
-    foreach component $filtered {
+    #item 6585
+    set sorted [ sort_components $filtered ]
+    foreach component $sorted {
         #item 6540
         print_component $db $fhandle $component $part
     }
@@ -3567,7 +3567,9 @@ proc print_spec { db filename fhandle components header footer } {
     #item 6551
     set filtered [ concat $filtered \
     	[ filter_subprograms $components visible ] ]
-    foreach component $filtered {
+    #item 6577
+    set sorted [ sort_components $filtered ]
+    foreach component $sorted {
         #item 6555
         print_component $db $fhandle $component $part
     }
@@ -3592,7 +3594,9 @@ proc print_spec { db filename fhandle components header footer } {
         #item 6573
         set filtered [ concat $filtered \
         	[ filter_subprograms $components private ] ]
-        foreach component $filtered {
+        #item 6581
+        set sorted [ sort_components $filtered ]
+        foreach component $sorted {
             #item 6571
             print_component $db $fhandle $component $part
         }
