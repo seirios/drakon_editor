@@ -35,7 +35,7 @@ variable drn_kw_access {
 }
 
 variable drn_kw_etype {
-	type subtype subprogram declaration
+	type subtype declaration
 }
 
 variable drn_kw_ontology {
