@@ -29,7 +29,7 @@ variable drn_kw_access {
 }
 
 variable drn_kw_etype {
-	type subtype subprogram
+	type subtype subprogram declaration
 }
 
 variable ada_keywords {
@@ -347,28 +347,32 @@ proc classify_keywords { keywords dia_name } {
     } else {
         #item 21440002
         if {($etype == "type") || ($etype == "subtype")} {
-            
+            #item 3918
+            if {$access == ""} {
+                #item 4132
+                if {$local} {
+                    #item 4134
+                    set access "local"
+                } else {
+                    #item 3921
+                    set access "visible"
+                }
+            }
+            #item 2204
+            variable ada_types
+            #item 2205
+            if {[ lsearch -exact $ada_types $name ] == -1} {
+                #item 2209
+                lappend ada_types $name
+            }
         } else {
             #item 21440004
-            error "Unexpected switch value: $etype"
-        }
-        #item 3918
-        if {$access == ""} {
-            #item 4132
-            if {$local} {
-                #item 4134
-                set access "local"
+            if {$etype == "declaration"} {
+                
             } else {
-                #item 3921
-                set access "visible"
+                #item 21440005
+                error "Unexpected switch value: $etype"
             }
-        }
-        #item 2204
-        variable ada_types
-        #item 2205
-        if {[ lsearch -exact $ada_types $name ] == -1} {
-            #item 2209
-            lappend ada_types $name
         }
     }
     #item 2155
@@ -628,15 +632,19 @@ proc extract_signature { text name } {
             } else {
                 #item 31300004
                 if {$type == "subtype"} {
-                    
+                    #item 6498
+                    set type "type"
+                    #item 3139
+                    set props(subtype) "subtype"
                 } else {
                     #item 31300005
-                    error "Unexpected switch value: $type"
+                    if {$type == "declaration"} {
+                        
+                    } else {
+                        #item 31300006
+                        error "Unexpected switch value: $type"
+                    }
                 }
-                #item 6498
-                set type "type"
-                #item 3139
-                set props(subtype) "subtype"
             }
         }
     } else {
@@ -711,15 +719,19 @@ proc extract_signature { text name } {
                     } else {
                         #item 31300004
                         if {$type == "subtype"} {
-                            
+                            #item 6498
+                            set type "type"
+                            #item 3139
+                            set props(subtype) "subtype"
                         } else {
                             #item 31300005
-                            error "Unexpected switch value: $type"
+                            if {$type == "declaration"} {
+                                
+                            } else {
+                                #item 31300006
+                                error "Unexpected switch value: $type"
+                            }
                         }
-                        #item 6498
-                        set type "type"
-                        #item 3139
-                        set props(subtype) "subtype"
                     }
                 }
             } else {
@@ -792,15 +804,19 @@ proc extract_signature { text name } {
                             } else {
                                 #item 31300004
                                 if {$type == "subtype"} {
-                                    
+                                    #item 6498
+                                    set type "type"
+                                    #item 3139
+                                    set props(subtype) "subtype"
                                 } else {
                                     #item 31300005
-                                    error "Unexpected switch value: $type"
+                                    if {$type == "declaration"} {
+                                        
+                                    } else {
+                                        #item 31300006
+                                        error "Unexpected switch value: $type"
+                                    }
                                 }
-                                #item 6498
-                                set type "type"
-                                #item 3139
-                                set props(subtype) "subtype"
                             }
                         }
                     }
@@ -867,6 +883,12 @@ proc filter_components_core { components flt_type flt_subtype flt_access } {
     }
     #item 6397
     return $result
+}
+
+proc filter_declarations { components access } {
+    #item 6601
+    return [ filter_components_core \
+    	$components declaration "" $access ]
 }
 
 proc filter_subprograms { components access } {
@@ -1921,8 +1943,8 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
     #item 3696
     set kw_extra {
     	comment returns
-    	nested name order
-    	local visible }
+    	declaration nested name
+    	order local visible }
     #item 3616
     set consts { True False }
     #item 14810001
@@ -2981,6 +3003,9 @@ proc print_body { db filename fhandle components header footer } {
     #item 6543
     set filtered [ concat $filtered \
     	[ filter_types $components subtype local ] ]
+    #item 6605
+    set filtered [ concat $filtered \
+    	[ filter_declarations $components local ] ]
     #item 6544
     set filtered [ concat $filtered \
     	[ filter_subprograms $components local ] ]
@@ -3050,34 +3075,40 @@ proc print_component { db fhandle component part } {
     } else {
         #item 64990002
         if {$type == "type"} {
-            
+            #item 6514
+            set print_body [ expr { $props(access) != "private" \
+            	|| $part == "private" } ]
+            #item 6516
+            if {$props(local) && ! $print_body} {
+                #item 6518
+                return
+            } else {
+                #item 6515
+                set result [ gen_type_kernel \
+                	$depth \
+                	$props(subtype) \
+                	$props(access) \
+                	$props(abstract) \
+                	$props(limited) \
+                	$props(tagged) \
+                	$props(name) \
+                	$body \
+                	$print_body \
+                	$spec_header \
+                	$spec_footer \
+                	$body_header \
+                	$body_footer ]
+            }
         } else {
             #item 64990003
-            error "Unexpected switch value: $type"
-        }
-        #item 6514
-        set print_body [ expr { $props(access) != "private" \
-        	|| $part == "private" } ]
-        #item 6516
-        if {$props(local) && ! $print_body} {
-            #item 6518
-            return
-        } else {
-            #item 6515
-            set result [ gen_type_kernel \
-            	$depth \
-            	$props(subtype) \
-            	$props(access) \
-            	$props(abstract) \
-            	$props(limited) \
-            	$props(tagged) \
-            	$props(name) \
-            	$body \
-            	$print_body \
-            	$spec_header \
-            	$spec_footer \
-            	$body_header \
-            	$body_footer ]
+            if {$type == "declaration"} {
+                
+            } else {
+                #item 64990004
+                error "Unexpected switch value: $type"
+            }
+            #item 6608
+            set result $body
         }
     }
     #item 6507
@@ -3561,6 +3592,9 @@ proc print_spec { db filename fhandle components header footer } {
     #item 6549
     set filtered [ concat $filtered \
     	[ filter_types $components type visible ] ]
+    #item 6595
+    set filtered [ concat $filtered \
+    	[ filter_declarations $components visible ] ]
     #item 6550
     set filtered [ concat $filtered \
     	[ filter_types $components subtype visible ] ]
@@ -3591,6 +3625,9 @@ proc print_spec { db filename fhandle components header footer } {
         #item 6569
         set filtered [ concat $filtered \
         	[ filter_types $components subtype private ] ]
+        #item 6603
+        set filtered [ concat $filtered \
+        	[ filter_declarations $components private ] ]
         #item 6573
         set filtered [ concat $filtered \
         	[ filter_subprograms $components private ] ]
