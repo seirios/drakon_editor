@@ -16,7 +16,6 @@ variable drn_sections {
 }
 
 variable drn_kw_bool {
-	abstract
 	local
 	protected
 	separate
@@ -37,6 +36,10 @@ variable drn_kw_access {
 
 variable drn_kw_etype {
 	type subtype subprogram declaration
+}
+
+variable drn_kw_ontology {
+	abstract interface
 }
 
 variable ada_keywords {
@@ -300,6 +303,7 @@ proc classify_keywords { keywords dia_name } {
     #item 4501
     variable drn_kw_access
     variable drn_kw_etype
+    variable drn_kw_ontology
     #item 4422
     set access [ find_keywords \
     	$keywords $drn_kw_access ]
@@ -338,11 +342,30 @@ proc classify_keywords { keywords dia_name } {
              "$name: inconsistent type: $etype"
         }
     }
+    #item 6671
+    set ontology [ find_keywords \
+    	$keywords $drn_kw_ontology ]
+    #item 66720000
+    set _sw66720000_ [ llength $ontology ]
+    #item 66720001
+    if {$_sw66720000_ == 0} {
+        #item 6670
+        set ontology "concrete"
+    } else {
+        #item 66720002
+        if {$_sw66720000_ == 1} {
+            
+        } else {
+            #item 6663
+            lappend errors \
+             "$name: inconsistent ontology: $ontology"
+        }
+    }
     #item 4128
     if {$access == "visible" && $local} {
         #item 4131
         lappend errors \
-         "$name: cannot be visible and local"
+         "$name: cannot be both visible and local"
     }
     #item 21440001
     if {$etype == "subprogram"} {
@@ -350,6 +373,12 @@ proc classify_keywords { keywords dia_name } {
         if {$access == ""} {
             #item 4109
             set access "local"
+        }
+        #item 6684
+        if {$ontology == "interface"} {
+            #item 6687
+            lappend errors \
+             "$name: subprogram cannot be interface"
         }
     } else {
         #item 21440002
@@ -398,6 +427,7 @@ proc classify_keywords { keywords dia_name } {
     #item 2156
     set props(access) $access
     set props(subtype) $etype
+    set props(ontology) $ontology
     foreach kw $drn_kw_bool {
         #item 4546
         set props($kw) [set $kw]
@@ -605,6 +635,7 @@ proc extract_signature { text name } {
     variable drn_kw_keyval
     variable drn_kw_access
     variable drn_kw_etype
+    variable drn_kw_ontology
     #item 4485
     array set kw_keyval $drn_kw_keyval
     set kw_keys [ array names kw_keyval ]
@@ -619,8 +650,10 @@ proc extract_signature { text name } {
         set props($kw) ""
     }
     #item 4503
-    set props(order) 0
     set props(access) local
+    set props(ontology) concrete
+    
+    set props(order) 0
     set props(name) $name
     #item 4502
     set error_message ""
@@ -677,7 +710,8 @@ proc extract_signature { text name } {
             #item 2093
             set keywords [ concat \
             	$drn_kw_bool $drn_kw_access \
-            	$drn_kw_etype $kw_keys ]
+            	$drn_kw_etype $drn_kw_ontology \
+            	$kw_keys ]
             #item 2094
             set found_keywords \
              [ find_keywords $first $keywords ]
@@ -1169,24 +1203,32 @@ proc gen_insertion { db item_id } {
         type prop_list parameters returns
         #item 5228
         array set props $prop_list
-        #item 5231
-        set ins_body [ gen_subprogram_kernel \
-        	1 \
-        	$props(subtype) \
-        	$props(abstract) \
-        	$props(overriding) \
-        	$props(separate) \
-        	$props(name) \
-        	$returns \
-        	$parameters \
-        	$body $is_part $with_part \
-        	1 "" "" "" "" ]
-        #item 5236
-        set text [ join $ins_body "\n" ]
-        #item 5232
-        set_node_text $db $item_id $text
-        #item 5233
-        set result [ list "insertion" $item_id ]
+        #item 6683
+        if {$props(ontology) == "abstract"} {
+            #item 4796
+            set g_errmsg [ mc2 "Some errors found." ]
+            #item 4795
+            set result {}
+        } else {
+            #item 5231
+            set ins_body [ gen_subprogram_kernel \
+            	1 \
+            	$props(subtype) \
+            	0 \
+            	$props(overriding) \
+            	$props(separate) \
+            	$props(name) \
+            	$returns \
+            	$parameters \
+            	$body $is_part $with_part \
+            	1 "" "" "" "" ]
+            #item 5236
+            set text [ join $ins_body "\n" ]
+            #item 5232
+            set_node_text $db $item_id $text
+            #item 5233
+            set result [ list "insertion" $item_id ]
+        }
     }
     #item 4784
     return [ list $result $next ]
@@ -1355,7 +1397,7 @@ proc gen_subprogram_kernel { depth type abstract overriding separate name return
     return $result
 }
 
-proc gen_type_kernel { depth type access abstract limited tagged name body print_body spec_header spec_footer body_header body_footer } {
+proc gen_type_kernel { depth type access ontology limited tagged name body print_body spec_header spec_footer body_header body_footer } {
     #item 5554
     set result {}
     set line ""
@@ -1374,10 +1416,16 @@ proc gen_type_kernel { depth type access abstract limited tagged name body print
     append line " $name"
     #item 5581
     append line " is"
-    #item 5566
-    if {$abstract} {
+    #item 66740001
+    if {$ontology == "abstract"} {
         #item 5567
         append line " abstract"
+    } else {
+        #item 66740002
+        if {$ontology == "interface"} {
+            #item 6681
+            append line " interface"
+        }
     }
     #item 5583
     if {$tagged} {
@@ -3075,9 +3123,10 @@ proc print_component { db fhandle component part depth } {
     #item 64990001
     if {$type == "subprogram"} {
         #item 6512
+        set abstract [ expr { $props(ontology) == "abstract" } ]
         set print_body [ expr { $part == "body" } ]
         #item 6509
-        if {$props(abstract) && $print_body} {
+        if {$abstract && $print_body} {
             #item 6511
             return
         } else {
@@ -3085,7 +3134,7 @@ proc print_component { db fhandle component part depth } {
             set result [ gen_subprogram_kernel \
             	1 \
             	$props(subtype) \
-            	$props(abstract) \
+            	$abstract \
             	$props(overriding) \
             	$props(separate) \
             	$props(name) \
@@ -3114,7 +3163,7 @@ proc print_component { db fhandle component part depth } {
                 	1 \
                 	$props(subtype) \
                 	$props(access) \
-                	$props(abstract) \
+                	$props(ontology) \
                 	$props(limited) \
                 	$props(tagged) \
                 	$props(name) \
