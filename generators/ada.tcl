@@ -8,6 +8,13 @@ variable g_no_ins {}
 
 variable g_errmsg ""
 
+variable drn_sections {
+	spec_header
+	spec_footer
+	body_header
+	body_footer
+}
+
 variable drn_kw_bool {
 	abstract
 	local
@@ -1416,6 +1423,8 @@ proc gen_type_kernel { depth type access abstract limited tagged name body print
 proc generate { db gdb filename } {
     #item 5934
     variable tdb
+    #item 6659
+    variable drn_sections
     #item 5911
     do_monkey_patch
     #item 5909
@@ -1451,16 +1460,13 @@ proc generate { db gdb filename } {
     if {[ graph::errors_occured ]} {
         
     } else {
-        #item 5908
-        set sections { unit spec_header spec_footer
-        	body_header body_footer }
         #item 5910
         lassign \
-        [ gen::scan_file_description $db $sections ] \
-        unit spec_header spec_footer body_header body_footer
+        [ gen::scan_file_description $db $drn_sections ] \
+        spec_header spec_footer body_header body_footer
         #item 5944
         set tab_convert [ gen::get_callback $callbacks tab_convert ]
-        foreach section $sections {
+        foreach section $drn_sections {
             #item 5943
             set $section [ gen::tab_convert $tab_convert \
             	[ set $section ] ]
@@ -1478,7 +1484,7 @@ proc generate { db gdb filename } {
             #item 5923
             catch {
                 print_spec $db $spec_filename $sfile $components \
-            	$unit $spec_header $spec_footer
+            	$spec_header $spec_footer
             } error_message
             #item 5924
             close_files [ list $sfile ]
@@ -1494,7 +1500,7 @@ proc generate { db gdb filename } {
             #item 5889
             catch {
                 print_body $db $body_filename $bfile $components \
-            	$unit $body_header $body_footer
+            	$body_header $body_footer
             } error_message
             #item 5890
             close_files [ list $bfile ]
@@ -1671,30 +1677,26 @@ proc get_node_text { db item_id } {
 }
 
 proc get_preset_desc { preset } {
-    #item 3864
+    #item 6653
     global g_filename
-    #item 38350001
+    #item 66420001
     if {$preset == "blank"} {
-        #item 6613
-        set unit ""
-        #item 3849
-        return [ init_description $unit ]
+        #item 6651
+        return [ init_description ]
     } else {
-        #item 38350002
+        #item 66420002
         if {$preset == "package"} {
-            #item 3862
-            set unit $preset
-            #item 3849
-            return [ init_description $unit ]
+            #item 6652
+            return [ init_unit \
+            	$preset $g_filename ]
         } else {
-            #item 38350003
+            #item 66420003
             if {$preset == "task"} {
-                #item 6617
-                set unit $preset
-                #item 3849
-                return [ init_description $unit ]
+                #item 6656
+                return [ init_unit \
+                	$preset $g_filename ]
             } else {
-                #item 3843
+                #item 6650
                 return ""
             }
         }
@@ -2121,22 +2123,37 @@ proc indent_group { lines prefix depth endchar } {
     return $result
 }
 
-proc init_description { unit } {
+proc init_description { } {
+    #item 6658
+    variable drn_sections
     #item 1907
     set result {}
-    #item 3844
-    set sections { unit spec_header spec_footer
-    	body_header body_footer }
-    foreach section $sections {
+    foreach section $drn_sections {
         #item 3848
         lappend result "=== $section ==="
-        #item 6609
-        if {$section == "unit" && $unit != ""} {
-            #item 6612
-            lappend result $unit
-        }
     }
     #item 1908
+    return [ join $result "\n" ]
+}
+
+proc init_unit { unit filename } {
+    #item 6630
+    set result {}
+    #item 6636
+    set name [ package_name $filename ]
+    #item 6632
+    lappend result "=== spec_header ==="
+    lappend result "$unit $name is"
+    #item 6633
+    lappend result "=== spec_footer ==="
+    lappend result "end $name;"
+    #item 6634
+    lappend result "=== body_header ==="
+    lappend result "$unit body $name is"
+    #item 6635
+    lappend result "=== body_footer ==="
+    lappend result "end $name;"
+    #item 6631
     return [ join $result "\n" ]
 }
 
@@ -2994,7 +3011,7 @@ proc presets_desc { } {
     return { blank package task }
 }
 
-proc print_body { db filename fhandle components unit header footer } {
+proc print_body { db filename fhandle components header footer } {
     #item 5403
     put_credits $fhandle
     #item 5404
@@ -3034,6 +3051,8 @@ proc print_body { db filename fhandle components unit header footer } {
 }
 
 proc print_component { db fhandle component part } {
+    #item 6657
+    variable drn_sections
     #item 6488
     lassign \
     $component \
@@ -3044,12 +3063,10 @@ proc print_component { db fhandle component part } {
     type prop_list parameters returns
     #item 6480
     array set props $prop_list
-    #item 6487
-    set sections {
-    	spec_header spec_footer body_header body_footer }
     #item 6490
     lassign \
-    [ gen::scan_diagram_description $db $diagram_id $sections ] \
+    [ gen::scan_diagram_description \
+    	$db $diagram_id $drn_sections ] \
     spec_header spec_footer body_header body_footer
     #item 6508
     set depth 1
@@ -3583,7 +3600,7 @@ $tnext == "insertion"} {
     return $result
 }
 
-proc print_spec { db filename fhandle components unit header footer } {
+proc print_spec { db filename fhandle components header footer } {
     #item 5332
     put_credits $fhandle
     #item 5333

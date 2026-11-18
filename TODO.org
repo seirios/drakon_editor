@@ -1,12 +1,12 @@
 * Ada generator
-** TODO Allow other description sections
+** TODO Add support for 'pragma'
+** TODO Add support for 'incomplete' types (?)
+** INPR Add test cases
+** TODO Allow other description sections (?)
 + === unit === with value: subprogram, package or task.
 + === context === containing toplevel with and use clauses.
 + === generic === containing generic section.
 + === body_context === for body-only context.
-** TODO Add support for 'pragma'
-** TODO Add support for 'incomplete' types (?)
-** INPR Add test cases
 ** TODO Investigate support for nested loop breaking with nogoto
 ** TODO Bug hunt: why empty case ends selection printing early
 ** TODO Bug hunt: why empty loop triggers error
