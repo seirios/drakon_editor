@@ -1447,12 +1447,17 @@ proc gen_type_kernel { depth type access ontology limited tagged name body print
         	$body $indent
     } else {
         #item 6450
-        if {$limited != ""} {
+        if {$limited == ""} {
+            
+        } else {
             #item 5600
             append line " limited"
         }
-        #item 6442
-        append line " private"
+        #item 6688
+        if {$access == "private"} {
+            #item 6442
+            append line " private"
+        }
         #item 6443
         lappend result $line
     }
@@ -3151,8 +3156,9 @@ proc print_component { db fhandle component part depth } {
         #item 64990002
         if {$type == "type"} {
             #item 6514
-            set print_body [ expr { $props(access) != "private" \
-            	|| $part == "private" } ]
+            set print_body [ expr {
+            	( $props(access) != "private" || $part == "private" )
+            	&& $props(ontology) != "interface" } ]
             #item 6516
             if {$props(local) && ! $print_body} {
                 #item 6518
