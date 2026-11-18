@@ -373,6 +373,17 @@ proc classify_keywords { keywords dia_name } {
                 #item 21440005
                 error "Unexpected switch value: $etype"
             }
+            #item 6618
+            if {$access == ""} {
+                #item 6622
+                if {$local} {
+                    #item 6624
+                    set access "local"
+                } else {
+                    #item 6621
+                    set access "visible"
+                }
+            }
         }
     }
     #item 2155
@@ -1441,18 +1452,18 @@ proc generate { db gdb filename } {
         
     } else {
         #item 5908
-        set sections \
-        	{ spec_header spec_footer body_header body_footer }
+        set sections { unit spec_header spec_footer
+        	body_header body_footer }
         #item 5910
         lassign \
         [ gen::scan_file_description $db $sections ] \
-        spec_header spec_footer body_header body_footer
+        unit spec_header spec_footer body_header body_footer
         #item 5944
         set tab_convert [ gen::get_callback $callbacks tab_convert ]
         foreach section $sections {
             #item 5943
-            set $section [ gen::tab_convert \
-            	$tab_convert [ set $section ] ]
+            set $section [ gen::tab_convert $tab_convert \
+            	[ set $section ] ]
         }
         #item 5930
         if {[ is_empty_spec \
@@ -1467,7 +1478,7 @@ proc generate { db gdb filename } {
             #item 5923
             catch {
                 print_spec $db $spec_filename $sfile $components \
-            	$spec_header $spec_footer
+            	$unit $spec_header $spec_footer
             } error_message
             #item 5924
             close_files [ list $sfile ]
@@ -1483,7 +1494,7 @@ proc generate { db gdb filename } {
             #item 5889
             catch {
                 print_body $db $body_filename $bfile $components \
-            	$body_header $body_footer
+            	$unit $body_header $body_footer
             } error_message
             #item 5890
             close_files [ list $bfile ]
@@ -1664,16 +1675,28 @@ proc get_preset_desc { preset } {
     global g_filename
     #item 38350001
     if {$preset == "blank"} {
+        #item 6613
+        set unit ""
         #item 3849
-        return [ init_description ]
+        return [ init_description $unit ]
     } else {
         #item 38350002
         if {$preset == "package"} {
             #item 3862
-            return [ init_package $g_filename ]
+            set unit $preset
+            #item 3849
+            return [ init_description $unit ]
         } else {
-            #item 3843
-            return ""
+            #item 38350003
+            if {$preset == "task"} {
+                #item 6617
+                set unit $preset
+                #item 3849
+                return [ init_description $unit ]
+            } else {
+                #item 3843
+                return ""
+            }
         }
     }
 }
@@ -2098,38 +2121,22 @@ proc indent_group { lines prefix depth endchar } {
     return $result
 }
 
-proc init_description { } {
+proc init_description { unit } {
     #item 1907
     set result {}
     #item 3844
-    set sections \
-    	{ spec_header spec_footer body_header body_footer }
+    set sections { unit spec_header spec_footer
+    	body_header body_footer }
     foreach section $sections {
         #item 3848
         lappend result "=== $section ==="
+        #item 6609
+        if {$section == "unit" && $unit != ""} {
+            #item 6612
+            lappend result $unit
+        }
     }
     #item 1908
-    return [ join $result "\n" ]
-}
-
-proc init_package { filename } {
-    #item 3855
-    set result {}
-    #item 3861
-    set pkgname [ package_name $filename ]
-    #item 3857
-    lappend result "=== spec_header ==="
-    lappend result "package $pkgname is"
-    #item 3858
-    lappend result "=== spec_footer ==="
-    lappend result "end $pkgname;"
-    #item 3859
-    lappend result "=== body_header ==="
-    lappend result "package body $pkgname is"
-    #item 3860
-    lappend result "=== body_footer ==="
-    lappend result "end $pkgname;"
-    #item 3856
     return [ join $result "\n" ]
 }
 
@@ -2984,10 +2991,10 @@ proc preprocess_tokens { tokens } {
 
 proc presets_desc { } {
     #item 3829
-    return { blank package }
+    return { blank package task }
 }
 
-proc print_body { db filename fhandle components header footer } {
+proc print_body { db filename fhandle components unit header footer } {
     #item 5403
     put_credits $fhandle
     #item 5404
@@ -3576,7 +3583,7 @@ $tnext == "insertion"} {
     return $result
 }
 
-proc print_spec { db filename fhandle components header footer } {
+proc print_spec { db filename fhandle components unit header footer } {
     #item 5332
     put_credits $fhandle
     #item 5333
