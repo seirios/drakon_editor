@@ -1474,8 +1474,11 @@ proc generate { db gdb filename } {
         #item 5930
         if {[ is_empty_spec \
 	$components $spec_header $spec_footer ]} {
-            
+            #item 6661
+            set depth 0
         } else {
+            #item 6660
+            set depth 1
             #item 5922
             set spec_filename [ replace_extension $filename "ads" ]
             #item 5928
@@ -1484,7 +1487,7 @@ proc generate { db gdb filename } {
             #item 5923
             catch {
                 print_spec $db $spec_filename $sfile $components \
-            	$spec_header $spec_footer
+            	$spec_header $spec_footer $depth
             } error_message
             #item 5924
             close_files [ list $sfile ]
@@ -1500,7 +1503,7 @@ proc generate { db gdb filename } {
             #item 5889
             catch {
                 print_body $db $body_filename $bfile $components \
-            	$body_header $body_footer
+            	$body_header $body_footer $depth
             } error_message
             #item 5890
             close_files [ list $bfile ]
@@ -3011,7 +3014,7 @@ proc presets_desc { } {
     return { blank package task }
 }
 
-proc print_body { db filename fhandle components header footer } {
+proc print_body { db filename fhandle components header footer depth } {
     #item 5403
     put_credits $fhandle
     #item 5404
@@ -3043,14 +3046,15 @@ proc print_body { db filename fhandle components header footer } {
     set sorted [ sort_components $filtered ]
     foreach component $sorted {
         #item 6540
-        print_component $db $fhandle $component $part
+        print_component \
+        	$db $fhandle $component $part $depth
     }
     #item 5405
     puts_notempty \
     	$fhandle $footer
 }
 
-proc print_component { db fhandle component part } {
+proc print_component { db fhandle component part depth } {
     #item 6657
     variable drn_sections
     #item 6488
@@ -3068,8 +3072,6 @@ proc print_component { db fhandle component part } {
     [ gen::scan_diagram_description \
     	$db $diagram_id $drn_sections ] \
     spec_header spec_footer body_header body_footer
-    #item 6508
-    set depth 1
     #item 64990001
     if {$type == "subprogram"} {
         #item 6512
@@ -3081,7 +3083,7 @@ proc print_component { db fhandle component part } {
         } else {
             #item 6513
             set result [ gen_subprogram_kernel \
-            	$depth \
+            	1 \
             	$props(subtype) \
             	$props(abstract) \
             	$props(overriding) \
@@ -3109,7 +3111,7 @@ proc print_component { db fhandle component part } {
             } else {
                 #item 6515
                 set result [ gen_type_kernel \
-                	$depth \
+                	1 \
                 	$props(subtype) \
                 	$props(access) \
                 	$props(abstract) \
@@ -3600,7 +3602,7 @@ $tnext == "insertion"} {
     return $result
 }
 
-proc print_spec { db filename fhandle components header footer } {
+proc print_spec { db filename fhandle components header footer depth } {
     #item 5332
     put_credits $fhandle
     #item 5333
@@ -3629,7 +3631,8 @@ proc print_spec { db filename fhandle components header footer } {
     set sorted [ sort_components $filtered ]
     foreach component $sorted {
         #item 6555
-        print_component $db $fhandle $component $part
+        print_component \
+        	$db $fhandle $component $part $depth
     }
     #item 5358
     if {[ llength [ filter_components \
@@ -3659,7 +3662,8 @@ proc print_spec { db filename fhandle components header footer } {
         set sorted [ sort_components $filtered ]
         foreach component $sorted {
             #item 6571
-            print_component $db $fhandle $component $part
+            print_component \
+            	$db $fhandle $component $part $depth
         }
     }
     #item 5337
