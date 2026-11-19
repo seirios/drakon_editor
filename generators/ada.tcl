@@ -17,14 +17,13 @@ variable drn_sections {
 
 variable drn_kw_bool {
 	local
-	protected
 	separate
 	tagged
 }
 
 # keyword set_default_value
 variable drn_kw_keyval {
-	limited		implicit
+	limited		limited
 	name		""
 	order		0
 	overriding		yes
@@ -40,6 +39,11 @@ variable drn_kw_etype {
 
 variable drn_kw_ontology {
 	abstract interface
+}
+
+# 'limited' is handled as key-value keyword
+variable drn_kw_limit {
+	synchronized task protected
 }
 
 variable ada_keywords {
@@ -304,6 +308,7 @@ proc classify_keywords { keywords dia_name } {
     variable drn_kw_access
     variable drn_kw_etype
     variable drn_kw_ontology
+    variable drn_kw_limit
     #item 4422
     set access [ find_keywords \
     	$keywords $drn_kw_access ]
@@ -361,11 +366,44 @@ proc classify_keywords { keywords dia_name } {
              "$name: inconsistent ontology: $ontology"
         }
     }
+    #item 6700
+    set limit [ find_keywords \
+    	$keywords $drn_kw_limit ]
+    #item 67010000
+    set _sw67010000_ [ llength $limit ]
+    #item 67010001
+    if {$_sw67010000_ == 0} {
+        #item 6699
+        set limit ""
+    } else {
+        #item 67010002
+        if {$_sw67010000_ == 1} {
+            
+        } else {
+            #item 6692
+            lappend errors \
+             "$name: inconsistent limit: $limit"
+        }
+    }
     #item 4128
     if {$access == "visible" && $local} {
         #item 4131
         lappend errors \
          "$name: cannot be both visible and local"
+    }
+    #item 67090001
+    if {$limited == ""} {
+        
+    } else {
+        #item 67090002
+        if {(($limited == "limited") || ($limited == "explicit")) && (!($limit != ""))} {
+            #item 6708
+            set limit $limited
+        } else {
+            #item 6705
+            lappend errors \
+             "$name: inconsistent limit: $limit $limited"
+        }
     }
     #item 21440001
     if {$etype == "subprogram"} {
@@ -428,6 +466,7 @@ proc classify_keywords { keywords dia_name } {
     set props(access) $access
     set props(subtype) $etype
     set props(ontology) $ontology
+    set props(limit) $limit
     foreach kw $drn_kw_bool {
         #item 4546
         set props($kw) [set $kw]
@@ -636,6 +675,7 @@ proc extract_signature { text name } {
     variable drn_kw_access
     variable drn_kw_etype
     variable drn_kw_ontology
+    variable drn_kw_limit
     #item 4485
     array set kw_keyval $drn_kw_keyval
     set kw_keys [ array names kw_keyval ]
@@ -652,6 +692,7 @@ proc extract_signature { text name } {
     #item 4503
     set props(access) local
     set props(ontology) concrete
+    set props(limit) ""
     
     set props(order) 0
     set props(name) $name
@@ -1397,7 +1438,7 @@ proc gen_subprogram_kernel { depth type abstract overriding separate name return
     return $result
 }
 
-proc gen_type_kernel { depth type access ontology limited tagged name body print_body spec_header spec_footer body_header body_footer } {
+proc gen_type_kernel { depth type access ontology limit tagged name body print_body spec_header spec_footer body_header body_footer } {
     #item 5554
     set result {}
     set line ""
@@ -1434,11 +1475,18 @@ proc gen_type_kernel { depth type access ontology limited tagged name body print
     }
     #item 6436
     if {$print_body} {
-        #item 6455
-        if {($access != "private" && $limited != "")
-	|| $limited == "explicit"} {
-            #item 6451
-            append line " limited"
+        #item 6726
+        if {$access == "private"} {
+            #item 6737
+            if {$limit == "limited"} {
+                
+            } else {
+                #item 6756
+                append line [ get_limited $limit ]
+            }
+        } else {
+            #item 6754
+            append line [ get_limited $limit ]
         }
         #item 5569
         lappend result $line
@@ -1446,13 +1494,8 @@ proc gen_type_kernel { depth type access ontology limited tagged name body print
         lappend_indent result \
         	$body $indent
     } else {
-        #item 6450
-        if {$limited == ""} {
-            
-        } else {
-            #item 5600
-            append line " limited"
-        }
+        #item 6753
+        append line [ get_limited $limit ]
         #item 6688
         if {$access == "private"} {
             #item 6442
@@ -1722,6 +1765,23 @@ proc get_indent { str } {
     set blank [ string range $str 0 $loc-1 ]
     #item 4602
     return [ list $symbol $blank ]
+}
+
+proc get_limited { limit } {
+    #item 6748
+    if {$limit != ""} {
+        #item 6749
+        if {$limit == "explicit"} {
+            #item 6750
+            return " limited"
+        } else {
+            #item 6745
+            return " $limit"
+        }
+    } else {
+        #item 6752
+        return ""
+    }
 }
 
 proc get_node_text { db item_id } {
@@ -3170,7 +3230,7 @@ proc print_component { db fhandle component part depth } {
                 	$props(subtype) \
                 	$props(access) \
                 	$props(ontology) \
-                	$props(limited) \
+                	$props(limit) \
                 	$props(tagged) \
                 	$props(name) \
                 	$body \
