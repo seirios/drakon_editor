@@ -997,9 +997,11 @@ proc filter_types { components subtype access } {
 }
 
 proc find_if_end_impl { db parent_id ordinal path loops } {
-    #item 4677
-    set item_id [ nogoto::get_next_node \
-     $db $parent_id $ordinal ]
+    #item 6757
+    lassign \
+    [ nogoto::get_all_node_info \
+    	$db $parent_id $ordinal ] \
+    item_id is_link_up type
     #item 4702
     if {$item_id == ""} {
         #item 4716
@@ -1008,7 +1010,7 @@ proc find_if_end_impl { db parent_id ordinal path loops } {
         #item 4686
         lappend path $item_id
         #item 4675
-        if {[ nogoto::is_link_up $db $parent_id $ordinal ]} {
+        if {$is_link_up} {
             #item 4710
             if {[ contains $loops $item_id ]} {
                 #item 4712
@@ -1018,8 +1020,6 @@ proc find_if_end_impl { db parent_id ordinal path loops } {
                 set result [ list $path ]
             }
         } else {
-            #item 4678
-            set type [ nogoto::get_node_type $db $item_id ]
             #item 46790001
             if {$type == "loop"} {
                 #item 4687
