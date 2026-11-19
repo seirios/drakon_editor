@@ -788,181 +788,175 @@ proc extract_signature { text name } {
         #item 2068
         set first_line [ lindex $lines 0 ]
         set first [ lindex $first_line 0 ]
-        #item 3597
-        if {$first == "#comment"} {
-            #item 3600
-            set type "comment"
-        } else {
-            #item 2093
-            set keywords [ concat \
-            	$drn_kw_bool $drn_kw_access \
-            	$drn_kw_etype $drn_kw_ontology \
-            	$drn_kw_limit $kw_keys ]
-            #item 2094
-            set found_keywords \
-             [ find_keywords $first $keywords ]
-            #item 2092
-            if {[ llength $found_keywords ] == 0} {
-                #item 2096
-                set start_index 0
-                #item 2075
-                set count [ llength $lines ]
-                set last [ expr { $count - 1 } ]
-                #item 20780001
-                set i $start_index
-                while { 1 } {
-                    #item 20780002
-                    if {$i < $count} {
-                        
-                    } else {
-                        break
-                    }
-                    #item 2077
-                    set current [ lindex $lines $i ]
-                    set stripped [ lindex $current 0 ]
-                    #item 2082
-                    if {[ string match "returns *" $stripped ]} {
-                        #item 2083
-                        if {$i == $last} {
-                            #item 2085
-                            set returns [ \
-                            	gen::extract_return_type $stripped ]
-                        } else {
-                            #item 2087
-                            set error_message \
-                            "$name: 'returns' can only be the last line."
-                        }
-                        break
-                    }
-                    #item 2081
-                    lappend parameters $current
-                    #item 20780003
-                    incr i
-                }
-                #item 31300001
-                if {($type == "subprogram") || ($type == "nested")} {
-                    #item 2109
-                    if {$returns == ""} {
-                        #item 2111
-                        set props(subtype) "procedure"
-                    } else {
-                        #item 2112
-                        set props(subtype) "function"
-                    }
+        #item 2093
+        set keywords [ concat \
+        	$drn_kw_bool $drn_kw_access \
+        	$drn_kw_etype $drn_kw_ontology \
+        	$drn_kw_limit $kw_keys ]
+        #item 2094
+        set found_keywords \
+         [ find_keywords $first $keywords ]
+        #item 2092
+        if {[ llength $found_keywords ] == 0} {
+            #item 2096
+            set start_index 0
+            #item 2075
+            set count [ llength $lines ]
+            set last [ expr { $count - 1 } ]
+            #item 20780001
+            set i $start_index
+            while { 1 } {
+                #item 20780002
+                if {$i < $count} {
+                    
                 } else {
-                    #item 31300003
-                    if {$type == "type"} {
-                        #item 3141
-                        set props(subtype) "type"
+                    break
+                }
+                #item 2077
+                set current [ lindex $lines $i ]
+                set stripped [ lindex $current 0 ]
+                #item 2082
+                if {[ string match "returns *" $stripped ]} {
+                    #item 2083
+                    if {$i == $last} {
+                        #item 2085
+                        set returns [ \
+                        	gen::extract_return_type $stripped ]
                     } else {
-                        #item 31300004
-                        if {$type == "subtype"} {
-                            #item 6498
-                            set type "type"
-                            #item 3139
-                            set props(subtype) "subtype"
+                        #item 2087
+                        set error_message \
+                        "$name: 'returns' can only be the last line."
+                    }
+                    break
+                }
+                #item 2081
+                lappend parameters $current
+                #item 20780003
+                incr i
+            }
+            #item 31300001
+            if {($type == "subprogram") || ($type == "nested")} {
+                #item 2109
+                if {$returns == ""} {
+                    #item 2111
+                    set props(subtype) "procedure"
+                } else {
+                    #item 2112
+                    set props(subtype) "function"
+                }
+            } else {
+                #item 31300003
+                if {$type == "type"} {
+                    #item 3141
+                    set props(subtype) "type"
+                } else {
+                    #item 31300004
+                    if {$type == "subtype"} {
+                        #item 6498
+                        set type "type"
+                        #item 3139
+                        set props(subtype) "subtype"
+                    } else {
+                        #item 31300005
+                        if {$type == "declaration"} {
+                            
                         } else {
-                            #item 31300005
-                            if {$type == "declaration"} {
-                                
+                            #item 31300006
+                            error "Unexpected switch value: $type"
+                        }
+                    }
+                }
+            }
+        } else {
+            #item 2095
+            set start_index 1
+            #item 2098
+            set alien_keywords \
+             [ find_not_belonging $first $keywords ]
+            #item 2099
+            if {[ llength $alien_keywords ] == 0} {
+                #item 2121
+                lassign \
+                [ classify_keywords $found_keywords $name ] \
+                error_message prop_list
+                #item 2105
+                if {$error_message == ""} {
+                    #item 2106
+                    array unset props
+                    array set props $prop_list
+                    set type $props(subtype)
+                    #item 2075
+                    set count [ llength $lines ]
+                    set last [ expr { $count - 1 } ]
+                    #item 20780001
+                    set i $start_index
+                    while { 1 } {
+                        #item 20780002
+                        if {$i < $count} {
+                            
+                        } else {
+                            break
+                        }
+                        #item 2077
+                        set current [ lindex $lines $i ]
+                        set stripped [ lindex $current 0 ]
+                        #item 2082
+                        if {[ string match "returns *" $stripped ]} {
+                            #item 2083
+                            if {$i == $last} {
+                                #item 2085
+                                set returns [ \
+                                	gen::extract_return_type $stripped ]
                             } else {
-                                #item 31300006
-                                error "Unexpected switch value: $type"
+                                #item 2087
+                                set error_message \
+                                "$name: 'returns' can only be the last line."
+                            }
+                            break
+                        }
+                        #item 2081
+                        lappend parameters $current
+                        #item 20780003
+                        incr i
+                    }
+                    #item 31300001
+                    if {($type == "subprogram") || ($type == "nested")} {
+                        #item 2109
+                        if {$returns == ""} {
+                            #item 2111
+                            set props(subtype) "procedure"
+                        } else {
+                            #item 2112
+                            set props(subtype) "function"
+                        }
+                    } else {
+                        #item 31300003
+                        if {$type == "type"} {
+                            #item 3141
+                            set props(subtype) "type"
+                        } else {
+                            #item 31300004
+                            if {$type == "subtype"} {
+                                #item 6498
+                                set type "type"
+                                #item 3139
+                                set props(subtype) "subtype"
+                            } else {
+                                #item 31300005
+                                if {$type == "declaration"} {
+                                    
+                                } else {
+                                    #item 31300006
+                                    error "Unexpected switch value: $type"
+                                }
                             }
                         }
                     }
                 }
             } else {
-                #item 2095
-                set start_index 1
-                #item 2098
-                set alien_keywords \
-                 [ find_not_belonging $first $keywords ]
-                #item 2099
-                if {[ llength $alien_keywords ] == 0} {
-                    #item 2121
-                    lassign \
-                    [ classify_keywords $found_keywords $name ] \
-                    error_message prop_list
-                    #item 2105
-                    if {$error_message == ""} {
-                        #item 2106
-                        array unset props
-                        array set props $prop_list
-                        set type $props(subtype)
-                        #item 2075
-                        set count [ llength $lines ]
-                        set last [ expr { $count - 1 } ]
-                        #item 20780001
-                        set i $start_index
-                        while { 1 } {
-                            #item 20780002
-                            if {$i < $count} {
-                                
-                            } else {
-                                break
-                            }
-                            #item 2077
-                            set current [ lindex $lines $i ]
-                            set stripped [ lindex $current 0 ]
-                            #item 2082
-                            if {[ string match "returns *" $stripped ]} {
-                                #item 2083
-                                if {$i == $last} {
-                                    #item 2085
-                                    set returns [ \
-                                    	gen::extract_return_type $stripped ]
-                                } else {
-                                    #item 2087
-                                    set error_message \
-                                    "$name: 'returns' can only be the last line."
-                                }
-                                break
-                            }
-                            #item 2081
-                            lappend parameters $current
-                            #item 20780003
-                            incr i
-                        }
-                        #item 31300001
-                        if {($type == "subprogram") || ($type == "nested")} {
-                            #item 2109
-                            if {$returns == ""} {
-                                #item 2111
-                                set props(subtype) "procedure"
-                            } else {
-                                #item 2112
-                                set props(subtype) "function"
-                            }
-                        } else {
-                            #item 31300003
-                            if {$type == "type"} {
-                                #item 3141
-                                set props(subtype) "type"
-                            } else {
-                                #item 31300004
-                                if {$type == "subtype"} {
-                                    #item 6498
-                                    set type "type"
-                                    #item 3139
-                                    set props(subtype) "subtype"
-                                } else {
-                                    #item 31300005
-                                    if {$type == "declaration"} {
-                                        
-                                    } else {
-                                        #item 31300006
-                                        error "Unexpected switch value: $type"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    #item 2100
-                    set error_message \
-                        "$name: Unexpected keywords: $alien_keywords"
-                }
+                #item 2100
+                set error_message \
+                    "$name: Unexpected keywords: $alien_keywords"
             }
         }
     }
@@ -2192,7 +2186,7 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
     	"(" ")" "[" "]" ";" }
     #item 3696
     set kw_extra {
-    	comment returns enum
+    	returns enum
     	declaration nested name
     	order local visible }
     #item 3616
