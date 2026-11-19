@@ -16,21 +16,19 @@ variable drn_sections {
 }
 
 variable drn_kw_bool {
-	local
 	separate
 	tagged
 }
 
 # keyword set_default_value
 variable drn_kw_keyval {
-	limited		limited
 	name		""
 	order		0
 	overriding		yes
 }
 
 variable drn_kw_access {
-	private visible nested
+	private visible local nested
 }
 
 variable drn_kw_etype {
@@ -41,9 +39,8 @@ variable drn_kw_ontology {
 	abstract interface
 }
 
-# 'limited' is handled as key-value keyword
 variable drn_kw_limit {
-	synchronized task protected
+	limited synchronized task protected
 }
 
 variable ada_keywords {
@@ -385,26 +382,6 @@ proc classify_keywords { keywords dia_name } {
              "$name: inconsistent limit: $limit"
         }
     }
-    #item 4128
-    if {$access == "visible" && $local} {
-        #item 4131
-        lappend errors \
-         "$name: cannot be both visible and local"
-    }
-    #item 67090001
-    if {$limited == ""} {
-        
-    } else {
-        #item 67090002
-        if {(($limited == "limited") || ($limited == "explicit")) && (!($limit != ""))} {
-            #item 6708
-            set limit $limited
-        } else {
-            #item 6705
-            lappend errors \
-             "$name: inconsistent limit: $limit $limited"
-        }
-    }
     #item 21440001
     if {$etype == "subprogram"} {
         #item 4106
@@ -423,19 +400,15 @@ proc classify_keywords { keywords dia_name } {
         if {($etype == "type") || ($etype == "subtype")} {
             #item 3918
             if {$access == ""} {
-                #item 4132
-                if {$local} {
-                    #item 4134
-                    set access "local"
-                } else {
-                    #item 3921
-                    set access "visible"
-                }
+                #item 3921
+                set access "visible"
             }
             #item 2204
             variable ada_types
             #item 2205
-            if {[ lsearch -exact $ada_types $name ] == -1} {
+            if {[ contains $ada_types $name ]} {
+                
+            } else {
                 #item 2209
                 lappend ada_types $name
             }
@@ -449,14 +422,8 @@ proc classify_keywords { keywords dia_name } {
             }
             #item 6618
             if {$access == ""} {
-                #item 6622
-                if {$local} {
-                    #item 6624
-                    set access "local"
-                } else {
-                    #item 6621
-                    set access "visible"
-                }
+                #item 6621
+                set access "local"
             }
         }
     }
@@ -752,7 +719,7 @@ proc extract_signature { text name } {
             set keywords [ concat \
             	$drn_kw_bool $drn_kw_access \
             	$drn_kw_etype $drn_kw_ontology \
-            	$kw_keys ]
+            	$drn_kw_limit $kw_keys ]
             #item 2094
             set found_keywords \
              [ find_keywords $first $keywords ]
@@ -1216,6 +1183,85 @@ proc gen_case { db item_id } {
     }
 }
 
+proc gen_component { db component print_body } {
+    #item 6830
+    variable drn_sections
+    #item 6811
+    lassign \
+    $component \
+    diagram_id name signature body is_part with_part
+    #item 6812
+    lassign \
+    $signature \
+    type prop_list parameters returns
+    #item 6809
+    array set props $prop_list
+    #item 6813
+    lassign \
+    [ gen::scan_diagram_description \
+    	$db $diagram_id $drn_sections ] \
+    spec_header spec_footer body_header body_footer
+    #item 6831
+    set result {}
+    #item 68140001
+    if {$type == "subprogram"} {
+        #item 6823
+        set abstract [ expr { $props(ontology) == "abstract" } ]
+        #item 6821
+        if {$abstract && $print_body} {
+            
+        } else {
+            #item 6824
+            set result [ gen_subprogram_kernel \
+            	1 \
+            	$props(subtype) \
+            	$abstract \
+            	$props(overriding) \
+            	$props(separate) \
+            	$props(name) \
+            	$returns \
+            	$parameters \
+            	$body $is_part $with_part \
+            	$print_body \
+            	$spec_header \
+            	$spec_footer \
+            	$body_header \
+            	$body_footer ]
+        }
+    } else {
+        #item 68140002
+        if {$type == "type"} {
+            #item 6826
+            set result [ gen_type_kernel \
+            	1 \
+            	$props(subtype) \
+            	$props(access) \
+            	$props(ontology) \
+            	$props(limit) \
+            	$props(tagged) \
+            	$props(name) \
+            	$body $is_part $with_part \
+            	$print_body \
+            	$spec_header \
+            	$spec_footer \
+            	$body_header \
+            	$body_footer ]
+        } else {
+            #item 68140003
+            if {$type == "declaration"} {
+                
+            } else {
+                #item 68140004
+                error "Unexpected switch value: $type"
+            }
+            #item 6829
+            set result $body
+        }
+    }
+    #item 6820
+    return $result
+}
+
 proc gen_insertion { db item_id } {
     #item 4788
     variable g_errmsg
@@ -1438,7 +1484,7 @@ proc gen_subprogram_kernel { depth type abstract overriding separate name return
     return $result
 }
 
-proc gen_type_kernel { depth type access ontology limit tagged name body print_body spec_header spec_footer body_header body_footer } {
+proc gen_type_kernel { depth type access ontology limit tagged name body is_part with_part print_body spec_header spec_footer body_header body_footer } {
     #item 5554
     set result {}
     set line ""
@@ -1457,60 +1503,82 @@ proc gen_type_kernel { depth type access ontology limit tagged name body print_b
     append line " $name"
     #item 5581
     append line " is"
-    #item 66740001
-    if {$ontology == "abstract"} {
-        #item 5567
-        append line " abstract"
-    } else {
-        #item 66740002
-        if {$ontology == "interface"} {
-            #item 6681
-            append line " interface"
-        }
-    }
-    #item 5583
-    if {$tagged} {
-        #item 5584
-        append line " tagged"
-    }
     #item 6436
     if {$print_body} {
-        #item 6726
-        if {$access == "private"} {
-            #item 6737
-            if {$limit == "limited"} {
-                
-            } else {
-                #item 6756
-                append line [ get_limited $limit ]
+        #item 66740001
+        if {$ontology == "abstract"} {
+            #item 5567
+            append line " abstract"
+            #item 5583
+            if {$tagged} {
+                #item 5584
+                append line " tagged"
+            }
+            #item 6773
+            if {$limit != ""} {
+                #item 6772
+                append line " $limit"
             }
         } else {
-            #item 6754
-            append line [ get_limited $limit ]
-        }
-        #item 5569
-        lappend result $line
-        #item 6448
-        lappend_indent result \
-        	$body $indent
-    } else {
-        #item 6753
-        append line [ get_limited $limit ]
-        #item 6688
-        if {$access == "private"} {
-            #item 6442
-            append line " private"
+            #item 66740002
+            if {$ontology == "interface"} {
+                #item 6777
+                if {$limit != ""} {
+                    #item 6776
+                    append line " $limit"
+                }
+                #item 6681
+                append line " interface"
+            } else {
+                #item 6786
+                if {$tagged} {
+                    #item 6787
+                    append line " tagged"
+                }
+                #item 6781
+                if {$limit != ""} {
+                    #item 6780
+                    append line " $limit"
+                }
+            }
         }
         #item 6443
         lappend result $line
-    }
-    #item 5596
-    add_last_semicolon result
-    #item 6456
-    if {$print_body} {
-        #item 5595
-        lappend_notempty \
-        	result $spec_footer
+        #item 6789
+        if {[ is_null $body ]} {
+            
+        } else {
+            #item 6448
+            lappend_indent result \
+            	$body $indent
+        }
+        #item 5596
+        add_last_semicolon result
+        #item 6456
+        if {$print_body} {
+            #item 5595
+            lappend_notempty \
+            	result $spec_footer
+        }
+    } else {
+        #item 6792
+        if {[ llength $is_part ] == 0} {
+            
+        } else {
+            #item 5569
+            lappend result $line
+            #item 6771
+            lappend_indent result \
+            	$is_part $indent
+            #item 5596
+            add_last_semicolon result
+            #item 6456
+            if {$print_body} {
+                #item 5595
+                lappend_notempty \
+                	result $spec_footer
+            }
+        }
     }
     #item 5598
     return $result
@@ -1527,6 +1595,8 @@ proc generate { db gdb filename } {
     set error_message ""
     #item 5933
     set tdb $gdb
+    #item 6661
+    set depth 0
     #item 5894
     set prefix [ string cat [ \
     	file dirname $filename ] "/" ]
@@ -1570,8 +1640,7 @@ proc generate { db gdb filename } {
         #item 5930
         if {[ is_empty_spec \
 	$components $spec_header $spec_footer ]} {
-            #item 6661
-            set depth 0
+            
         } else {
             #item 6660
             set depth 1
@@ -1663,8 +1732,7 @@ proc generate_component { gdb diagram_id callbacks } {
         "Could not generate code for function '$name'. $errmsg"
     }
     #item 5611
-    return [ list $diagram_id $name $real_sign \
-    	$body $is_part $with_part ]
+    return [ list $diagram_id $name $real_sign $body $is_part $with_part ]
 }
 
 proc generate_components { db gdb callbacks } {
@@ -1765,23 +1833,6 @@ proc get_indent { str } {
     set blank [ string range $str 0 $loc-1 ]
     #item 4602
     return [ list $symbol $blank ]
-}
-
-proc get_limited { limit } {
-    #item 6748
-    if {$limit != ""} {
-        #item 6749
-        if {$limit == "explicit"} {
-            #item 6750
-            return " limited"
-        } else {
-            #item 6745
-            return " $limit"
-        }
-    } else {
-        #item 6752
-        return ""
-    }
 }
 
 proc get_node_text { db item_id } {
@@ -1909,7 +1960,7 @@ proc glue_special { gdb diagram_id } {
     }
 }
 
-proc handle_is { result_var body is_lines depth abstract separate print_body } {
+proc handle_is { result_var body is_part depth abstract separate print_body } {
     #item 4509
     upvar 1 $result_var result
     #item 4537
@@ -1932,7 +1983,7 @@ proc handle_is { result_var body is_lines depth abstract separate print_body } {
             #item 4515
             if {$print_body} {
                 #item 4521
-                if {[ llength $is_lines ] == 0} {
+                if {[ llength $is_part ] == 0} {
                     #item 6214
                     if {[ is_null $body ]} {
                         #item 4540
@@ -1948,7 +1999,7 @@ proc handle_is { result_var body is_lines depth abstract separate print_body } {
                 } else {
                     #item 4517
                     lappend result "is"
-                    foreach line $is_lines {
+                    foreach line $is_part {
                         #item 4518
                         lappend result "${indent}$line"
                     }
@@ -3185,61 +3236,19 @@ proc print_component { db fhandle component part depth } {
     [ gen::scan_diagram_description \
     	$db $diagram_id $drn_sections ] \
     spec_header spec_footer body_header body_footer
+    #item 6795
+    set result {}
     #item 64990001
     if {$type == "subprogram"} {
         #item 6512
-        set abstract [ expr { $props(ontology) == "abstract" } ]
         set print_body [ expr { $part == "body" } ]
-        #item 6509
-        if {$abstract && $print_body} {
-            #item 6511
-            return
-        } else {
-            #item 6513
-            set result [ gen_subprogram_kernel \
-            	1 \
-            	$props(subtype) \
-            	$abstract \
-            	$props(overriding) \
-            	$props(separate) \
-            	$props(name) \
-            	$returns \
-            	$parameters \
-            	$body $is_part $with_part \
-            	$print_body \
-            	$spec_header \
-            	$spec_footer \
-            	$body_header \
-            	$body_footer ]
-        }
     } else {
         #item 64990002
         if {$type == "type"} {
             #item 6514
-            set print_body [ expr {
-            	( $props(access) != "private" || $part == "private" )
-            	&& $props(ontology) != "interface" } ]
-            #item 6516
-            if {$props(local) && ! $print_body} {
-                #item 6518
-                return
-            } else {
-                #item 6515
-                set result [ gen_type_kernel \
-                	1 \
-                	$props(subtype) \
-                	$props(access) \
-                	$props(ontology) \
-                	$props(limit) \
-                	$props(tagged) \
-                	$props(name) \
-                	$body \
-                	$print_body \
-                	$spec_header \
-                	$spec_footer \
-                	$body_header \
-                	$body_footer ]
-            }
+            set print_body [ expr { \
+            	( $props(access) == "private" && $part == "private" )
+            	|| $props(access) != "private" } ]
         } else {
             #item 64990003
             if {$type == "declaration"} {
@@ -3248,43 +3257,50 @@ proc print_component { db fhandle component part depth } {
                 #item 64990004
                 error "Unexpected switch value: $type"
             }
-            #item 6608
-            set result $body
+            #item 6832
+            set print_body 1
         }
     }
+    #item 6833
+    set result [ gen_component $db $component $print_body ]
     #item 6507
     print_lines $fhandle $depth $result
 }
 
 proc print_lines { fhandle depth result } {
-    #item 6468
-    set indent \
-    	[ gen::make_indent $depth ]
-    #item 6474
-    puts $fhandle ""
-    #item 6466
-    set nline [ llength $result ]
-    #item 64650001
-    set i 0
-    while { 1 } {
-        #item 64650002
-        if {$i < $nline} {
-            
-        } else {
-            break
+    #item 6796
+    if {$result == ""} {
+        
+    } else {
+        #item 6468
+        set indent \
+        	[ gen::make_indent $depth ]
+        #item 6474
+        puts $fhandle ""
+        #item 6466
+        set nline [ llength $result ]
+        #item 64650001
+        set i 0
+        while { 1 } {
+            #item 64650002
+            if {$i < $nline} {
+                
+            } else {
+                break
+            }
+            #item 6469
+            set line [ lindex $result $i ]
+            #item 6470
+            if {[ string is space $line ]} {
+                #item 6473
+                puts $fhandle ""
+            } else {
+                #item 6467
+                puts $fhandle "${indent}$line"
+            }
+            #item 64650003
+            incr i
         }
-        #item 6469
-        set line [ lindex $result $i ]
-        #item 6470
-        if {[ string is space $line ]} {
-            #item 6473
-            puts $fhandle ""
-        } else {
-            #item 6467
-            puts $fhandle "${indent}$line"
-        }
-        #item 64650003
-        incr i
     }
 }
 
