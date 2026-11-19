@@ -1532,6 +1532,16 @@ proc print_function_kernel { fhandle depth static virtual inline returns class n
             #item 1302
             set parameter_info [ lindex $parameters $i ]
             set parameter [ lindex $parameter_info 0 ]
+            #item 1468
+            if {$print_body} {
+                
+            } else {
+                #item 1471
+                set pterms [ split $parameter "=" ]
+                #item 1472
+                set parameter [ string trim \
+                	[ lindex $pterms 0 ] ]
+            }
             #item 1300
             set line "    $parameter"
             #item 1303
