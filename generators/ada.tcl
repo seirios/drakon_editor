@@ -713,6 +713,21 @@ proc exit_statement { cond_text negate depth } {
     return $result
 }
 
+proc extract_return_type { line } {
+    #item 6916
+    set return_length [ string length "return " ]
+    set return_length_1 [ expr { $return_length - 1 } ]
+    #item 6918
+    if {[ string range $line 0 $return_length_1 ] == "return "} {
+        #item 6922
+        set remainder [ string range $line $return_length end ]
+        #item 6921
+        return [ string trim $remainder ]
+    }
+    #item 6917
+    return ""
+}
+
 proc extract_signature { text name } {
     #item 4486
     variable drn_kw_bool
@@ -818,16 +833,16 @@ proc extract_signature { text name } {
                 set current [ lindex $lines $i ]
                 set stripped [ lindex $current 0 ]
                 #item 2082
-                if {[ string match "returns *" $stripped ]} {
+                if {[ string match "return *" $stripped ]} {
                     #item 2083
                     if {$i == $last} {
                         #item 2085
-                        set returns [ \
-                        	gen::extract_return_type $stripped ]
+                        set returns [ extract_return_type \
+                        	$stripped ]
                     } else {
                         #item 2087
                         set error_message \
-                        "$name: 'returns' can only be the last line."
+                        "$name: 'return' can only be the last line."
                     }
                     break
                 }
@@ -905,16 +920,16 @@ proc extract_signature { text name } {
                         set current [ lindex $lines $i ]
                         set stripped [ lindex $current 0 ]
                         #item 2082
-                        if {[ string match "returns *" $stripped ]} {
+                        if {[ string match "return *" $stripped ]} {
                             #item 2083
                             if {$i == $last} {
                                 #item 2085
-                                set returns [ \
-                                	gen::extract_return_type $stripped ]
+                                set returns [ extract_return_type \
+                                	$stripped ]
                             } else {
                                 #item 2087
                                 set error_message \
-                                "$name: 'returns' can only be the last line."
+                                "$name: 'return' can only be the last line."
                             }
                             break
                         }
@@ -2192,8 +2207,7 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
     	"(" ")" "[" "]" ";" }
     #item 3696
     set kw_extra {
-    	returns enum
-    	nested name
+    	enum nested name
     	order local visible }
     #item 3616
     set consts { True False }
