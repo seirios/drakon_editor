@@ -1662,89 +1662,96 @@ proc generate { db gdb filename } {
     variable tdb
     #item 6659
     variable drn_sections
-    #item 5911
-    do_monkey_patch
     #item 5909
     set error_message ""
     #item 5933
     set tdb $gdb
     #item 6661
     set depth 0
-    #item 5894
-    set prefix [ string cat [ \
-    	file dirname $filename ] "/" ]
-    #item 5895
-    set trees [ tab::generate_trees $gdb ]
-    foreach tree $trees {
-        #item 5898
-        create_structure_tree $prefix $tree
-    }
-    #item 5899
-    set callbacks [ make_callbacks ]
-    #item 5900
-    set diagrams [ $gdb eval { \
-    	select diagram_id from diagrams } ]
-    foreach diagram_id $diagrams {
-        #item 5904
-        if {[ mwc::is_drakon $diagram_id ]} {
-            #item 5907
-            gen::fix_graph_for_diagram \
-            	$gdb $callbacks 0 $diagram_id
-        }
-    }
-    #item 5901
-    set components [ generate_components \
-    	$db $gdb $callbacks ]
-    #item 5874
-    if {[ graph::errors_occured ]} {
-        
+    #item 5911
+    do_monkey_patch
+    #item 6926
+    if {[ has_inactive_icons $db ]} {
+        #item 6929
+        set error_message \
+        	"Inactive icons not supported."
     } else {
-        #item 5910
-        lassign \
-        [ gen::scan_file_description $db $drn_sections ] \
-        spec_header spec_footer body_header body_footer
-        #item 5944
-        set tab_convert [ gen::get_callback $callbacks tab_convert ]
-        foreach section $drn_sections {
-            #item 5943
-            set $section [ gen::tab_convert $tab_convert \
-            	[ set $section ] ]
+        #item 5894
+        set prefix [ string cat [ \
+        	file dirname $filename ] "/" ]
+        #item 5895
+        set trees [ tab::generate_trees $gdb ]
+        foreach tree $trees {
+            #item 5898
+            create_structure_tree $prefix $tree
         }
-        #item 5930
-        if {[ is_empty_spec \
-	$components $spec_header $spec_footer ]} {
+        #item 5899
+        set callbacks [ make_callbacks ]
+        #item 5900
+        set diagrams [ $gdb eval { \
+        	select diagram_id from diagrams } ]
+        foreach diagram_id $diagrams {
+            #item 5904
+            if {[ mwc::is_drakon $diagram_id ]} {
+                #item 5907
+                gen::fix_graph_for_diagram \
+                	$gdb $callbacks 0 $diagram_id
+            }
+        }
+        #item 5901
+        set components [ generate_components \
+        	$db $gdb $callbacks ]
+        #item 5874
+        if {[ graph::errors_occured ]} {
             
         } else {
-            #item 6660
-            set depth 1
-            #item 5922
-            set spec_filename [ replace_extension $filename "ads" ]
-            #item 5928
-            set sfile \
-            [open_files [ list $spec_filename ] "w"]
-            #item 5923
-            catch {
-                print_spec $db $spec_filename $sfile $components \
-            	$spec_header $spec_footer $depth
-            } error_message
-            #item 5924
-            close_files [ list $sfile ]
-        }
-        #item 5925
-        if {($error_message == "") && (!([ is_empty_body \
+            #item 5910
+            lassign \
+            [ gen::scan_file_description $db $drn_sections ] \
+            spec_header spec_footer body_header body_footer
+            #item 5944
+            set tab_convert [ gen::get_callback $callbacks tab_convert ]
+            foreach section $drn_sections {
+                #item 5943
+                set $section [ gen::tab_convert $tab_convert \
+                	[ set $section ] ]
+            }
+            #item 5930
+            if {[ is_empty_spec \
+	$components $spec_header $spec_footer ]} {
+                
+            } else {
+                #item 6660
+                set depth 1
+                #item 5922
+                set spec_filename [ replace_extension $filename "ads" ]
+                #item 5928
+                set sfile \
+                [open_files [ list $spec_filename ] "w"]
+                #item 5923
+                catch {
+                    print_spec $db $spec_filename $sfile $components \
+                	$spec_header $spec_footer $depth
+                } error_message
+                #item 5924
+                close_files [ list $sfile ]
+            }
+            #item 5925
+            if {($error_message == "") && (!([ is_empty_body \
 	$components $body_header $body_footer ]))} {
-            #item 5888
-            set body_filename [ replace_extension $filename "adb" ]
-            #item 5929
-            set bfile \
-            [open_files [ list $body_filename ] "w"]
-            #item 5889
-            catch {
-                print_body $db $body_filename $bfile $components \
-            	$body_header $body_footer $depth
-            } error_message
-            #item 5890
-            close_files [ list $bfile ]
+                #item 5888
+                set body_filename [ replace_extension $filename "adb" ]
+                #item 5929
+                set bfile \
+                [open_files [ list $body_filename ] "w"]
+                #item 5889
+                catch {
+                    print_body $db $body_filename $bfile $components \
+                	$body_header $body_footer $depth
+                } error_message
+                #item 5890
+                close_files [ list $bfile ]
+            }
         }
     }
     #item 5912
@@ -1753,8 +1760,6 @@ proc generate { db gdb filename } {
     if {$error_message == ""} {
         
     } else {
-        #item 5935
-        puts $::errorInfo
         #item 5876
         error $error_message
     }
@@ -2093,6 +2098,20 @@ proc handle_is { result_var body is_part depth abstract separate print_body } {
             }
         }
     }
+}
+
+proc has_inactive_icons { db } {
+    #item 6935
+    set num [ $db eval {
+    	select count(*)
+    	from items
+    	where b = 1
+    	and  ( type = 'action' 
+    		or type = 'shelf' 
+    		or type = 'output'
+    		or type = 'insertion' ) } ]
+    #item 6936
+    return [ expr { $num != 0 } ]
 }
 
 proc has_insertions { gdb diagram_id } {
