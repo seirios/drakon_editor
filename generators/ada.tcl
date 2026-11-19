@@ -32,7 +32,7 @@ variable drn_kw_access {
 }
 
 variable drn_kw_etype {
-	type subtype declaration
+	type subtype declare
 }
 
 variable drn_kw_ontology {
@@ -434,7 +434,7 @@ proc classify_keywords { keywords dia_name } {
             }
         } else {
             #item 21440004
-            if {$etype == "declaration"} {
+            if {$etype == "declare"} {
                 
             } else {
                 #item 21440005
@@ -775,12 +775,14 @@ proc extract_signature { text name } {
                     set props(subtype) "subtype"
                 } else {
                     #item 31300005
-                    if {$type == "declaration"} {
+                    if {$type == "declare"} {
                         
                     } else {
                         #item 31300006
                         error "Unexpected switch value: $type"
                     }
+                    #item 6910
+                    set type "declaration"
                 }
             }
         }
@@ -858,12 +860,14 @@ proc extract_signature { text name } {
                         set props(subtype) "subtype"
                     } else {
                         #item 31300005
-                        if {$type == "declaration"} {
+                        if {$type == "declare"} {
                             
                         } else {
                             #item 31300006
                             error "Unexpected switch value: $type"
                         }
+                        #item 6910
+                        set type "declaration"
                     }
                 }
             }
@@ -943,12 +947,14 @@ proc extract_signature { text name } {
                                 set props(subtype) "subtype"
                             } else {
                                 #item 31300005
-                                if {$type == "declaration"} {
+                                if {$type == "declare"} {
                                     
                                 } else {
                                     #item 31300006
                                     error "Unexpected switch value: $type"
                                 }
+                                #item 6910
+                                set type "declaration"
                             }
                         }
                     }
@@ -2187,7 +2193,7 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
     #item 3696
     set kw_extra {
     	returns enum
-    	declaration nested name
+    	nested name
     	order local visible }
     #item 3616
     set consts { True False }
