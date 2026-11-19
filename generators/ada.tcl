@@ -1274,11 +1274,19 @@ proc gen_component { db component print_body } {
     type prop_list parameters returns
     #item 6809
     array set props $prop_list
-    #item 6813
-    lassign \
-    [ gen::scan_diagram_description \
-    	$db $diagram_id $drn_sections ] \
-    spec_header spec_footer body_header body_footer
+    #item 6906
+    if {$db == ""} {
+        #item 6909
+        lassign \
+        {} \
+        spec_header spec_footer body_header body_footer
+    } else {
+        #item 6813
+        lassign \
+        [ gen::scan_diagram_description \
+        	$db $diagram_id $drn_sections ] \
+        spec_header spec_footer body_header body_footer
+    }
     #item 6831
     set result {}
     #item 68140001
@@ -1358,42 +1366,14 @@ proc gen_insertion { db item_id } {
         #item 4795
         set result {}
     } else {
-        #item 5229
-        lassign \
-        $insertion \
-        diagram_id name signature body is_part with_part
-        #item 5230
-        lassign \
-        $signature \
-        type prop_list parameters returns
-        #item 5228
-        array set props $prop_list
-        #item 6683
-        if {$props(ontology) == "abstract"} {
-            #item 4796
-            set g_errmsg [ mc2 "Some errors found." ]
-            #item 4795
-            set result {}
-        } else {
-            #item 5231
-            set ins_body [ gen_subprogram \
-            	1 \
-            	$props(subtype) \
-            	0 \
-            	$props(overriding) \
-            	$props(separate) \
-            	$props(name) \
-            	$returns \
-            	$parameters \
-            	$body $is_part $with_part \
-            	1 "" "" "" "" ]
-            #item 5236
-            set text [ join $ins_body "\n" ]
-            #item 5232
-            set_node_text $db $item_id $text
-            #item 5233
-            set result [ list "insertion" $item_id ]
-        }
+        #item 6905
+        set ins_body [ gen_component "" $insertion 1 ]
+        #item 5236
+        set text [ join $ins_body "\n" ]
+        #item 5232
+        set_node_text $db $item_id $text
+        #item 5233
+        set result [ list "insertion" $item_id ]
     }
     #item 4784
     return [ list $result $next ]
