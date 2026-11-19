@@ -1957,9 +1957,9 @@ proc glue_special { gdb diagram_id } {
     	or type == 'enum'
     	or type == 'record'
     	or type == 'exception'
+    	or type == 'declare'
     	or type == 'with'
     	or type == 'is'
-    	or type == 'declare'
     	and diagram_id = :diagram_id
     } ]
     foreach vertex_id $vertices {
@@ -1992,23 +1992,23 @@ proc glue_special { gdb diagram_id } {
                             set line_end ""
                         } else {
                             #item 50170005
-                            if {$type == "with"} {
-                                #item 6266
-                                set line_end ","
+                            if {$type == "declare"} {
+                                #item 5027
+                                set line_end ""
                             } else {
                                 #item 50170006
-                                if {$type == "is"} {
-                                    #item 6319
-                                    set line_end ""
+                                if {$type == "with"} {
+                                    #item 6266
+                                    set line_end ","
                                 } else {
                                     #item 50170007
-                                    if {$type == "declare"} {
+                                    if {$type == "is"} {
                                         
                                     } else {
                                         #item 50170008
                                         error "Unexpected switch value: $type"
                                     }
-                                    #item 5027
+                                    #item 6319
                                     set line_end ""
                                 }
                             }
@@ -2226,8 +2226,8 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
     	"(" ")" "[" "]" ";" }
     #item 3696
     set kw_extra {
-    	enum nested name
-    	order local visible }
+    	enum name order
+    	nested local visible }
     #item 3616
     set consts { True False }
     #item 14810001
@@ -2836,7 +2836,7 @@ proc p.proc_shelf { gdb item_id diagram_id } {
         
     } else {
         #item 48740003
-        if {(((((((($type == "declare") || ($type == "return")) || ($type == "when")) || ($type == "for")) || ($type == "enum")) || ($type == "record")) || ($type == "exception")) || ($type == "with")) || ($type == "is")} {
+        if {(((((((($type == "return") || ($type == "for")) || ($type == "when")) || ($type == "enum")) || ($type == "record")) || ($type == "exception")) || ($type == "declare")) || ($type == "with")) || ($type == "is")} {
             #item 6293
             if {$primary == ""} {
                 #item 6295

@@ -1,7 +1,7 @@
 * Ada generator
 ** TODO Add support for 'pragma'
-** TODO Add support for 'incomplete' types (?)
 ** INPR Add test cases
+** TODO Add support for 'incomplete' types (?)
 ** TODO Allow other description sections (?)
 + === unit === with value: subprogram, package or task.
 + === context === containing toplevel with and use clauses.
