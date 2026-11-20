@@ -16,8 +16,8 @@ variable drn_sections {
 }
 
 variable drn_kw_bool {
+	abstract
 	separate
-	tagged
 }
 
 # keyword set_default_value
@@ -27,20 +27,11 @@ variable drn_kw_keyval {
 	overriding		yes
 }
 
-variable drn_kw_access {
-	private body nested
-}
-
-variable drn_kw_etype {
-	type subtype declare
-}
-
-variable drn_kw_ontology {
-	abstract interface
-}
-
-variable drn_kw_limit {
-	limited synchronized task protected
+array set drn_kw_mutex {
+	access  {private body nested}
+	subtype {type subtype declare}
+	tagtype {tagged interface}
+	limit   {limited synchronized task protected}
 }
 
 variable ada_keywords {
@@ -366,107 +357,78 @@ proc check_keywords_keyval { words keywords } {
     }
 }
 
-proc classify_keywords { keywords dia_name } {
+proc check_keywords_mutex { keywords words errors_var } {
+    #item 7188
+    variable drn_kw_mutex
+    #item 7190
+    upvar 1 $errors_var errors
+    foreach mkw $words {
+        #item 7189
+        upvar 1 $mkw kw
+        #item 7177
+        set kw [ find_keywords $keywords \
+        	$drn_kw_mutex($mkw) ]
+        #item 71840000
+        set _sw71840000_ [ llength $kw ]
+        #item 71840001
+        if {$_sw71840000_ == 0} {
+            #item 7187
+            set kw ""
+        } else {
+            #item 71840002
+            if {$_sw71840000_ == 1} {
+                
+            } else {
+                #item 7179
+                lappend errors \
+                 "$name: inconsistent $mkw: $kw"
+            }
+        }
+    }
+}
+
+proc classify_keywords { keywords default_list } {
+    #item 7206
+    array set default $default_list
+    #item 7171
+    variable drn_kw_mutex
+    #item 7193
+    set mutex_kw \
+    	[ array names drn_kw_mutex ]
+    #item 7100
+    check_keywords_mutex $keywords \
+    	$mutex_kw errors
+    #item 7158
+    if {$access == ""} {
+        #item 7161
+        set access $default(access)
+    }
+    #item 7162
+    if {$subtype == ""} {
+        #item 7165
+        set subtype $default(subtype)
+    }
     #item 4420
     set errors {}
     #item 4498
     variable drn_kw_bool
     #item 2177
-    check_keywords_bool $keywords $drn_kw_bool
+    check_keywords_bool $keywords \
+    	$drn_kw_bool
     #item 4499
     variable drn_kw_keyval
     #item 4472
-    check_keywords_keyval $keywords $drn_kw_keyval
+    check_keywords_keyval $keywords \
+    	$drn_kw_keyval
     #item 4474
     if {$order == ""} {
         #item 4560
-        set order 0
+        set order $default(order)
     }
     #item 4556
     if {$name == ""} {
         #item 4558
-        set name $dia_name
-    }
-    #item 4501
-    variable drn_kw_access
-    variable drn_kw_etype
-    variable drn_kw_ontology
-    variable drn_kw_limit
-    #item 4422
-    set access [ find_keywords \
-    	$keywords $drn_kw_access ]
-    #item 44290000
-    set _sw44290000_ [ llength $access ]
-    #item 44290001
-    if {$_sw44290000_ == 0} {
-        #item 4432
-        set access "visible"
-    } else {
-        #item 44290002
-        if {$_sw44290000_ == 1} {
-            
-        } else {
-            #item 4424
-            lappend errors \
-             "$name: inconsistent access: $access"
-        }
-    }
-    #item 4442
-    set etype [ find_keywords \
-    	$keywords $drn_kw_etype ]
-    #item 44430000
-    set _sw44430000_ [ llength $etype ]
-    #item 44430001
-    if {$_sw44430000_ == 0} {
-        #item 4441
-        set etype "subprogram"
-    } else {
-        #item 44430002
-        if {$_sw44430000_ == 1} {
-            
-        } else {
-            #item 4434
-            lappend errors \
-             "$name: inconsistent type: $etype"
-        }
-    }
-    #item 6671
-    set ontology [ find_keywords \
-    	$keywords $drn_kw_ontology ]
-    #item 66720000
-    set _sw66720000_ [ llength $ontology ]
-    #item 66720001
-    if {$_sw66720000_ == 0} {
-        #item 6670
-        set ontology "concrete"
-    } else {
-        #item 66720002
-        if {$_sw66720000_ == 1} {
-            
-        } else {
-            #item 6663
-            lappend errors \
-             "$name: inconsistent ontology: $ontology"
-        }
-    }
-    #item 6700
-    set limit [ find_keywords \
-    	$keywords $drn_kw_limit ]
-    #item 67010000
-    set _sw67010000_ [ llength $limit ]
-    #item 67010001
-    if {$_sw67010000_ == 0} {
-        #item 6699
-        set limit ""
-    } else {
-        #item 67010002
-        if {$_sw67010000_ == 1} {
-            
-        } else {
-            #item 6692
-            lappend errors \
-             "$name: inconsistent limit: $limit"
-        }
+        set name $default(name)
     }
     #item 7040
     if {[ string is integer $order ]} {
@@ -486,16 +448,26 @@ proc classify_keywords { keywords dia_name } {
          "$name: invalid overriding: $overriding"
     }
     #item 21440001
-    if {$etype == "subprogram"} {
+    if {$subtype == "subprogram"} {
         #item 6684
-        if {$ontology == "interface"} {
+        if {$tagtype == ""} {
+            
+        } else {
             #item 6687
             lappend errors \
-             "$name: invalid use of interface"
+             "$name: subprogram cannot be tagged"
+        }
+        #item 7059
+        if {$limit == ""} {
+            
+        } else {
+            #item 7062
+            lappend errors \
+             "$name: subprogram cannot be limited"
         }
     } else {
         #item 21440002
-        if {($etype == "type") || ($etype == "subtype")} {
+        if {($subtype == "type") || ($subtype == "subtype")} {
             #item 2204
             variable ada_types
             #item 2205
@@ -507,21 +479,42 @@ proc classify_keywords { keywords dia_name } {
             }
         } else {
             #item 21440004
-            if {$etype == "declare"} {
+            if {$subtype == "declare"} {
                 
             } else {
                 #item 21440005
-                error "Unexpected switch value: $etype"
+                error "Unexpected switch value: $subtype"
+            }
+            #item 7051
+            if {$tagtype == ""} {
+                
+            } else {
+                #item 7054
+                lappend errors \
+                 "$name: declaration cannot be tagged"
+            }
+            #item 7055
+            if {$limit == ""} {
+                
+            } else {
+                #item 7058
+                lappend errors \
+                 "$name: declaration cannot be limited"
+            }
+            #item 7063
+            if {$abstract} {
+                #item 7066
+                lappend errors \
+                 "$name: declaration cannot be abstract"
             }
         }
     }
     #item 2155
     array set props {}
-    #item 2156
-    set props(access) $access
-    set props(subtype) $etype
-    set props(ontology) $ontology
-    set props(limit) $limit
+    foreach kw $mutex_kw {
+        #item 7169
+        set props($kw) [set $kw]
+    }
     foreach kw $drn_kw_bool {
         #item 4546
         set props($kw) [set $kw]
@@ -730,17 +723,32 @@ proc extract_return_type { line } {
 
 proc extract_signature { text name } {
     #item 4486
+    variable drn_kw_mutex
     variable drn_kw_bool
     variable drn_kw_keyval
-    variable drn_kw_access
-    variable drn_kw_etype
-    variable drn_kw_ontology
-    variable drn_kw_limit
     #item 4485
     array set kw_keyval $drn_kw_keyval
     set kw_keys [ array names kw_keyval ]
+    #item 7198
+    set mutex_kw \
+    	[ array names drn_kw_mutex ]
+    #item 7207
+    set keywords [ concat \
+    	$drn_kw_bool $kw_keys ]
+    foreach kw $mutex_kw {
+        #item 7210
+        set keywords [ concat \
+        	$keywords $drn_kw_mutex($kw) ]
+    }
     #item 4493
     array set props {}
+    foreach kw $mutex_kw {
+        #item 7201
+        set props($kw) ""
+    }
+    #item 7194
+    set props(access) "visible"
+    set props(subtype) "subprogram"
     foreach kw $drn_kw_bool {
         #item 4492
         set props($kw) 0
@@ -750,10 +758,6 @@ proc extract_signature { text name } {
         set props($kw) ""
     }
     #item 4503
-    set props(access) visible
-    set props(ontology) concrete
-    set props(limit) ""
-    
     set props(order) 0
     set props(name) $name
     #item 4502
@@ -763,7 +767,8 @@ proc extract_signature { text name } {
     set parameters {}
     set returns ""
     #item 2067
-    set lines [ gen::separate_from_comments $text ]
+    set lines [ gen::separate_from_comments \
+    	$text ]
     #item 2069
     if {[ llength $lines ] == 0} {
         #item 31300001
@@ -805,14 +810,9 @@ proc extract_signature { text name } {
         #item 2068
         set first_line [ lindex $lines 0 ]
         set first [ lindex $first_line 0 ]
-        #item 2093
-        set keywords [ concat \
-        	$drn_kw_bool $drn_kw_access \
-        	$drn_kw_etype $drn_kw_ontology \
-        	$drn_kw_limit $kw_keys ]
         #item 2094
-        set found_keywords \
-         [ find_keywords $first $keywords ]
+        set found_keywords [ find_keywords \
+        	$first $keywords ]
         #item 2092
         if {[ llength $found_keywords ] == 0} {
             #item 2096
@@ -894,9 +894,11 @@ proc extract_signature { text name } {
              [ find_not_belonging $first $keywords ]
             #item 2099
             if {[ llength $alien_keywords ] == 0} {
+                #item 7202
+                set default_list [ array get props ]
                 #item 2121
                 lassign \
-                [ classify_keywords $found_keywords $name ] \
+                [ classify_keywords $found_keywords $default_list ] \
                 error_message prop_list
                 #item 2105
                 if {$error_message == ""} {
@@ -1306,17 +1308,15 @@ proc gen_component { db component print_body } {
     set result {}
     #item 68140001
     if {$type == "subprogram"} {
-        #item 6823
-        set abstract [ expr { $props(ontology) == "abstract" } ]
         #item 6821
-        if {$abstract && $print_body} {
+        if {$props(abstract) && $print_body} {
             
         } else {
             #item 6824
             set result [ gen_subprogram \
             	1 \
             	$props(subtype) \
-            	$abstract \
+            	$props(abstract) \
             	$props(overriding) \
             	$props(separate) \
             	$props(name) \
@@ -1336,10 +1336,10 @@ proc gen_component { db component print_body } {
             set result [ gen_type \
             	1 \
             	$props(subtype) \
+            	$props(abstract) \
             	$props(access) \
-            	$props(ontology) \
             	$props(limit) \
-            	$props(tagged) \
+            	$props(tagtype) \
             	$props(name) \
             	$body $is_part $with_part \
             	$print_body \
@@ -1555,7 +1555,7 @@ proc gen_subprogram { depth type abstract overriding separate name returns param
     return $result
 }
 
-proc gen_type { depth type access ontology limit tagged name body is_part with_part print_body spec_header spec_footer body_header body_footer } {
+proc gen_type { depth type abstract access limit tagtype name body is_part with_part print_body spec_header spec_footer body_header body_footer } {
     #item 5554
     set result {}
     set line ""
@@ -1576,43 +1576,14 @@ proc gen_type { depth type access ontology limit tagged name body is_part with_p
     append line " is"
     #item 6436
     if {$print_body} {
-        #item 66740001
-        if {$ontology == "abstract"} {
+        #item 7047
+        if {$abstract} {
             #item 5567
             append line " abstract"
-            #item 5583
-            if {$tagged} {
-                #item 5584
-                append line " tagged"
-            }
-            #item 6773
-            if {$limit != ""} {
-                #item 6772
-                append line " $limit"
-            }
-        } else {
-            #item 66740002
-            if {$ontology == "interface"} {
-                #item 6777
-                if {$limit != ""} {
-                    #item 6776
-                    append line " $limit"
-                }
-                #item 6681
-                append line " interface"
-            } else {
-                #item 6786
-                if {$tagged} {
-                    #item 6787
-                    append line " tagged"
-                }
-                #item 6781
-                if {$limit != ""} {
-                    #item 6780
-                    append line " $limit"
-                }
-            }
         }
+        #item 7094
+        append line [ handle_tagged_limited \
+        	$limit $tagtype ]
         #item 6443
         lappend result $line
         #item 6789
@@ -2114,6 +2085,40 @@ proc handle_is { result_var body is_part depth abstract separate print_body } {
             }
         }
     }
+}
+
+proc handle_tagged_limited { limit tagtype } {
+    #item 7092
+    set line ""
+    #item 70730001
+    if {$tagtype == "tagged"} {
+        #item 7072
+        append line " tagged"
+        #item 7082
+        if {$limit != ""} {
+            #item 7081
+            append line " $limit"
+        }
+    } else {
+        #item 70730002
+        if {$tagtype == "interface"} {
+            #item 7085
+            if {$limit != ""} {
+                #item 7084
+                append line " $limit"
+            }
+            #item 7080
+            append line " interface"
+        } else {
+            #item 7089
+            if {$limit != ""} {
+                #item 7088
+                append line " $limit"
+            }
+        }
+    }
+    #item 7093
+    return $line
 }
 
 proc has_inactive_icons { db } {
