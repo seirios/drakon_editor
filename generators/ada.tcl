@@ -28,7 +28,7 @@ variable drn_kw_keyval {
 }
 
 variable drn_kw_access {
-	private visible local nested
+	private visible body nested
 }
 
 variable drn_kw_etype {
@@ -407,7 +407,7 @@ proc classify_keywords { keywords dia_name } {
         #item 4106
         if {$access == ""} {
             #item 4109
-            set access "local"
+            set access "body"
         }
         #item 6684
         if {$ontology == "interface"} {
@@ -443,7 +443,7 @@ proc classify_keywords { keywords dia_name } {
             #item 6618
             if {$access == ""} {
                 #item 6621
-                set access "local"
+                set access "body"
             }
         }
     }
@@ -750,7 +750,7 @@ proc extract_signature { text name } {
         set props($kw) ""
     }
     #item 4503
-    set props(access) local
+    set props(access) body
     set props(ontology) concrete
     set props(limit) ""
     
@@ -2227,7 +2227,7 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
     #item 3696
     set kw_extra {
     	enum name order
-    	nested local visible }
+    	nested visible }
     #item 3616
     set consts { True False }
     #item 14810001
@@ -2419,7 +2419,7 @@ proc is_empty_body { components header footer } {
     #item 4164
     set visible [ filter_subprograms $components visible ]
     set private [ filter_subprograms $components private ]
-    set local [ filter_components $components local ]
+    set local [ filter_components $components body ]
     #item 4163
     if {(([ llength [ concat $visible $private $local ] ] == 0) && ($header == "")) && ($footer == "")} {
         #item 4031
@@ -3288,16 +3288,16 @@ proc print_body { db filename fhandle components header footer depth } {
     set part "body"
     #item 6542
     set filtered [ concat $filtered \
-    	[ filter_types $components type local ] ]
+    	[ filter_types $components type body ] ]
     #item 6543
     set filtered [ concat $filtered \
-    	[ filter_types $components subtype local ] ]
+    	[ filter_types $components subtype body ] ]
     #item 6605
     set filtered [ concat $filtered \
-    	[ filter_declarations $components local ] ]
+    	[ filter_declarations $components body ] ]
     #item 6544
     set filtered [ concat $filtered \
-    	[ filter_subprograms $components local ] ]
+    	[ filter_subprograms $components body ] ]
     #item 6545
     set filtered [ concat $filtered \
     	[ filter_subprograms $components visible ] ]
