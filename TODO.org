@@ -1,4 +1,11 @@
 * Ada generator
+** TODO Support more complex aggregates
++ Type-qualified, for assignments, e.g., `Type'();`
++ Parse prefix/suffix from secondary text
+** TODO Support output icon with Put_Line by default
++ Other functions possible in top box
++ One argument per line
++ Strings are auto-concatenated
 ** TODO Add support for 'pragma'
 ** INPR Add test cases
 ** TODO Add support for 'incomplete' types (?)
