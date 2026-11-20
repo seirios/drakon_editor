@@ -28,7 +28,7 @@ variable drn_kw_keyval {
 }
 
 variable drn_kw_access {
-	private visible body nested
+	private body nested
 }
 
 variable drn_kw_etype {
@@ -334,7 +334,7 @@ proc classify_keywords { keywords dia_name } {
     #item 44290001
     if {$_sw44290000_ == 0} {
         #item 4432
-        set access ""
+        set access "visible"
     } else {
         #item 44290002
         if {$_sw44290000_ == 1} {
@@ -404,11 +404,6 @@ proc classify_keywords { keywords dia_name } {
     }
     #item 21440001
     if {$etype == "subprogram"} {
-        #item 4106
-        if {$access == ""} {
-            #item 4109
-            set access "body"
-        }
         #item 6684
         if {$ontology == "interface"} {
             #item 6687
@@ -418,11 +413,6 @@ proc classify_keywords { keywords dia_name } {
     } else {
         #item 21440002
         if {($etype == "type") || ($etype == "subtype")} {
-            #item 3918
-            if {$access == ""} {
-                #item 3921
-                set access "visible"
-            }
             #item 2204
             variable ada_types
             #item 2205
@@ -439,11 +429,6 @@ proc classify_keywords { keywords dia_name } {
             } else {
                 #item 21440005
                 error "Unexpected switch value: $etype"
-            }
-            #item 6618
-            if {$access == ""} {
-                #item 6621
-                set access "body"
             }
         }
     }
@@ -750,7 +735,7 @@ proc extract_signature { text name } {
         set props($kw) ""
     }
     #item 4503
-    set props(access) body
+    set props(access) visible
     set props(ontology) concrete
     set props(limit) ""
     
@@ -2226,8 +2211,8 @@ proc idle_default { keywords kw_types result_name type text lookahead } {
     	"(" ")" "[" "]" ";" }
     #item 3696
     set kw_extra {
-    	enum name order
-    	nested visible }
+    	name nested order
+    	enum }
     #item 3616
     set consts { True False }
     #item 14810001
