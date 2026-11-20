@@ -381,15 +381,6 @@ proc classify_keywords { keywords dia_name } {
     if {$order == ""} {
         #item 4560
         set order 0
-    } else {
-        #item 4561
-        if {[ string is integer $order ]} {
-            
-        } else {
-            #item 4563
-            lappend errors \
-             "$name: order must be an integer"
-        }
     }
     #item 4556
     if {$name == ""} {
@@ -477,13 +468,30 @@ proc classify_keywords { keywords dia_name } {
              "$name: inconsistent limit: $limit"
         }
     }
+    #item 7040
+    if {[ string is integer $order ]} {
+        
+    } else {
+        #item 7042
+        lappend errors \
+         "$name: invalid order, must be an integer"
+    }
+    #item 7044
+    if {[ contains \
+{ "" yes not } $overriding ]} {
+        
+    } else {
+        #item 7046
+        lappend errors \
+         "$name: invalid overriding: $overriding"
+    }
     #item 21440001
     if {$etype == "subprogram"} {
         #item 6684
         if {$ontology == "interface"} {
             #item 6687
             lappend errors \
-             "$name: subprogram cannot be interface"
+             "$name: invalid use of interface"
         }
     } else {
         #item 21440002
