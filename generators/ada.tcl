@@ -1955,8 +1955,8 @@ proc glue_special { gdb diagram_id } {
     	select vertex_id
     	from vertices
     	where type == 'when'
-    	or type == '()'
-    	or type == '[]'
+    	or type == 'agg_paren'
+    	or type == 'agg_brack'
     	or type == 'record'
     	or type == 'exception'
     	or type == 'declare'
@@ -1977,14 +1977,14 @@ proc glue_special { gdb diagram_id } {
                 set commentator gen_ada::blank
             } else {
                 #item 50170002
-                if {$type == "\(\)"} {
+                if {$type == "agg_paren"} {
                     #item 6222
                     set line_end ""
                     #item 6223
                     set commentator gen_ada::blank
                 } else {
                     #item 50170003
-                    if {$type == "\[\]"} {
+                    if {$type == "agg_brack"} {
                         #item 6940
                         set line_end ""
                         #item 6223
@@ -2854,12 +2854,19 @@ proc p.proc_shelf { gdb item_id diagram_id } {
             }
         } else {
             #item 48740011
-            if {($type == "\(\)") || ($type == "\[\]")} {
-                
+            if {$type == "\(\)"} {
+                #item 7006
+                set type "agg_paren"
             } else {
-                #item 4873
-                graph::p.error $diagram_id $item_id \
-                	"Invalid shelf of type '$type'."
+                #item 48740012
+                if {$type == "\[\]"} {
+                    #item 7007
+                    set type "agg_brack"
+                } else {
+                    #item 4873
+                    graph::p.error $diagram_id $item_id \
+                    	"Invalid shelf of type '$type'."
+                }
             }
         }
     }
@@ -3807,7 +3814,7 @@ $tnext == "insertion"} {
                                                                             set result [ concat $result $body ]
                                                                         } else {
                                                                             #item 59660018
-                                                                            if {$_sw59660000_ == "\(\)"} {
+                                                                            if {$_sw59660000_ == "agg_paren"} {
                                                                                 #item 6947
                                                                                 set id [ lindex $current 1 ]
                                                                                 #item 6996
@@ -3820,7 +3827,7 @@ $tnext == "insertion"} {
                                                                                 lappend_indent result $lines $indent
                                                                             } else {
                                                                                 #item 59660019
-                                                                                if {$_sw59660000_ == "\[\]"} {
+                                                                                if {$_sw59660000_ == "agg_brack"} {
                                                                                     
                                                                                 } else {
                                                                                     #item 59660020
