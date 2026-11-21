@@ -17,6 +17,7 @@ variable drn_sections {
 
 variable drn_kw_bool {
 	abstract
+	nested
 	separate
 }
 
@@ -28,7 +29,7 @@ variable drn_kw_keyval {
 }
 
 array set drn_kw_mutex {
-	access  {private body nested}
+	access  {private body}
 	subtype {type subtype declare}
 	tagtype {tagged interface}
 	limit   {limited synchronized task protected}
@@ -1015,25 +1016,30 @@ proc filter_components_core { components flt_type flt_subtype flt_access } {
         type prop_list parameters returns
         #item 6399
         array set props $prop_list
-        #item 6408
-        if {$cur_type == ""} {
-            #item 6411
-            set cur_type $type
-        }
-        #item 6412
-        if {$cur_subtype == ""} {
-            #item 6415
-            set cur_subtype $props(subtype)
-        }
-        #item 6416
-        if {$cur_access == ""} {
-            #item 6419
-            set cur_access $props(access)
-        }
-        #item 6406
-        if {(($type == $cur_type) && ($props(subtype) == $cur_subtype)) && ($props(access) == $cur_access)} {
-            #item 6401
-            lappend result $component
+        #item 7211
+        if {$props(nested)} {
+            
+        } else {
+            #item 6408
+            if {$cur_type == ""} {
+                #item 6411
+                set cur_type $type
+            }
+            #item 6412
+            if {$cur_subtype == ""} {
+                #item 6415
+                set cur_subtype $props(subtype)
+            }
+            #item 6416
+            if {$cur_access == ""} {
+                #item 6419
+                set cur_access $props(access)
+            }
+            #item 6406
+            if {(($type == $cur_type) && ($props(subtype) == $cur_subtype)) && ($props(access) == $cur_access)} {
+                #item 6401
+                lappend result $component
+            }
         }
     }
     #item 6397

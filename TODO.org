@@ -1,4 +1,8 @@
 * Ada generator
+** TODO Rework how private types are specified
++ Can we generate the partial view automatically?
++ 'private' + 'body' for no partial view
++ 'limited:body' for explicitly limited
 ** TODO Support more complex aggregates
 + Type-qualified, for assignments, e.g., `Type'();`
 + Parse prefix/suffix from secondary text
