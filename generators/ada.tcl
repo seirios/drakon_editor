@@ -1369,7 +1369,7 @@ proc gen_component { db component print_body } {
     return $result
 }
 
-proc gen_insertion { db item_id type } {
+proc gen_insertion { db item_id type print_body } {
     #item 4788
     variable g_errmsg
     #item 4782
@@ -1386,7 +1386,8 @@ proc gen_insertion { db item_id type } {
         set result {}
     } else {
         #item 6905
-        set ins_body [ gen_component "" $insertion 1 ]
+        set ins_body [ gen_component \
+        	"" $insertion $print_body ]
         #item 5236
         set text [ join $ins_body "\n" ]
         #item 5232
@@ -1830,45 +1831,89 @@ proc generate_components { db gdb callbacks } {
 
 proc generate_item { db item_id parent_loop } {
     #item 4650
-    set type [ nogoto::get_node_type $db $item_id ]
+    set type [ nogoto::get_node_type \
+    	$db $item_id ]
     #item 46430001
-    if {(($type == "ins_declare") || ($type == "ins_is")) || ($type == "ins_body")} {
-        #item 4666
-        return [ gen_insertion $db $item_id $type ]
+    if {$type == "action"} {
+        #item 4652
+        return [ nogoto::gen_action \
+        	$db $item_id $parent_loop ]
     } else {
-        #item 46430004
-        if {$type == "action"} {
-            #item 4652
-            return [ nogoto::gen_action \
+        #item 46430002
+        if {$type == "if"} {
+            #item 4656
+            return [ nogoto::gen_if \
             	$db $item_id $parent_loop ]
         } else {
-            #item 46430005
-            if {$type == "if"} {
-                #item 4656
-                return [ nogoto::gen_if \
-                	$db $item_id $parent_loop ]
+            #item 46430003
+            if {$type == "loop"} {
+                #item 4660
+                return [ gen_loop \
+                	$db $item_id ]
             } else {
-                #item 46430006
-                if {$type == "loop"} {
-                    #item 4660
-                    return [ gen_loop \
+                #item 46430004
+                if {$type == "case"} {
+                    #item 4663
+                    return [ gen_case \
                     	$db $item_id ]
                 } else {
-                    #item 46430007
-                    if {$type == "case"} {
-                        #item 4663
-                        return [ gen_case \
+                    #item 46430005
+                    if {$type == "selection"} {
+                        #item 4659
+                        return [ gen_selection \
                         	$db $item_id ]
                     } else {
-                        #item 46430008
-                        if {$type == "selection"} {
-                            #item 4659
-                            return [ gen_selection \
-                            	$db $item_id ]
+                        #item 46430006
+                        if {$type == "ins_declare"} {
+                            #item 7219
+                            set print_body 0
+                            #item 4666
+                            return [ gen_insertion \
+                            	$db $item_id $type $print_body ]
                         } else {
-                            #item 4669
-                            return [ gen_special \
-                            	$db $item_id $type ]
+                            #item 46430007
+                            if {$type == "ins_is"} {
+                                #item 7233
+                                set print_body 0
+                                #item 4666
+                                return [ gen_insertion \
+                                	$db $item_id $type $print_body ]
+                            } else {
+                                #item 46430008
+                                if {$type == "ins_body"} {
+                                    #item 7223
+                                    set print_body 1
+                                    #item 4666
+                                    return [ gen_insertion \
+                                    	$db $item_id $type $print_body ]
+                                } else {
+                                    #item 46430009
+                                    if {$type == "ins_declare_body"} {
+                                        #item 7232
+                                        set type "ins_declare"
+                                        #item 7235
+                                        set print_body 1
+                                        #item 4666
+                                        return [ gen_insertion \
+                                        	$db $item_id $type $print_body ]
+                                    } else {
+                                        #item 46430010
+                                        if {$type == "ins_is_body"} {
+                                            #item 7234
+                                            set type "ins_is"
+                                            #item 7236
+                                            set print_body 1
+                                            #item 4666
+                                            return [ gen_insertion \
+                                            	$db $item_id $type $print_body ]
+                                        } else {
+                                            #item 4669
+                                            return [ gen_special \
+                                            	$db $item_id $type ]
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -2815,17 +2860,32 @@ proc p.proc_insertion { gdb item_id diagram_id } {
         #item 7021
         set type [ lindex $text 1 ]
         #item 70090001
-        if {(($type == "body") || ($type == "is")) || ($type == "declare")} {
-            
+        if {$type == "body"} {
+            #item 7022
+            set type "ins_$type"
+            #item 4862
+            set name [ lindex $text 2 ]
         } else {
-            #item 7020
-            graph::p.error $diagram_id $item_id \
-            	"Invalid insertion type."
+            #item 70090002
+            if {($type == "is") || ($type == "declare")} {
+                #item 7213
+                if {[ lindex $text 2 ] == "body"} {
+                    #item 7217
+                    set type "ins_${type}_body"
+                    #item 7216
+                    set name [ lindex $text 3 ]
+                } else {
+                    #item 7022
+                    set type "ins_$type"
+                    #item 4862
+                    set name [ lindex $text 2 ]
+                }
+            } else {
+                #item 7020
+                graph::p.error $diagram_id $item_id \
+                	"Invalid insertion type."
+            }
         }
-        #item 7022
-        set type "ins_$type"
-        #item 4862
-        set name [ lindex $text 2 ]
         #item 4861
         set found [ $gdb onecolumn {
         	select count(*)
@@ -3709,8 +3769,8 @@ proc print_node_core { texts node callbacks depth } {
                                                     set next [ lindex $node $inext ]
                                                     set tnext [ nodetype $next ]
                                                     #item 6363
-                                                    if {$tnext == "declare" ||
-$tnext == "ins_declare"} {
+                                                    if {$tnext == "declare"
+|| $tnext == "ins_declare"} {
                                                         
                                                     } else {
                                                         break
