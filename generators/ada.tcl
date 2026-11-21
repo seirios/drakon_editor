@@ -742,13 +742,17 @@ proc extract_signature { text name } {
     }
     #item 4493
     array set props {}
+    #item 4479
+    set type "subprogram"
+    set parameters {}
+    set returns ""
     foreach kw $mutex_kw {
         #item 7201
         set props($kw) ""
     }
     #item 7194
     set props(access) "visible"
-    set props(subtype) "subprogram"
+    set props(subtype) $type
     foreach kw $drn_kw_bool {
         #item 4492
         set props($kw) 0
@@ -762,17 +766,13 @@ proc extract_signature { text name } {
     set props(name) $name
     #item 4502
     set error_message ""
-    #item 4479
-    set type "subprogram"
-    set parameters {}
-    set returns ""
     #item 2067
     set lines [ gen::separate_from_comments \
     	$text ]
     #item 2069
     if {[ llength $lines ] == 0} {
         #item 31300001
-        if {($type == "subprogram") || ($type == "nested")} {
+        if {$type == "subprogram"} {
             #item 2109
             if {$returns == ""} {
                 #item 2111
@@ -782,23 +782,23 @@ proc extract_signature { text name } {
                 set props(subtype) "function"
             }
         } else {
-            #item 31300003
+            #item 31300002
             if {$type == "type"} {
                 #item 3141
                 set props(subtype) "type"
             } else {
-                #item 31300004
+                #item 31300003
                 if {$type == "subtype"} {
                     #item 6498
                     set type "type"
                     #item 3139
                     set props(subtype) "subtype"
                 } else {
-                    #item 31300005
+                    #item 31300004
                     if {$type == "declare"} {
                         
                     } else {
-                        #item 31300006
+                        #item 31300005
                         error "Unexpected switch value: $type"
                     }
                     #item 6910
@@ -852,7 +852,7 @@ proc extract_signature { text name } {
                 incr i
             }
             #item 31300001
-            if {($type == "subprogram") || ($type == "nested")} {
+            if {$type == "subprogram"} {
                 #item 2109
                 if {$returns == ""} {
                     #item 2111
@@ -862,23 +862,23 @@ proc extract_signature { text name } {
                     set props(subtype) "function"
                 }
             } else {
-                #item 31300003
+                #item 31300002
                 if {$type == "type"} {
                     #item 3141
                     set props(subtype) "type"
                 } else {
-                    #item 31300004
+                    #item 31300003
                     if {$type == "subtype"} {
                         #item 6498
                         set type "type"
                         #item 3139
                         set props(subtype) "subtype"
                     } else {
-                        #item 31300005
+                        #item 31300004
                         if {$type == "declare"} {
                             
                         } else {
-                            #item 31300006
+                            #item 31300005
                             error "Unexpected switch value: $type"
                         }
                         #item 6910
@@ -941,7 +941,7 @@ proc extract_signature { text name } {
                         incr i
                     }
                     #item 31300001
-                    if {($type == "subprogram") || ($type == "nested")} {
+                    if {$type == "subprogram"} {
                         #item 2109
                         if {$returns == ""} {
                             #item 2111
@@ -951,23 +951,23 @@ proc extract_signature { text name } {
                             set props(subtype) "function"
                         }
                     } else {
-                        #item 31300003
+                        #item 31300002
                         if {$type == "type"} {
                             #item 3141
                             set props(subtype) "type"
                         } else {
-                            #item 31300004
+                            #item 31300003
                             if {$type == "subtype"} {
                                 #item 6498
                                 set type "type"
                                 #item 3139
                                 set props(subtype) "subtype"
                             } else {
-                                #item 31300005
+                                #item 31300004
                                 if {$type == "declare"} {
                                     
                                 } else {
-                                    #item 31300006
+                                    #item 31300005
                                     error "Unexpected switch value: $type"
                                 }
                                 #item 6910
