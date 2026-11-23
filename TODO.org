@@ -1,4 +1,6 @@
 * Ada generator
+** TODO Allow nested package declarations
++ Introduce 'package' and 'private' shelves
 ** TODO Rework how private types are specified
 + Can we generate the partial view automatically?
 + 'private' + 'body' for no partial view

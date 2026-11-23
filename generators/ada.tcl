@@ -358,7 +358,7 @@ proc check_keywords_keyval { words keywords } {
     }
 }
 
-proc check_keywords_mutex { keywords words errors_var } {
+proc check_keywords_mutex { keywords words errors_var name } {
     #item 7188
     variable drn_kw_mutex
     #item 7190
@@ -388,9 +388,11 @@ proc check_keywords_mutex { keywords words errors_var } {
     }
 }
 
-proc classify_keywords { keywords default_list } {
+proc classify_keywords { keywords default_list name } {
     #item 7206
     array set default $default_list
+    #item 4420
+    set errors {}
     #item 7171
     variable drn_kw_mutex
     #item 7193
@@ -398,7 +400,7 @@ proc classify_keywords { keywords default_list } {
     	[ array names drn_kw_mutex ]
     #item 7100
     check_keywords_mutex $keywords \
-    	$mutex_kw errors
+    	$mutex_kw errors $name
     #item 7158
     if {$access == ""} {
         #item 7161
@@ -409,8 +411,6 @@ proc classify_keywords { keywords default_list } {
         #item 7165
         set subtype $default(subtype)
     }
-    #item 4420
-    set errors {}
     #item 4498
     variable drn_kw_bool
     #item 2177
@@ -899,7 +899,8 @@ proc extract_signature { text name } {
                 set default_list [ array get props ]
                 #item 2121
                 lassign \
-                [ classify_keywords $found_keywords $default_list ] \
+                [ classify_keywords \
+                	$found_keywords $default_list $name ] \
                 error_message prop_list
                 #item 2105
                 if {$error_message == ""} {
@@ -2131,8 +2132,16 @@ proc handle_is { result_var body is_part depth abstract separate print_body } {
                     }
                 }
             } else {
-                #item 4533
-                return 0
+                #item 7250
+                if {[ is_null $body ]} {
+                    #item 7253
+                    lappend result "is null"
+                    #item 7252
+                    return 0
+                } else {
+                    #item 4533
+                    return 0
+                }
             }
         }
     }
@@ -2487,14 +2496,41 @@ proc init_unit { unit filename } {
 }
 
 proc is_empty_body { components header footer } {
-    #item 4164
-    set visible [ filter_subprograms $components visible ]
-    set private [ filter_subprograms $components private ]
-    set local [ filter_components $components body ]
-    #item 4163
-    if {(([ llength [ concat $visible $private $local ] ] == 0) && ($header == "")) && ($footer == "")} {
-        #item 4031
-        return 1
+    #item 4034
+    if {($header == "") && ($footer == "")} {
+        #item 4164
+        set visible [ filter_subprograms $components visible ]
+        set private [ filter_subprograms $components private ]
+        set local [ filter_components $components body ]
+        #item 7240
+        set filtered [ concat $visible $private $local ]
+        #item 4163
+        if {[ llength $filtered ] == 0} {
+            #item 4031
+            return 1
+        } else {
+            foreach component $filtered {
+                #item 7242
+                lassign \
+                $component \
+                diagram_id name signature body
+                #item 7243
+                lassign \
+                $signature \
+                type prop_list parameters returns
+                #item 7241
+                array set props $prop_list
+                #item 7244
+                if {($props(abstract)) || ([ is_null $body ])} {
+                    
+                } else {
+                    #item 4032
+                    return 0
+                }
+            }
+            #item 7245
+            return 1
+        }
     } else {
         #item 4032
         return 0
@@ -2502,13 +2538,19 @@ proc is_empty_body { components header footer } {
 }
 
 proc is_empty_spec { components header footer } {
-    #item 2235
-    set visible [ filter_components $components visible ]
-    set private [ filter_components $components private ]
-    #item 2230
-    if {(([ llength [ concat $visible $private ] ] == 0) && ($header == "")) && ($footer == "")} {
-        #item 2233
-        return 1
+    #item 2236
+    if {($header == "") && ($footer == "")} {
+        #item 2235
+        set visible [ filter_components $components visible ]
+        set private [ filter_components $components private ]
+        #item 2230
+        if {[ llength [ concat $visible $private ] ] == 0} {
+            #item 2233
+            return 1
+        } else {
+            #item 2234
+            return 0
+        }
     } else {
         #item 2234
         return 0
