@@ -2409,14 +2409,18 @@ proc rename_dia { } {
 	}
 }
 
-proc get_selected_diagrams { } {
+proc nodes_to_diagrams { node_ids } {
 	set result {}
-	set selection [ mtree::get_selected_items ]
-	foreach node_id $selection {
+	foreach node_id $node_ids {
 		lassign [ get_node_info $node_id ] parent type foo diagram_id
 		lappend result $diagram_id
 	}
 	return $result
+}
+
+proc get_selected_diagrams { } {
+	set selection [ mtree::get_selected_items ]
+	return [ nodes_to_diagrams $selection ]
 }
 
 proc goto_item { } {
@@ -3391,6 +3395,35 @@ proc dia_properties { } {
 	ui::text_window [ mc2 "\$dia_name: Edit diagram description" ] $old mwc::do_dia_properties $old
 }
 
+proc preview_code { diagram_ids } {
+	set all_code {}
+	foreach diagram_id $diagram_ids {
+		lassign [ gen::generate_preview $diagram_id ] error_message code
+
+		if { $error_message != "" } {
+			set err_prefix [ mc2 "Cannot generate code preview." ]
+			set err_suffix [ mc2 $error_message ]
+			mw::set_status "$err_prefix $err_suffix"
+			return
+		}
+
+		set dia_name [ get_dia_name $diagram_id ]
+		set code "$dia_name\n$code"
+		lappend all_code $code
+	}
+
+	if { [ llength $diagram_ids ] == 1 } {
+		set dia_name [ get_dia_name [ lindex $diagram_ids 0 ] ]
+	} else {
+		set dia_name [ mc2 "multiple" ]
+	}
+
+	set text [ join $all_code "\n\n" ]
+	ui::text_window [ mc2 "\$dia_name: Code preview" ] $text mwc::do_nothing $text
+}
+
+proc do_nothing { old new } {
+}
 
 
 proc create_file { } {

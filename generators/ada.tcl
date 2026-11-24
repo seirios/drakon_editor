@@ -533,6 +533,55 @@ proc classify_keywords { keywords default_list name } {
     return [ list $error_message $proplist ]
 }
 
+proc code_preview { db gdb diagram_id } {
+    #item 7285
+    set result ""
+    #item 7282
+    do_monkey_patch
+    #item 7261
+    set callbacks [ make_callbacks ]
+    #item 7266
+    if {[ mwc::is_drakon $diagram_id ]} {
+        #item 7269
+        gen::fix_graph_for_diagram \
+        	$gdb $callbacks 0 $diagram_id
+        #item 7263
+        set components [ generate_components \
+        	$db $gdb $callbacks ]
+        #item 7272
+        if {[ has_insertions $gdb $diagram_id ]} {
+            
+        } else {
+            #item 7271
+            set component [ generate_component \
+            	$gdb $diagram_id $callbacks ]
+            #item 7259
+            if {[ graph::errors_occured ]} {
+                
+            } else {
+                #item 7278
+                set spec_text [ gen_component \
+                	$db $component 0 ]
+                #item 7279
+                set body_text [ gen_component \
+                	$db $component 1 ]
+                #item 7280
+                set lines [ concat \
+                	{ "=== print_body = 0 ===" } \
+                	$spec_text \
+                	{ "=== print_body = 1 ===" } \
+                	$body_text ]
+                #item 7281
+                set result [ join $lines "\n" ]
+            }
+        }
+    }
+    #item 7283
+    undo_monkey_patch
+    #item 7284
+    return $result
+}
+
 proc collect_until { lines start until do_unindent } {
     #item 3274
     set result {}

@@ -498,6 +498,7 @@ proc create_ui { } {
 	.mainmenu.drakon add command -label [ mc2 "Verify" ] -underline 0 -command mw::verify -accelerator [ acc R ]
 	.mainmenu.drakon add command -label [ mc2 "Verify all" ] -underline 7 -command mw::verify_all
 	.mainmenu.drakon add separator		
+	.mainmenu.drakon add command -label [ mc2 "Preview code..." ] -underline 0 -command mw::preview_code -accelerator [ acc P ]
 	.mainmenu.drakon add command -label [ mc2 "Generate code" ] -underline 0 -command gen::generate -accelerator [ acc S ]
 
 	. configure -menu .mainmenu
@@ -605,7 +606,18 @@ variable errors_main
 variable errors_listbox
 variable error_label
 
-proc get_current { s_current_only } {
+proc preview_code { } {
+	set selection [ mtree::get_selection ]
+	set count [ llength $selection ]
+	set has_selection [ expr { $count > 0 } ]
+
+	if { $has_selection } {
+		set diagram_ids [ mwc::nodes_to_diagrams $selection ]
+		mwc::preview_code $diagram_ids
+	}
+}
+
+proc is_current { s_current_only } {
 	if { $s_current_only == "current" } {
 		return 1
 	} else {
@@ -635,7 +647,7 @@ proc replace_all { } {
 	
 	set db $mwc::db
 	set diagram_ids [ mwc::get_selected_diagrams ]
-	set current_only [ get_current $s_current_only ]
+	set current_only [ is_current $s_current_only ]
 
 	set ignore_case [ expr { !$s_case } ]
 	search::init $db
@@ -702,7 +714,7 @@ proc find_all { } {
 	
 	set db $mwc::db
 	set diagram_ids [ mwc::get_selected_diagrams ]
-	set current_only [ get_current $s_current_only ]
+	set current_only [ is_current $s_current_only ]
 	
 	set ignore_case [ expr { !$s_case } ]
 	search::init $db
@@ -938,6 +950,8 @@ proc shortcut_handler { window code key } {
 		mwc::go_to_branch
 	} elseif { $code == $codes(t) || $key == "t" } {
 		mwc::adjust_icon_sizes_current	
+	} elseif { $code == $codes(p) || $key == "p" } {
+		mw::preview_code
 	} elseif { $code == $codes(s) || $key == "s" } {
 		gen::generate
 	}
@@ -1255,6 +1269,7 @@ proc dia_popup { window x_world y_world } {
 	if { $one } {
 		if { $diagram_selected } {
 			.diapop add command -label [ mc2 "Find all references" ] -command mw::find_references
+			.diapop add command -label [ mc2 "Preview code..." ] -command mw::preview_code
 			.diapop add separator
 		} else {
 			.diapop add command -label [ mc2 "Collapse" ] -command mtree::collapse
@@ -1266,7 +1281,7 @@ proc dia_popup { window x_world y_world } {
 	}
 
 	.diapop add command -label [ mc2 "New diagram..." ] -command mwc::new_dia
-	.diapop add command -label [ mc2 "New folder..." ] -command mwc::new_folder		
+	.diapop add command -label [ mc2 "New folder..." ] -command mwc::new_folder
 
 
 	if { $has_selection } {

@@ -374,7 +374,7 @@ proc edit_popup { window x_world y_world callback } {
 	if { [ info exists properties(language) ] } {
 		set language $properties(language)
 		if { [ info exists gen::generators($language) ] } {
-			lassign $gen::generators($language) generator extension
+			lassign $gen::generators($language) generator
 			set gen_namespace [ namespace tail [ namespace qualifiers $generator ] ]
 			set cmd_presets "${gen_namespace}::presets_$preset_type"
 			set cmd_get_preset "${gen_namespace}::get_preset_$preset_type"

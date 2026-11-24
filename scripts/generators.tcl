@@ -66,7 +66,7 @@ proc generate { } {
 	lassign $generators($language) generator extension
 	
 	
-	# That namespace is used by some procedures (p.separate_line) to store some variebles for current file generation.
+	# That namespace is used by some procedures (p.separate_line) to store some variables for current file generation.
 	namespace eval current_file_generation_info {}
 	set current_file_generation_info::language $language
 	set current_file_generation_info::generator $generator
@@ -145,6 +145,45 @@ proc generate_no_gui { dst_filename } {
 	return 1
 }
 
+proc generate_preview { diagram_id } {
+	variable generators
+
+	array set properties [ mwc::get_file_properties ]
+	if { ! [ info exists properties(language) ] } {
+		return [ list "Language is not set." "" ]
+	}
+	set language $properties(language)
+
+	if { ! [ info exists generators($language) ] } {
+		return [ list "No generator for language." "" ]
+	}
+	lassign $generators($language) generator
+
+	namespace eval current_file_generation_info {}
+	set current_file_generation_info::language $language
+	set current_file_generation_info::generator $generator
+
+	set gen_namespace [ namespace tail [ namespace qualifiers $generator ] ]
+	set cmd_code_preview "${gen_namespace}::code_preview"
+
+	if { [ namespace which $cmd_code_preview ] == "" } {
+		return [ list "No code_preview in generator." "" ]
+	}
+
+	set db [ mwc::get_db ]
+
+	newfor::clear
+	graph::verify_one $db $diagram_id
+
+	if { [ graph::errors_occured ] } {
+		return [ list "Some errors found." "" ]
+	}
+
+	set gdb "gdb"
+	set code [ $cmd_code_preview $db $gdb $diagram_id ]
+
+	return [ list "" $code ]
+}
 
 proc p.do_generate { generator language { filename "" } } {
 	global g_filename
