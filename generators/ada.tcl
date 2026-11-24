@@ -1365,7 +1365,8 @@ proc gen_component { db component print_body } {
     #item 68140001
     if {$type == "subprogram"} {
         #item 6821
-        if {$props(abstract) && $print_body} {
+        if {[ omit_subprogram_body $component ]
+&& $print_body} {
             
         } else {
             #item 6824
@@ -2817,6 +2818,45 @@ proc nodetype { node } {
         #item 6361
         return [ lindex $node 0 ]
     }
+}
+
+proc omit_subprogram_body { component } {
+    #item 7292
+    lassign \
+    $component \
+    diagram_id name signature body is_part with_part
+    #item 7293
+    lassign \
+    $signature \
+    type prop_list parameters returns
+    #item 7291
+    array set props $prop_list
+    #item 7294
+    if {$props(abstract)} {
+        #item 7298
+        return 1
+    } else {
+        #item 7299
+        if {[ is_null $body ]} {
+            #item 7301
+            if {$props(separate)} {
+                
+            } else {
+                #item 7303
+                if {$is_part != ""} {
+                    
+                } else {
+                    #item 7305
+                    if {$props(access) != "body"} {
+                        #item 7298
+                        return 1
+                    }
+                }
+            }
+        }
+    }
+    #item 7297
+    return 0
 }
 
 proc p.and { left right } {
