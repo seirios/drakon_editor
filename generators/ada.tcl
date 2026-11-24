@@ -1422,7 +1422,9 @@ proc gen_insertion { db item_id type print_body } {
     #item 4793
     if {$insertion == ""} {
         #item 4796
-        set g_errmsg [ mc2 "Insertion not found." ]
+        set g_errmsg [ mc2 "Insertion not found:" ]
+        #item 7434
+        append g_errmsg " $name."
         #item 4795
         set result {}
     } else {
@@ -1818,8 +1820,9 @@ proc generate_component { gdb diagram_id callbacks } {
     errorMessage real_sign
     #item 5614
     if {$errorMessage != ""} {
-        #item 5617
-        gen::report_error $diagram_id {} $errorMessage
+        #item 7433
+        complain_dia $name \
+        "Invalid signature. $errorMessage"
     }
     #item 5618
     set tree ""
@@ -1840,7 +1843,7 @@ proc generate_component { gdb diagram_id callbacks } {
         }
         #item 5622
         complain_dia $name \
-        "Could not generate code for diagram '$name'. $errmsg"
+        "Failed code generation for diagram '$name'. $errmsg"
     }
     #item 5611
     set component [ list \
@@ -4494,9 +4497,12 @@ proc try_nogoto { gdb diagram_id callbacks name } {
     set tree [ nogoto::generate $db $start_item ]
     #item 5661
     if {$tree == ""} {
-        #item 5664
-        gen::report_error $diagram_id {} \
-        	"Could not generate with nogoto. $g_errmsg"
+        #item 7431
+        complain_dia $name \
+        "Could not generate with nogoto. $g_errmsg"
+        #item 7432
+        set g_errmsg \
+        	[ mc2 "Some errors found." ]
         #item 5665
         return ""
     }
