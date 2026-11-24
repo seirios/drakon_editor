@@ -199,14 +199,14 @@ proc get_selected_items { } {
 		if { $type == "item" } {
 			lappend result $ext_id
 		} elseif { $type == "folder" } {
-			set children [ get_folder_items $ext_id ]
+			set children [ get_folder_items $ext_id 1 ]
 			set result [ concat $result $children ]
 		}
 	}
 	return [ lrmdups $result ]
 }
 
-proc get_folder_items { ext_id } {
+proc get_folder_items { ext_id recurse } {
 	variable tree
 
 	set result {}
@@ -214,7 +214,13 @@ proc get_folder_items { ext_id } {
 	set children [ $tree children $item_id ]
 	foreach child $children {
 		set ext_id [ map.get_external_id $child ]
-		lappend result $ext_id
+		set type [ map.get_type $ext_id ]
+		if { $type == "item" } {
+			lappend result $ext_id
+		} elseif { $type == "folder" && $recurse } {
+			set inner [ get_folder_items $ext_id 1 ]
+			set result [ concat $result $inner ]
+		}
 	}
 	return $result
 }
