@@ -1789,6 +1789,14 @@ proc generate_component { gdb diagram_id callbacks } {
     #item 5608
     set extract_signature [ gen::get_callback $callbacks signature ]
     set commentator [ gen::get_callback $callbacks comment ]
+    #item 5609
+    set start_info [ gen::get_start_info $gdb $diagram_id ]
+    #item 5612
+    lassign \
+    $start_info \
+    start_icon params_icon name params_text start_item
+    #item 7429
+    set g_gen($name) {}
     #item 7327
     set insertions [ get_insertions $gdb $diagram_id ]
     foreach ins_name $insertions {
@@ -1802,12 +1810,6 @@ proc generate_component { gdb diagram_id callbacks } {
             generate_component $gdb $ins_id $callbacks
         }
     }
-    #item 5609
-    set start_info [ gen::get_start_info $gdb $diagram_id ]
-    #item 5612
-    lassign \
-    $start_info \
-    start_icon params_icon name params_text start_item
     #item 5610
     set signature [ $extract_signature $params_text $name ]
     #item 5613
