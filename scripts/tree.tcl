@@ -302,5 +302,22 @@ proc p.collapse { item_id } {
 	$tree item $item_id -open no
 }
 
+proc expand { } {
+	variable tree
+	foreach item_id [ $tree selection ] {
+		p.expand $item_id
+	}
+}
+
+proc p.expand { item_id } {
+	variable tree
+
+	foreach child [ $tree children $item_id ] {
+		p.expand $child
+	}
+	
+	$tree item $item_id -open yes
+}
+
 }
 

@@ -1255,8 +1255,10 @@ proc dia_popup { window x_world y_world } {
 	if { $one } {
 		if { $diagram_selected } {
 			.diapop add command -label [ mc2 "Find all references" ] -command mw::find_references
+			.diapop add separator
 		} else {
 			.diapop add command -label [ mc2 "Collapse" ] -command mtree::collapse
+			.diapop add command -label [ mc2 "Expand" ] -command mtree::expand
 			.diapop add separator
 			.diapop add command -label [ mc2 "New diagram inside this folder..." ] -command mwc::new_dia_here
 			.diapop add command -label [ mc2 "New folder inside this folder..." ] -command mwc::new_folder_here
@@ -1269,6 +1271,7 @@ proc dia_popup { window x_world y_world } {
 
 	if { $has_selection } {
 		.diapop add separator		
+		.diapop add command -label [ mc2 "Copy diagram names" ] -command mwc::copy_dia_names
 		.diapop add command -label [ mc2 "Copy" ] -command mwc::copy_tree
 		.diapop add command -label [ mc2 "Cut" ] -command mwc::cut_tree
 	}
@@ -1299,13 +1302,9 @@ proc dia_popup { window x_world y_world } {
 	}
 	
 	if { $diagram_selected } {
-		.diapop add separator	
+		.diapop add separator
 		.diapop add command -label [ mc2 "Export to PDF..." ] -command export_pdf::export
 		.diapop add command -label [ mc2 "Export to PNG..." ] -command export_png::export
-	}
-	
-	if { $has_selection } {
-		.diapop add command -label [ mc2 "Copy diagram names" ] -command mwc::copy_dia_names
 	}
 	
 	tk_popup .diapop $x_world $y_world
