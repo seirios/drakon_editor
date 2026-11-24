@@ -1156,6 +1156,7 @@ proc canvas_popup { window x_world y_world x y } {
 	
 	.canvaspop add cascade -label [ mc2 "Insert" ] -underline 0 -menu .canvaspop.inserts
 	.canvaspop add cascade -label [ mc2 "Insert more" ] -underline 0 -menu .canvaspop.more
+	.canvaspop add separator
 	
 	# Create 'Insert' menu items
 	foreach insert $inserts {
@@ -1286,7 +1287,6 @@ proc dia_popup { window x_world y_world } {
 
 	if { $has_selection } {
 		.diapop add separator		
-		.diapop add command -label [ mc2 "Copy diagram names" ] -command mwc::copy_dia_names
 		.diapop add command -label [ mc2 "Copy" ] -command mwc::copy_tree
 		.diapop add command -label [ mc2 "Cut" ] -command mwc::cut_tree
 	}
@@ -1312,6 +1312,7 @@ proc dia_popup { window x_world y_world } {
 	}
 	
 	if { $has_selection } {
+		.diapop add command -label [ mc2 "Copy diagram names" ] -command mwc::copy_dia_names
 		.diapop add separator
 		.diapop add command -label [ mc2 "Delete" ] -command mwc::delete_tree_items
 	}
