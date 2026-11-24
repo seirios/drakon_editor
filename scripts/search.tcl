@@ -358,14 +358,14 @@ proc to_tokens_nw { text } {
 	return [ remove_whitespace $tokens ]
 }
 
-proc p.search_makes_sense { diagram_id current_only whole needle } {
+proc p.search_makes_sense { diagram_ids current_only whole needle } {
 	if { $needle == "" } { return 0 }
 	if { $whole && [ string trim $needle ] == "" } { return 0 }
-	if { $current_only && $diagram_id == "" } { return 0 }
+	if { $current_only && $diagram_ids == {} } { return 0 }
 	return 1
 }
 
-proc p.scan_texts { db needle diagram_id current_only whole icase } {
+proc p.scan_texts { db needle diagram_ids current_only whole icase } {
 
 	if { $icase } {
 		set needle [ string tolower $needle ]
@@ -377,7 +377,9 @@ proc p.scan_texts { db needle diagram_id current_only whole icase } {
 	}
 	
 	if { $current_only } {
-		p.scan_diagram $db $needle $needle_tokens $diagram_id $whole $icase
+		foreach diagram_id $diagram_ids {
+			p.scan_diagram $db $needle $needle_tokens $diagram_id $whole $icase
+		}
 	} else {
 		set file_description [ $db onecolumn { select description from state } ]
 		p.scan 0 file_description $file_description $needle $needle_tokens $whole $icase
@@ -530,22 +532,22 @@ proc p.build_result { } {
 	p.sort_results	
 }
 
-proc find_all { db needle diagram_id current_only whole icase } {
-	if { ![ p.search_makes_sense $diagram_id $current_only $whole $needle ] } {
+proc find_all { db needle diagram_ids current_only whole icase } {
+	if { ![ p.search_makes_sense $diagram_ids $current_only $whole $needle ] } {
 		return 0
 	}
 	p.init_db
-	p.scan_texts $db $needle $diagram_id $current_only $whole $icase
+	p.scan_texts $db $needle $diagram_ids $current_only $whole $icase
 	p.build_result
 	return 1
 }
 
-proc replace_all { db needle diagram_id current_only whole icase replacement } {
-	if { ![ p.search_makes_sense $diagram_id $current_only $whole $needle ] } {
+proc replace_all { db needle diagram_ids current_only whole icase replacement } {
+	if { ![ p.search_makes_sense $diagram_ids $current_only $whole $needle ] } {
 		return 0
 	}
 	p.init_db
-	p.scan_texts $db $needle $diagram_id $current_only $whole $icase
+	p.scan_texts $db $needle $diagram_ids $current_only $whole $icase
 	p.build_result
 	p.replace_all_kernel $replacement
 	set count [ searchdb onecolumn { select count(*) from matches } ]

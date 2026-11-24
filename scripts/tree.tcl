@@ -191,6 +191,34 @@ proc get_selection { } {
 	return $result
 }
 
+proc get_selected_items { } {
+	set result {}
+	set ext_ids [ get_selection ]
+	foreach ext_id $ext_ids {
+		set type [ map.get_type $ext_id ]
+		if { $type == "item" } {
+			lappend result $ext_id
+		} elseif { $type == "folder" } {
+			set children [ get_folder_items $ext_id ]
+			set result [ concat $result $children ]
+		}
+	}
+	return [ lrmdups $result ]
+}
+
+proc get_folder_items { ext_id } {
+	variable tree
+
+	set result {}
+	set item_id [ map.get_item_id $ext_id ]
+	set children [ $tree children $item_id ]
+	foreach child $children {
+		set ext_id [ map.get_external_id $child ]
+		lappend result $ext_id
+	}
+	return $result
+}
+
 proc p.open_to_root { item_id } {
 	variable tree
 	$tree item $item_id -open yes

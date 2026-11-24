@@ -365,7 +365,7 @@ proc create_ui { } {
 	set case_check [ ttk::checkbutton $search_main.criteria.case_check -text [ mc2 "Case sensitive" ] -variable mw::s_case ]
 	set whole_check [ ttk::checkbutton $search_main.criteria.whole_check -text [ mc2 "Whole word only" ] -variable mw::s_whole_word ]
 	
-	set current_radio [ ttk::radiobutton $search_main.criteria.current_radio -text [ mc2 "Current diagram" ] -variable mw::s_current_only -value current ]
+	set current_radio [ ttk::radiobutton $search_main.criteria.current_radio -text [ mc2 "Current selection" ] -variable mw::s_current_only -value current ]
 	set all_radio [ ttk::radiobutton $search_main.criteria.all_radio -text [ mc2 "Entire file" ] -variable mw::s_current_only -value all ]
 	
 	grid $needle_label -row 0 -column 0 -sticky w
@@ -605,6 +605,14 @@ variable errors_main
 variable errors_listbox
 variable error_label
 
+proc get_current { s_current_only } {
+	if { $s_current_only == "current" } {
+		return 1
+	} else {
+		return 0
+	}
+}
+
 proc replace_all { } {
 	variable s_needle
 	variable s_case
@@ -626,17 +634,13 @@ proc replace_all { } {
 	mwc::save_view
 	
 	set db $mwc::db
-	set diagram_id [ mwc::editor_state $db current_dia ]
-	if { $s_current_only == "current" } {
-		set current_only 1
-	} else {
-		set current_only 0
-	}
-	
+	set diagram_ids [ mwc::get_selected_diagrams ]
+	set current_only [ get_current $s_current_only ]
+
 	set ignore_case [ expr { !$s_case } ]
 	search::init $db
-	set count [ search::replace_all $db $s_needle $diagram_id $current_only \
-		 $s_whole_word $ignore_case $s_replace ] 	
+	set count [ search::replace_all $db $s_needle $diagram_ids $current_only \
+		 $s_whole_word $ignore_case $s_replace ]
 	set search_result_list {}
 	
 	if { $count == 0 } {
@@ -697,16 +701,13 @@ proc find_all { } {
 	mwc::save_view
 	
 	set db $mwc::db
-	set diagram_id [ mwc::editor_state $db current_dia ]
-	if { $s_current_only == "current" } {
-		set current_only 1
-	} else {
-		set current_only 0
-	}
+	set diagram_ids [ mwc::get_selected_diagrams ]
+	set current_only [ get_current $s_current_only ]
 	
 	set ignore_case [ expr { !$s_case } ]
 	search::init $db
-	if { ![ search::find_all $db $s_needle $diagram_id $current_only $s_whole_word $ignore_case ] } { return }
+	if { ![ search::find_all $db $s_needle $diagram_ids $current_only \
+		$s_whole_word $ignore_case ] } { return }
 
 	set search_result_list [ search::get_list ]
 	set count [ search::get_match_count ]

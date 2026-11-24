@@ -1077,8 +1077,20 @@ proc get_optional { dictionary key } {
     }
 }
 
-proc open_output_file { filename } {	
+proc open_output_file { filename } {
 	set handle [ open $filename w ]
 	fconfigure $handle -encoding "utf-8"
 	return $handle
+}
+
+# from TCL wiki
+proc lrmdups list {
+	array set x {}
+	set res {}
+	foreach e $list {
+		if {[info exists x($e)]} continue
+		lappend res $e
+		set x($e) {}
+	}
+	return $res
 }

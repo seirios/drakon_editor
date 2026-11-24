@@ -2409,6 +2409,16 @@ proc rename_dia { } {
 	}
 }
 
+proc get_selected_diagrams { } {
+	set result {}
+	set selection [ mtree::get_selected_items ]
+	foreach node_id $selection {
+		lassign [ get_node_info $node_id ] parent type foo diagram_id
+		lappend result $diagram_id
+	}
+	return $result
+}
+
 proc goto_item { } {
 	variable db
 	ui::input_box [ mc2 "Go to item" ] "" mwc::do_goto_item foo
