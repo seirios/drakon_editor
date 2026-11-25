@@ -63,6 +63,11 @@
 ** TODO Introduce block start/end icons (?)
 + Could help with scoping in C3 generator
 + Avoid begin/end shelves in Ada generator
++ Geometry: square with crenelation, slightly wider
++ Declare part would go after block start icon, extracted
++ Optional name in block start icon
++ Optional name in block end icon
++ Extended return statement would use these icons too
 ** TODO Show branches in order in 'go to branch...' (?)
 + Problem is order not known until generation time
 ** TODO Allow enabling/disabling branches (?)

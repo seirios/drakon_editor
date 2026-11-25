@@ -1998,7 +1998,7 @@ proc get_indent { str } {
 }
 
 proc get_insertions { gdb diagram_id } {
-    #item 7314
+    #item 7628
     return [ $gdb eval {
     	select text
     	from vertices
@@ -2993,7 +2993,7 @@ proc p.proc_insertion { gdb item_id diagram_id } {
     #item 7365
     lassign \
     [ parse_insertion $gdb $item_id ] \
-    error_msg name type
+    error_msg type name
     #item 7366
     if {$error_msg == ""} {
         #item 7023
@@ -3011,72 +3011,23 @@ proc p.proc_insertion { gdb item_id diagram_id } {
 }
 
 proc p.proc_shelf { gdb item_id diagram_id } {
-    #item 4871
-    lassign [ $gdb eval {
-    	select text, text2
-    	from items
-    	where item_id = :item_id
-    	} ] primary secondary
-    #item 4963
-    set slines [ split $secondary "\n" ]
-    #item 4964
-    if {[ llength $slines ] == 1} {
-        #item 4967
-        set secondary \
-        	[ lindex $slines 0 ]
-    } else {
-        #item 4968
-        graph::p.error $diagram_id $item_id \
-        	"Top text must be single line."
-    }
-    #item 4878
-    set type [ lindex $secondary 0 ]
-    set last [ lindex $secondary end ]
-    #item 48740001
-    if {($type == "end") || ($type == "begin")} {
-        
-    } else {
-        #item 48740003
-        if {((((((($type == "return") || ($type == "for")) || ($type == "when")) || ($type == "record")) || ($type == "exception")) || ($type == "declare")) || ($type == "with")) || ($type == "is")} {
-            #item 6293
-            if {$primary == ""} {
-                #item 6295
-                graph::p.error $diagram_id $item_id \
-                	"Shelf of type '$type' cannot be empty."
-            }
-        } else {
-            #item 48740011
-            if {$type == "\(\)"} {
-                #item 7006
-                set type "agg_paren"
-            } else {
-                #item 48740012
-                if {$type == "\[\]"} {
-                    #item 7007
-                    set type "agg_brack"
-                } else {
-                    #item 4873
-                    graph::p.error $diagram_id $item_id \
-                    	"Invalid shelf of type '$type'."
-                }
-            }
+    #item 7491
+    lassign \
+    [ parse_shelf $gdb $item_id ] \
+    error_msg type text
+    #item 7492
+    if {$error_msg == ""} {
+        #item 4872
+        gdb eval {
+        	update vertices
+        	set text = :text,
+        	    type = :type
+        	where item_id = :item_id
         }
-    }
-    #item 4900
-    if {[ llength $secondary ] == 1} {
-        #item 4896
-        set text $primary
     } else {
-        #item 4902
+        #item 7490
         graph::p.error $diagram_id $item_id \
-        	"Extra arguments in shelf of type '$type'."
-    }
-    #item 4872
-    gdb eval {
-    	update vertices
-    	set text = :text,
-    	    type = :type
-    	where item_id = :item_id
+        	$error_msg
     }
 }
 
@@ -3396,65 +3347,148 @@ proc parenthesis_aggregate { lines maxlen } {
 }
 
 proc parse_insertion { gdb item_id } {
-    #item 7413
+    #item 7514
     set error_msg ""
-    set name ""
     set type ""
+    set name ""
     set diagram_id ""
-    #item 7383
+    #item 7513
     lassign [ $gdb eval {
     	select text, text2
     	from items
     	where item_id = :item_id
     	} ] text text2
-    #item 7384
+    #item 7521
     if {[ lindex $text 0 ] == "nested"} {
-        #item 7398
+        #item 7537
         set type [ lindex $text 1 ]
-        #item 73880001
+        #item 75270001
         if {$type == "body"} {
-            #item 7399
+            #item 7538
             set type "ins_$type"
-            #item 7386
+            #item 7526
             set name [ lindex $text 2 ]
+            #item 7547
+            set diagram_id [ get_diagram_id \
+            	$gdb $name ]
+            #item 7548
+            if {$diagram_id == ""} {
+                #item 7550
+                set error_msg \
+                	[ mc2 "Unknown diagram." ]
+            }
         } else {
-            #item 73880002
+            #item 75270002
             if {($type == "is") || ($type == "declare")} {
-                #item 7401
+                #item 7540
                 if {[ lindex $text 2 ] == "body"} {
-                    #item 7405
+                    #item 7544
                     set type "ins_${type}_body"
-                    #item 7404
+                    #item 7543
                     set name [ lindex $text 3 ]
                 } else {
-                    #item 7399
+                    #item 7538
                     set type "ins_$type"
-                    #item 7386
+                    #item 7526
                     set name [ lindex $text 2 ]
                 }
+                #item 7547
+                set diagram_id [ get_diagram_id \
+                	$gdb $name ]
+                #item 7548
+                if {$diagram_id == ""} {
+                    #item 7550
+                    set error_msg \
+                    	[ mc2 "Unknown diagram." ]
+                }
             } else {
-                #item 7397
+                #item 7536
                 set error_msg \
-                	"Invalid insertion type."
+                	[ mc2 "Invalid insertion type." ]
             }
         }
-        #item 7385
-        set diagram_id [ get_diagram_id \
-        	$gdb $name ]
-        #item 7387
-        if {$diagram_id == ""} {
-            #item 7411
+    } else {
+        #item 7524
+        set error_msg \
+        	[ mc2 "Wrong insertion syntax." ]
+    }
+    #item 7525
+    return [ list \
+    	$error_msg $type $name $diagram_id ]
+}
+
+proc parse_shelf { gdb item_id } {
+    #item 7568
+    set error_msg ""
+    set type ""
+    set text ""
+    #item 7567
+    lassign [ $gdb eval {
+    	select text, text2
+    	from items
+    	where item_id = :item_id
+    	} ] primary secondary
+    #item 7569
+    set slines [ split $secondary "\n" ]
+    #item 7574
+    if {[ llength $slines ] == 1} {
+        #item 7575
+        set secondary [ lindex $slines 0 ]
+        #item 7579
+        if {[ llength $secondary ] == 1} {
+            #item 7580
+            set type $secondary
+            #item 75860001
+            if {($type == "end") || ($type == "begin")} {
+                #item 7584
+                set text $primary
+            } else {
+                #item 75860003
+                if {$type == "\(\)"} {
+                    #item 7619
+                    set type "agg_paren"
+                    #item 7584
+                    set text $primary
+                } else {
+                    #item 75860004
+                    if {$type == "\[\]"} {
+                        #item 7620
+                        set type "agg_brack"
+                        #item 7584
+                        set text $primary
+                    } else {
+                        #item 75860005
+                        if {((((((($type == "return") || ($type == "for")) || ($type == "when")) || ($type == "record")) || ($type == "exception")) || ($type == "declare")) || ($type == "with")) || ($type == "is")} {
+                            #item 7610
+                            if {$primary == ""} {
+                                #item 7612
+                                set error_msg \
+                                	[ mc2 "Invalid empty shelf." ]
+                            } else {
+                                #item 7584
+                                set text $primary
+                            }
+                        } else {
+                            #item 7585
+                            set error_msg \
+                            	[ mc2 "Invalid shelf type." ]
+                        }
+                    }
+                }
+            }
+        } else {
+            #item 7581
             set error_msg \
-            	"Unknown diagram '$name'."
+            	[ mc2 "Extra arguments in shelf." ]
         }
     } else {
-        #item 7410
+        #item 7576
         set error_msg \
-        	"Insertion must begin with 'nested'."
+        	[ mc2 "Invalid shelf syntax." ]
     }
-    #item 7412
+    #item 7570
     return [ list \
-    	$error_msg $name $type $diagram_id ]
+    	$error_msg $type $text ]
 }
 
 proc preprocess_tokens { tokens } {
