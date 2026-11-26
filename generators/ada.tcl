@@ -1276,13 +1276,13 @@ proc fix_graph_stage_1 { gdb callbacks diagram_id } {
 }
 
 proc gen_block { db item_id type } {
+    #item 7691
+    set next [ nogoto::get_next_node \
+    	$db $item_id 0 ]
     #item 7684
     if {$type == "blockstart"} {
         #item 7693
         set text [ get_node_text $db $item_id ]
-        #item 7699
-        set next [ nogoto::get_next_node \
-        	$db $item_id 0 ]
         #item 7701
         if {[ lindex $text 0 ] == "return"} {
             #item 7718
@@ -1291,6 +1291,8 @@ proc gen_block { db item_id type } {
             set_node_text $db $item_id $text
             #item 7700
             set result [ list "return" $item_id ]
+            #item 7891
+            set block_nesting 0
             #item 7767
             set next_id $next
             while { 1 } {
@@ -1298,8 +1300,20 @@ proc gen_block { db item_id type } {
                 set next_type [ nogoto::get_node_type \
                 	$db $next_id ]
                 #item 7761
-                if {$next_type == "blockend"} {
+                if {$next_type == "blockend" &&
+$block_nesting == 0} {
                     break
+                }
+                #item 78920001
+                if {$next_type == "blockstart"} {
+                    #item 7900
+                    incr block_nesting
+                } else {
+                    #item 78920002
+                    if {$next_type == "blockend"} {
+                        #item 7901
+                        incr block_nesting -1
+                    }
                 }
                 #item 7765
                 set next_id [ nogoto::get_next_node \
@@ -1312,9 +1326,6 @@ proc gen_block { db item_id type } {
             set result [ list "block" $item_id ]
         }
     } else {
-        #item 7691
-        set next [ nogoto::get_next_node \
-        	$db $item_id 0 ]
         #item 7692
         set result [ list "end" $item_id ]
     }
@@ -3933,9 +3944,13 @@ proc print_node_core { texts node callbacks depth } {
                                             #item 6991
                                             set lines [ get_text_lines \
                                             	$id $texts $tab_convert ]
+                                            #item 7906
+                                            set comment [ commentator "Item $id" ]
                                             #item 6248
                                             set lines [ indent_group \
                                             	$lines "return" $depth " do" ]
+                                            #item 7907
+                                            lappend result $comment
                                             #item 6249
                                             set result [ concat $result $lines ]
                                             #item 6261
