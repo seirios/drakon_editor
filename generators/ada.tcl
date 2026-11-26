@@ -229,13 +229,6 @@ proc aggregate { lines maxlen start end } {
     return $result
 }
 
-proc begins_with { str text } {
-    #item 6845
-    set loc [ string first $text $str ]
-    #item 6846
-    return [ expr { $loc == 0 } ]
-}
-
 proc blank { arg } {
     #item 6219
     return ""
@@ -610,42 +603,6 @@ proc code_preview { db gdb diagram_id } {
     undo_monkey_patch
     #item 7284
     return $result
-}
-
-proc collect_until { lines start until do_unindent } {
-    #item 3274
-    set result {}
-    #item 3278
-    set len [ llength $lines ]
-    #item 32760001
-    set i $start
-    while { 1 } {
-        #item 32760002
-        if {$i < $len} {
-            
-        } else {
-            break
-        }
-        #item 3279
-        set current [ lindex $lines $i ]
-        #item 3280
-        if {[ unindent $current ] == $until} {
-            break
-        }
-        #item 3496
-        set line $current
-        #item 3413
-        if {$do_unindent} {
-            #item 3416
-            set line [ unindent $line ]
-        }
-        #item 3497
-        lappend result $line
-        #item 32760003
-        incr i
-    }
-    #item 3275
-    return [ list $i $result ]
 }
 
 proc commentator { line } {
@@ -2079,17 +2036,6 @@ proc get_diagram_id { gdb name } {
     } ]
 }
 
-proc get_indent { str } {
-    #item 4603
-    set symbol [ unindent $str ]
-    #item 4605
-    set loc [ string first $symbol $str ]
-    #item 4604
-    set blank [ string range $str 0 $loc-1 ]
-    #item 4602
-    return [ list $symbol $blank ]
-}
-
 proc get_insertions { gdb diagram_id } {
     #item 7628
     return [ $gdb eval {
@@ -2719,43 +2665,6 @@ proc is_null { body } {
         #item 4408
         return 0
     }
-}
-
-proc join_lists { list_of_lists separator } {
-    #item 3504
-    set result {}
-    #item 3512
-    set nli [ llength $list_of_lists ]
-    set lastli [ expr { $nli - 1 } ]
-    #item 35060001
-    set i 0
-    while { 1 } {
-        #item 35060002
-        if {$i < $nli} {
-            
-        } else {
-            break
-        }
-        #item 3513
-        set lines [ lindex $list_of_lists $i ]
-        #item 3514
-        if {$separator != "" && $i != $lastli} {
-            #item 3508
-            set nlines [ llength $lines ]
-            set last [ expr { $nlines - 1 } ]
-            #item 3509
-            set last_line [ lindex $lines $last ]
-            set last_line "$last_line$separator"
-            #item 3510
-            set lines [ lreplace $lines $last $last $last_line ]
-        }
-        #item 3511
-        set result [ concat $result $lines ]
-        #item 35060003
-        incr i
-    }
-    #item 3505
-    return $result
 }
 
 proc lappend_indent { list_var lines indent } {
@@ -4577,23 +4486,6 @@ proc standard_color { type } {
     }
 }
 
-proc traverse_links { gdb id } {
-    #item 2449
-    if {$id == ""} {
-        
-    } else {
-        #item 2442
-        set d1 [ gen::p.link_dst $gdb $id 1 ]
-        set d2 [ gen::p.link_dst $gdb $id 2 ]
-        #item 3203
-        puts "$id -> d1: $d1; d2: $d2"
-        #item 2446
-        traverse_links $gdb $d1
-        #item 2447
-        traverse_links $gdb $d2
-    }
-}
-
 proc trim_item_id { str } {
     #item 4360
     set len [ string length $str ]
@@ -4680,11 +4572,6 @@ proc undo_monkey_patch { } {
     monkey_patch_gen $direction
     #item 2309
     monkey_patch_nogoto $direction
-}
-
-proc unindent { str } {
-    #item 3398
-    return [ string trimleft $str ]
 }
 
 proc when_line { cond_text } {

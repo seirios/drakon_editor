@@ -54,13 +54,18 @@
 + Added keywords to manually order them
 ** DONE Add highlighting for Ada! 
 * C3 generator
-** TODO Native for, switch
+** TODO Support block start/end icons
+** TODO Native for & switch
 + Required for local variable semantics in for loop
-+ Required when enums are no longer ints (C++ class enums)
++ Required when enums are no longer ints (e.g., C++ class enums)
 ** TODO Add test cases
 ** DONE Add C++ support
 * Canvas
-** TODO Introduce block start/end icons (?)
+** TODO Show branches in order in 'go to branch...' (?)
++ Problem is order not known until generation time
++ But they are shown in order in contextual menu for address
+** TODO Add command to add new branch (?)
+** DONE Introduce block start/end icons
 + Could help with scoping in C3 generator
 + Avoid begin/end shelves in Ada generator
 + Geometry: square with crenelation, slightly wider
@@ -68,10 +73,6 @@
 + Optional name in block start icon
 + Optional name in block end icon
 + Extended return statement would use these icons too
-** TODO Show branches in order in 'go to branch...' (?)
-+ Problem is order not known until generation time
-** TODO Allow enabling/disabling branches (?)
-** TODO Add command to add new branch (?)
 ** DONE Allow enabling/disabling actions
 ** DONE Tab key goes to next branch
 ** DONE Do not center text in standalone comments
