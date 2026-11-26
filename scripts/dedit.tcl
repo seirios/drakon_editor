@@ -126,7 +126,10 @@ proc zoom_home {  } {
 
 proc go_to_branch { {foo ""} } {
 	set branches [ p.get_branches ]
-	if { $branches == "" } { return }
+	if { $branches == "" } {
+		mw::set_status [ mc2 "Diagram has no branches." ]
+		return
+	}
 	jumpto::go_to_branch $branches
 }
 
@@ -268,68 +271,64 @@ proc next_skewer { dir } {
 		
 	if { $count == 0 } { return }
 
-	lassign [ $db eval { select item_id, type from items
-		where diagram_id = :diagram_id and selected = 1 } ] item_id type
+	lassign [ $db eval {
+		select item_id, type, text
+		from items
+		where diagram_id = :diagram_id
+			and selected = 1 } ] \
+		item_id type text
 
-	if { $type != "case"
-		&& $type != "branch"
-		&& $type != "address" } { return }
-
-	graph::verify_one $db $diagram_id
-	if { [ graph::errors_occured ] } { return }
-	set gdb "gdb"
-
-	set vertex_id [ $gdb onecolumn { select vertex_id from vertices
-		where item_id = :item_id } ]
-
-	set next_vertex ""
+	set next_item ""
 	switch $type {
 		"case" {
-			set parent [ $gdb eval {
-				select src,ordinal from links where dst = :vertex_id } ]
-			lassign $parent select ord
+			graph::verify_one $db $diagram_id
+			if { [ graph::errors_occured ] } { return }
+			set gdb "gdb"
+
+			set vertex_id [ $gdb onecolumn { select vertex_id from vertices
+				where item_id = :item_id } ]
+			lassign [ $gdb eval {
+				select src, ordinal from links where dst = :vertex_id } ] \
+				select ord
 			set ordlen [ $gdb eval {
 				select count(*) from links where src = :select } ]
 			# ordinals are 1-based
-			set inext [ expr { 1 + ( ($ord - 1) + ($dir) ) % $ordlen } ]
+			set inext [ expr { 1 + ( ($ord - 1) + $dir ) % $ordlen } ]
 			set next_vertex [ gen::p.link_dst $gdb $select $inext ]
+			set next_item [ gen::p.vertex_item $gdb $next_vertex ]
 		}
 		"branch" {
-			set branches [ $gdb eval {
-				select header_icon from branches
-				where diagram_id = :diagram_id } ]
+			set branches [ $db eval {
+				select item_id from items
+				where diagram_id = :diagram_id
+					and type = 'branch'
+				order by x } ]
 			set brlen [ llength $branches ]
 			set i 0
 			while { $i < $brlen } {
 				set branch [ lindex $branches $i ]
-				if { $branch == $vertex_id } {
+				if { $branch == $item_id } {
 					break
 				}
 				incr i
 			}
 			if { $i < $brlen } {
 				set inext [ expr { ( $i + ($dir) ) % $brlen } ]
-				set next_vertex [ lindex $branches $inext ]
+				set next_item [ lindex $branches $inext ]
 			}
 		}
 		"address" {
-			set next_vertex [ $gdb eval {
-				select dst from links where src = :vertex_id } ]
+			set branch [ $db onecolumn {
+				select item_id from items
+				where diagram_id = :diagram_id
+					and type = 'branch'
+					and text = :text } ]
+			set next_item $branch
 		}
 	}
 
-	if { $next_vertex != "" } {
-		set next_item [ gen::p.vertex_item $gdb $next_vertex ]
-
-		begin_transaction switch_to_item
-
-		push_unselect_item $item_id
-		push_select_item $next_item
-		center_on $next_item 0.3
-
-		save_view
-		commit_transaction switch_to_item
-		state reset
+	if { $next_item != "" } {
+		switch_to_item $next_item
 	}
 }
 
@@ -3366,7 +3365,7 @@ proc switch_to_item { item_id } {
 
 	push_unselect_items $new_diagram_id
 	push_select_item $item_id
-	center_on $item_id 0.5
+	center_on $item_id 0.3
 
 	save_view
 	commit_transaction switch_to_item
