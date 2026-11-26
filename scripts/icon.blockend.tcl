@@ -35,10 +35,14 @@ proc blockend.box { x y w h a b } {
 
 proc blockend.icons { text text2 color x y w h a b } {
 	variable block_add
-	lassign [ get_colors $color $colors::branch_bg ] fg bg tc
-	set rect_coords [ make_rect $x $y $w $h ]
+	lassign [ get_colors $color $colors::action_bg ] fg bg tc
+	set yp [ expr { $y - $block_add / 2 } ]
+	set hp [ expr { $h - $block_add / 2 } ]
+
+	set rect_coords [ make_rect $x $yp $w $hp ]
 	set cdbox [ add_handle_border $rect_coords ]
 	set rect [ make_prim main rectangle $rect_coords "" $fg $bg $cdbox ]
+	set text_prim [ create_text $x $yp $text $tc ]
 
 	set x0 [ expr { $x - $w } ]
 	set x1 [ expr { $x + $w } ]
@@ -55,14 +59,15 @@ proc blockend.icons { text text2 color x y w h a b } {
 	set coords [ list $x0 $bottom1  $x0left $bottom1  $x1left $top  $x0right $top  \
 		$x1right $bottom1  $x1 $bottom1  $x1 $top1  $x0 $top1  $x0 $bottom1 ]
 	set bracket [ make_prim decoration polygon $coords "" $fg $bg "" ]
-	set y1 [ expr { $y - $block_add / 2 } ]
-	set text_prim [ create_text $x $y1 $text $tc ]
 	return [ list $rect $bracket $text_prim ]
 }
 
 
 proc blockend.handles { x y w h a b } {
-	return [ action.handles $x $y $w $h $a $b ]
+	variable block_add
+	set yp [ expr { $y - $block_add / 2 } ]
+	set hp [ expr { $h - $block_add / 2 } ]
+	return [ action.handles $x $yp $w $hp $a $b ]
 }
 
 proc blockend.nw { dx dy x y w h a b } {

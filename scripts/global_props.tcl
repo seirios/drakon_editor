@@ -25,7 +25,7 @@ variable element_list {
 	"Comment secondary"
 	"Background"
 	"Text"
-	"Branch background"
+	"Branch icon"
 	"Inactive text"
 	"Inactive background"
 	"Code: identifier"
@@ -291,7 +291,7 @@ proc element_changed {} {
 		"Comment secondary" { set color_text [ color comment_s ] }
 		"Background"	{ set color_text [ color background ] }
 		"Text"	{ set color_text [ color text ] }
-		"Branch background"	{ set color_text [ color branch ] }
+		"Branch icon"	{ set color_text [ color branch ] }
 		"Inactive text"	{ set color_text [ color inactive ] }
 		"Inactive background"	{ set color_text [ color inactive_s ] }
 		"Code: identifier" { set color_text [ color syntax_identifier ] }
@@ -328,7 +328,7 @@ proc color_changed { color } {
 		"Comment secondary" { color_set comment_s $color }
 		"Background"	{ color_set background $color }
 		"Text"	{ color_set text $color }
-		"Branch background"	{ color_set branch $color }
+		"Branch icon"	{ color_set branch $color }
 		"Inactive text"	{ color_set inactive $color }
 		"Inactive background"	{ color_set inactive_s $color }
 		"Code: identifier" { color_set syntax_identifier $color }
