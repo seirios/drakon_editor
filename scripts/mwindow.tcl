@@ -1417,6 +1417,7 @@ proc canvas_rect { } {
 
 proc canvas_shift_key_press { window k n code } {
 	set items {
+		b blockstart
 		c commentout
 		o output
 		i input

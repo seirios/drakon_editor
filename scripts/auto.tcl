@@ -126,7 +126,7 @@ proc p.start_primitive { diagram_id first } {
 	p.connect_branch_to_start $diagram_id 1 $first
 	p.set_branch_first_icon $diagram_id 1 $down
 	
-	s.down $first $down 1 1 0
+	s.down $first $down 1 1 0 0
 }
 
 proc p.is_marked { vertex_id } {
@@ -257,7 +257,7 @@ proc p.get_info { vertex_id } {
 	}
 }
 
-proc s.down { src vertex_id is_primitive is_skewer loop_depth } {
+proc s.down { src vertex_id is_primitive is_skewer loop_depth block_depth } {
 	p.link $src 1 $vertex_id "down"
 	if { ![ p.check_and_mark $vertex_id ] } { return }
 
@@ -265,24 +265,24 @@ proc s.down { src vertex_id is_primitive is_skewer loop_depth } {
 	lassign [ p.get_info $vertex_id ] type text up left right down
 	switch $type {
 		"action" {
-			s.down $vertex_id $down $is_primitive $is_skewer $loop_depth
+			s.down $vertex_id $down $is_primitive $is_skewer $loop_depth $block_depth
 		}
 		"shelf" {
-			s.down $vertex_id $down $is_primitive $is_skewer $loop_depth
+			s.down $vertex_id $down $is_primitive $is_skewer $loop_depth $block_depth
 		}
 		"output" {
-			s.down $vertex_id $down $is_primitive $is_skewer $loop_depth
+			s.down $vertex_id $down $is_primitive $is_skewer $loop_depth $block_depth
 		}
 		"insertion" {
-			s.down $vertex_id $down $is_primitive $is_skewer $loop_depth
+			s.down $vertex_id $down $is_primitive $is_skewer $loop_depth $block_depth
 		}
 		"if" {
-			s.down $vertex_id $down $is_primitive $is_skewer $loop_depth
+			s.down $vertex_id $down $is_primitive $is_skewer $loop_depth $block_depth
 			s.right $vertex_id $right $is_primitive 1 2
 		}
 		"loopstart" {
 			set nested [ expr { $loop_depth + 1 } ]
-			s.down $vertex_id $down $is_primitive $is_skewer $nested
+			s.down $vertex_id $down $is_primitive $is_skewer $nested $block_depth
 		}
 		"loopend" {
 			if { $loop_depth == 0 } {
@@ -291,27 +291,40 @@ proc s.down { src vertex_id is_primitive is_skewer loop_depth } {
 			}
 
 			set outer [ expr { $loop_depth - 1 } ]
-			s.down $vertex_id $down $is_primitive $is_skewer $outer
+			s.down $vertex_id $down $is_primitive $is_skewer $outer $block_depth
+		}
+		"blockstart" {
+			set nested [ expr { $block_depth + 1 } ]
+			s.down $vertex_id $down $is_primitive $is_skewer $loop_depth $nested
+		}
+		"blockend" {
+			if { $block_depth == 0 } {
+				p.unexpected_vertex $vertex_id
+				return
+			}
+
+			set outer [ expr { $block_depth - 1 } ]
+			s.down $vertex_id $down $is_primitive $is_skewer $loop_depth $outer
 		}
 		"select" {
-			s.select_joint $vertex_id $down $is_primitive $is_skewer $loop_depth
+			s.select_joint $vertex_id $down $is_primitive $is_skewer $loop_depth $block_depth
 		}
 		"address" {
-			if { $is_primitive || $loop_depth != 0 } {
+			if { $is_primitive || $loop_depth != 0 || $block_depth != 0 } {
 				p.unexpected_vertex $vertex_id
 				return
 			}
 			p.address $vertex_id
 		}
 		"beginend" {
-			if { ![ p.is_end $text ] || $loop_depth != 0 } {
+			if { ![ p.is_end $text ] || $loop_depth != 0 || $block_depth != 0 } {
 				p.unexpected_vertex $vertex_id
 				return
 			}
 		}
 		"" {
 			if { [ p.is_cross $vertex_id ] } { return }
-			if { $is_skewer || $loop_depth != 0 } {
+			if { $is_skewer || $loop_depth != 0 || $block_depth != 0 } {
 				if { $left != "" } {
 					set edge [ gdb onecolumn { select left from
 						vertices where vertex_id = :vertex_id } ]
@@ -334,7 +347,7 @@ proc s.down { src vertex_id is_primitive is_skewer loop_depth } {
 						p.check_right_goes_up $vertex_id
 					}
 				}
-				s.down $vertex_id $down $is_primitive $is_skewer $loop_depth
+				s.down $vertex_id $down $is_primitive $is_skewer $loop_depth $block_depth
 			} elseif { $left != "" } {
 				s.left $vertex_id $left $is_primitive
 			} elseif { $right != "" } {
@@ -347,7 +360,7 @@ proc s.down { src vertex_id is_primitive is_skewer loop_depth } {
 	}	
 }
 
-proc s.select_joint { select vertex_id is_primitive is_skewer loop_depth } {
+proc s.select_joint { select vertex_id is_primitive is_skewer loop_depth block_depth } {
 	if { [ p.is_cross $vertex_id ] } { return }
 	lassign [ p.get_info $vertex_id ] type text up left right down diagram_id
 	if { $type != "" } {
@@ -359,7 +372,7 @@ proc s.select_joint { select vertex_id is_primitive is_skewer loop_depth } {
 		p.error $diagram_id [ list $item_id ] [ mc2 "A right t-joint expected after the 'select' icon." ]
 		return
 	}
-	s.case 1 $select $down $is_primitive $is_skewer $loop_depth
+	s.case 1 $select $down $is_primitive $is_skewer $loop_depth $block_depth
 	set current $right
 	set i 2
 	while { $current != "" } {
@@ -373,13 +386,13 @@ proc s.select_joint { select vertex_id is_primitive is_skewer loop_depth } {
 			p.error $diagram_id [ list $item_id ] [ mc2 "Expected a line with a 'case' icon." ]
 			return
 		}
-		s.case $i $select $down $is_primitive 0 0
+		s.case $i $select $down $is_primitive 0 0 0
 		incr i
 		set current $right
 	}
 }
 
-proc s.case { ordinal select vertex_id is_primitive is_skewer loop_depth } {
+proc s.case { ordinal select vertex_id is_primitive is_skewer loop_depth block_depth } {
 	if { $ordinal == 1 } {
 		set direction "down"
 	} else {
@@ -399,7 +412,7 @@ proc s.case { ordinal select vertex_id is_primitive is_skewer loop_depth } {
 		return
 	}
 
-	s.down $vertex_id $down $is_primitive $is_skewer $loop_depth
+	s.down $vertex_id $down $is_primitive $is_skewer $loop_depth $block_depth
 }
 
 proc s.left { src vertex_id is_primitive } {
@@ -505,7 +518,7 @@ proc s.right { src vertex_id is_primitive down_allowed ordinal } {
 				p.unexpected_edge $dedge
 				return
 			}
-			s.down $vertex_id $down $is_primitive 0 0
+			s.down $vertex_id $down $is_primitive 0 0 0
 		} else {
 			s.up $vertex_id $up $is_primitive
 		}
@@ -695,7 +708,7 @@ proc p.start_silouette { diagram_id } {
 		set branch [ p.get_info $header_icon ]
 		lassign $branch type text up left right down foo item_id
 		p.set_branch_first_icon $diagram_id $ordinal $down
-		s.down $header_icon $down 0 1 0
+		s.down $header_icon $down 0 1 0 0
 	}
 }
 

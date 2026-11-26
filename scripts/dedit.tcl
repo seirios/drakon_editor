@@ -1367,6 +1367,13 @@ proc add_friend_items { diagram_id name create_one createv destroyv dov undov } 
 		set vertical2 [ mv::loopend.create $item2 $diagram_id $x $ey ]
 		set vertical2 [ lreplace $vertical2 9 9 '' ]
 		append_with_item $item2 $vertical2 create destroy do undo
+	} elseif { $name == "blockstart" } {
+		set height 500
+		set ey [ expr { $y + 70 } ]
+		
+		set vertical2 [ mv::blockend.create $item2 $diagram_id $x $ey ]
+		set vertical2 [ lreplace $vertical2 9 9 '' ]
+		append_with_item $item2 $vertical2 create destroy do undo
 	}
 }
 
@@ -3022,6 +3029,7 @@ proc get_context_inserts {} {
             #                     kind     icon_type  text                 accel
             lappend result [ list command  insertion  [ mc2 "Insertion" ]  "n" ]
             lappend result [ list command  shelf      [ mc2 "Shelf" ]      "f" ]
+            lappend result [ list command  blockstart [ mc2 "Block" ]      "B" ]
             lappend result { separator }
             lappend result [ list command  output     [ mc2 "Output" ]     "O" ]
             lappend result [ list command  input      [ mc2 "Input" ]      "I" ]
