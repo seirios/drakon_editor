@@ -61,10 +61,9 @@
 ** TODO Add test cases
 ** DONE Add C++ support
 * Canvas
-** TODO Show branches in order in 'go to branch...' (?)
-+ Problem is order not known until generation time
-+ But they are shown in order in contextual menu for address
 ** TODO Add command to add new branch (?)
+** WONTFIX Show branches in order in 'go to branch...'
++ Problem is names are passed as array keys, so order is lost
 ** DONE Introduce block start/end icons
 + Could help with scoping in C3 generator
 + Avoid begin/end shelves in Ada generator

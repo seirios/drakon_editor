@@ -2053,11 +2053,9 @@ proc get_insertions { gdb diagram_id } {
     	select text
     	from vertices
     	where diagram_id = :diagram_id
-    	and (type = 'ins_is'
-    		or type = 'ins_declare'
-    		or type = 'ins_body'
-    		or type = 'ins_is_body'
-    		or type = 'ins_declare_body')
+    	and type in ('ins_is', 'ins_declare',
+    		'ins_body', 'ins_is_body',
+    		'ins_declare_body')
     } ]
 }
 
@@ -2110,15 +2108,11 @@ proc glue_special { gdb diagram_id } {
     set vertices [ $gdb eval {
     	select vertex_id
     	from vertices
-    	where type == 'when'
-    	or type == 'agg_paren'
-    	or type == 'agg_brack'
-    	or type == 'record'
-    	or type == 'exception'
-    	or type == 'declare'
-    	or type == 'with'
-    	or type == 'is'
-    	and diagram_id = :diagram_id
+    	where diagram_id = :diagram_id
+    	and type in ('when', 'agg_paren',
+    		'agg_brack', 'record',
+    		'exception', 'declare',
+    		'with', 'is')
     } ]
     foreach vertex_id $vertices {
         #item 4987
@@ -2314,10 +2308,8 @@ proc has_inactive_icons { db } {
     	select count(*)
     	from items
     	where b = 1
-    	and  ( type = 'action' 
-    		or type = 'shelf' 
-    		or type = 'output'
-    		or type = 'insertion' ) } ]
+    	and type in ('action', 'shelf', 
+    		'output', 'insertion' ) } ]
     #item 6936
     return [ expr { $num != 0 } ]
 }
