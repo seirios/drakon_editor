@@ -61,6 +61,7 @@
 ** TODO Add test cases
 ** DONE Add C++ support
 * Canvas
+** TODO Double-click on a line extends it to nearest lines on both sides
 ** TODO Add command to add new branch (?)
 ** WONTFIX Show branches in order in 'go to branch...'
 + Problem is names are passed as array keys, so order is lost

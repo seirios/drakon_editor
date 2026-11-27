@@ -1532,13 +1532,13 @@ proc canvas_key_press { window k n code } {
 		zoom_home
 	} else {
 		if { $code == $codes(Up) } {
-
+			mwc::move_with_keys up
 		} elseif { $code == $codes(Down) } {
-
+			mwc::move_with_keys down
 		} elseif { $code == $codes(Left) } {
-
+			mwc::move_with_keys left
 		} elseif { $code == $codes(Right) } {
-
+			mwc::move_with_keys right
 		} elseif { $code == $codes(F2) } {
 			mwc::request_text_change 1
 		} elseif { $code == $codes(F3) } {

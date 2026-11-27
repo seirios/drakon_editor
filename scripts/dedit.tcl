@@ -1186,6 +1186,43 @@ proc rdown { cx cy } {
 	}
 }
 
+proc move_with_keys { key } {
+	variable db
+
+	if { ! [ has_selection ] } { return }
+
+	set snap_size [ get_snap_size ]
+
+	switch $key {
+		"up" {
+			set dx 0
+			set dy -$snap_size
+		}
+		"down" {
+			set dx 0
+			set dy $snap_size
+		}
+		"left" {
+			set dx -$snap_size
+			set dy 0
+		}
+		"right" {
+			set dx $snap_size
+			set dy 0
+		}
+	}
+
+	mv::drag $dx $dy
+
+	begin_transaction keymove
+	set diagram_id [ editor_state $db current_dia ]
+	take_selection_from_shadow $diagram_id
+	start_action  [ mc2 "Move items" ]
+	take_drag_from_shadow
+	mv::fill $diagram_id
+	commit_transaction keymove
+}
+
 proc select_all { } {
 	variable db
 	set diagram_id [ editor_state $db current_dia ]

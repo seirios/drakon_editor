@@ -1,5 +1,7 @@
 # Commonly used utilities.
 
+variable snap_size 10
+
 proc str_contains { haystack needle } {
 	set index [ string first $needle $haystack ]
 	if { $index == -1 } {
@@ -308,10 +310,15 @@ proc clear_array { name } {
     array set $name {}
 }
 
+proc get_snap_size { } {
+	variable snap_size
+	return $snap_size
+}
+
 proc snap_up2 { value } {
+	variable snap_size
 	if { $value == "" } { return "" }
 	
-	set snap_size 10
 	set result [ expr { int(ceil(double($value) / double($snap_size))) * $snap_size } ]
 
 	return $result
@@ -319,9 +326,9 @@ proc snap_up2 { value } {
 
 
 proc snap_up { value } {
+	variable snap_size
 	if { $value == "" } { return "" }
 	
-	set snap_size 10
 	set result [ expr { int(ceil(double($value) / double($snap_size))) * $snap_size } ]
 	if { $result == 0 } { return $snap_size }
 	return $result
@@ -543,8 +550,8 @@ proc lfilter_user { list fun user } {
 
 
 proc snap_coord { coord } {
+	variable snap_size
 	if { $coord == "" } { return "" }
-	set snap_size 10
 	return [ snap $coord $snap_size ]
 }
 
