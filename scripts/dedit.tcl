@@ -875,6 +875,33 @@ proc change_secondary_text { item_id } {
 	show_change_text_dialog $item_id 1
 }
 
+proc change_text_selected { secondary } {
+	variable db
+	set diagram_id [ editor_state $db current_dia ]
+	if { $diagram_id == "" } { return }
+
+	set count [ $db onecolumn { select count(*) from items
+		where diagram_id = :diagram_id and selected = 1 } ]
+	if { $count != 1 } { return }
+
+	lassign [ $db eval {
+		select item_id, type
+		from items
+		where diagram_id = :diagram_id
+			and selected = 1
+	} ] item_id type
+
+	if { [ mv::has_text $item_id ] } {
+		if { $type == "address" } { return }
+
+		set has_2 [ has_2_texts $type ]
+		if { ! $has_2 } {
+			set secondary 0
+		}
+		show_change_text_dialog $item_id $secondary
+	}
+}
+
 
 proc is_header { item_id } {
 	variable db

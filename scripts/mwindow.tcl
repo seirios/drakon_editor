@@ -1455,14 +1455,18 @@ proc canvas_shift_key_press { window k n code } {
 
 
 	array set codes [ ui::key_codes ]
-	if { $code == $codes(Up) } {
+	if { $k == "Return" } {
+		mwc::change_text_selected 1
+	} else {
+		if { $code == $codes(Up) } {
 
-	} elseif { $code == $codes(Down) } {
+		} elseif { $code == $codes(Down) } {
 
-	} elseif { $code == $codes(Left) } {
+		} elseif { $code == $codes(Left) } {
 
-	} elseif { $code == $codes(Right) } {
+		} elseif { $code == $codes(Right) } {
 
+		}
 	}
 }
 
@@ -1530,6 +1534,8 @@ proc canvas_key_press { window k n code } {
 		mwc::deselect_all
 	} elseif { $k == "Home" } {
 		zoom_home
+	} elseif { $k == "Return" } {
+		mwc::change_text_selected 0
 	} else {
 		if { $code == $codes(Up) } {
 			mwc::move_with_keys up
