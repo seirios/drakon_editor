@@ -1276,6 +1276,8 @@ proc fix_graph_stage_1 { gdb callbacks diagram_id } {
 }
 
 proc gen_block { db item_id type } {
+    #item 7913
+    variable g_errmsg
     #item 7691
     set next [ nogoto::get_next_node \
     	$db $item_id 0 ]
@@ -1302,6 +1304,8 @@ proc gen_block { db item_id type } {
                 #item 7761
                 if {$next_type == "blockend" &&
 $block_nesting == 0} {
+                    #item 7766
+                    set_node_text $db $next_id "return"
                     break
                 }
                 #item 78920001
@@ -1318,9 +1322,16 @@ $block_nesting == 0} {
                 #item 7765
                 set next_id [ nogoto::get_next_node \
                 	$db $next_id 0 ]
+                #item 7908
+                if {$next_id == ""} {
+                    #item 7912
+                    set g_errmsg \
+                    	[ mc2 "Block end not found." ]
+                    #item 7911
+                    set result {}
+                    break
+                }
             }
-            #item 7766
-            set_node_text $db $next_id "return"
         } else {
             #item 7706
             set result [ list "block" $item_id ]

@@ -1464,6 +1464,26 @@ proc p.find_end { gdb diagram_id start } {
 	report_error $diagram_id $item_id "End not found for loop start"
 }
 
+proc p.find_block_end { gdb diagram_id start } {
+	set block_nesting 0
+	set current [ p.next_on_skewer $gdb $start ]
+	while { 1 } {
+		if { $current == "" } { break }
+		set type [ p.vertex_type $gdb $current ]
+		if { $type == "blockend" && $block_nesting == 0 } {
+			return $current
+		} elseif { $type == "blockstart" } {
+			incr block_nesting
+		} elseif { $type == "blockend" } {
+			incr block_nesting -1
+		}
+		set current [ p.next_on_skewer $gdb $current ]
+	}
+
+	set item_id [ p.vertex_item $gdb $start ]
+	report_error $diagram_id $item_id "End not found for block start"
+}
+
 proc has_branches { gdb diagram_id } {
 	set count [ $gdb onecolumn {
 		select count(*)

@@ -539,9 +539,9 @@ proc create_ui { } {
 		bind $canvas <Double-ButtonPress-2> { mw::zoom_see_all }	
 	}
 	bind $canvas <Leave> insp::reset
-	bind $canvas <KeyPress-Tab> { mwc::next_skewer 1; break }
-	bind $canvas <Shift-KeyPress-Tab> { mwc::next_skewer -1; break }
-	bind $canvas <<PrevWindow>> { mwc::next_skewer -1; break }
+	bind $canvas <KeyPress-Tab> { mwc::tab_smart_jump 1; break }
+	bind $canvas <Shift-KeyPress-Tab> { mwc::tab_smart_jump -1; break }
+	bind $canvas <<PrevWindow>> { mwc::tab_smart_jump -1; break }
 	
 	bind_shortcut . mw::shortcut_handler
 	bind_shortcut $canvas mw::canvas_shortcut_handler

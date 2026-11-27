@@ -259,7 +259,7 @@ proc delete { ignored } {
 	commit_transaction delete
 }
 
-proc next_skewer { dir } {
+proc tab_smart_jump { dir } {
 	variable db
 	set diagram_id [ editor_state $db current_dia ]
 	if { $diagram_id == "" } { return }
@@ -278,15 +278,18 @@ proc next_skewer { dir } {
 			and selected = 1 } ] \
 		item_id type text
 
+	if { $type == "case" || $type == "loopstart" || $type == "blockstart" } {
+		graph::verify_one $db $diagram_id
+		if { [ graph::errors_occured ] } { return }
+		set gdb "gdb"
+
+		set vertex_id [ $gdb onecolumn { select vertex_id from vertices
+			where item_id = :item_id } ]
+	}
+
 	set next_item ""
 	switch $type {
 		"case" {
-			graph::verify_one $db $diagram_id
-			if { [ graph::errors_occured ] } { return }
-			set gdb "gdb"
-
-			set vertex_id [ $gdb onecolumn { select vertex_id from vertices
-				where item_id = :item_id } ]
 			lassign [ $gdb eval {
 				select src, ordinal from links where dst = :vertex_id } ] \
 				select ord
@@ -295,6 +298,14 @@ proc next_skewer { dir } {
 			# ordinals are 1-based
 			set inext [ expr { 1 + ( ($ord - 1) + $dir ) % $ordlen } ]
 			set next_vertex [ gen::p.link_dst $gdb $select $inext ]
+			set next_item [ gen::p.vertex_item $gdb $next_vertex ]
+		}
+		"loopstart" {
+			set next_vertex [ gen::p.find_end $gdb $diagram_id $vertex_id ]
+			set next_item [ gen::p.vertex_item $gdb $next_vertex ]
+		}
+		"blockstart" {
+			set next_vertex [ gen::p.find_block_end $gdb $diagram_id $vertex_id ]
 			set next_item [ gen::p.vertex_item $gdb $next_vertex ]
 		}
 		"branch" {

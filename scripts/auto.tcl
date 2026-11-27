@@ -1134,7 +1134,8 @@ proc p.check_icons_on_verticals { diagram_id  starts } {
 		select vertex_id, up, left, right, down, type, item_id
 		from vertices
 		where diagram_id = :diagram_id
-			and type in ('action', 'if', 'branch', 'case', 'insertion', 'loopend', 'loopstart', 'select', 'address')
+			and type in ('action', 'if', 'branch', 'case', 'insertion',
+				'loopend', 'loopstart', 'blockend', 'blockstart', 'select', 'address')
 	} {
 		if { [ contains $params $vertex_id ] } { continue }
 		if { $left != "" } {
