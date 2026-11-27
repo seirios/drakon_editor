@@ -428,24 +428,33 @@ proc double_click { cx cy } {
 	
 	set item_id [ mv::hit $cx $cy ]
 	if { $item_id == "" } { return }
-	if { ![ mv::has_text $item_id ] } { return }
-	
-	lassign [ $db eval {
-		select type, x, y, w, h, a, b
+
+	set type [ $db onecolumn {
+		select type
 		from items
 		where item_id = :item_id
-	} ] type x y w h a b
+	} ]
 
-	if { $type == "address" } { return }
-	
-	set has_2 [ has_2_texts $type ]
-	if { $has_2 } {
-		set secondary [ mv::$type.is_top $cx $cy $x $y $w $h $a $b ]
-	} else {
-		set secondary 0
+	if { [ mv::has_text $item_id ] } {
+		if { $type == "address" } { return }
+
+		set has_2 [ has_2_texts $type ]
+		if { $has_2 } {
+			lassign [ $db eval {
+				select x, y, w, h, a, b
+				from items
+				where item_id = :item_id
+			} ] x y w h a b
+
+			set secondary [ mv::$type.is_top $cx $cy $x $y $w $h $a $b ]
+		} else {
+			set secondary 0
+		}
+
+		show_change_text_dialog $item_id $secondary
+	} elseif { $type == "horizontal" || $type == "vertical" } {
+		smart_line_extend $item_id $type
 	}
-	
-	show_change_text_dialog $item_id $secondary
 }
 
 
@@ -501,6 +510,118 @@ proc add_text_change { action rollback change_info table key field } {
 	
 	lappend do [ list update $table $key $id $field '$text' ]
 	lappend undo [ list update $table $key $id $field '$old_text' ]
+}
+
+proc smart_line_extend { item_id type } {
+	variable db
+
+	if { $item_id == "" } return
+
+	set diagram_id [ editor_state $db current_dia ]
+	if { $diagram_id == "" } { return }
+
+	lassign [ $db eval {
+		select x, y, w, h
+		from items
+		where item_id = :item_id
+	} ] x y w h
+
+	if { $type == "vertical" } {
+		set y1 $y
+		set y2 [ expr { $y + $h } ]
+		# closest line above (potential intersection)
+		set y1_new [ $db eval {
+			select y
+			from items
+			where diagram_id = :diagram_id and
+			((type = 'horizontal'
+				and y <= :y1
+				and x <= :x and x + w >= :x)
+			or (type = 'if'
+				and y <= :y1
+				and x + w <= :x and x + w + a >= :x))
+			order by y desc
+			limit 1
+		} ]
+		# closest line below (potential intersection)
+		set y2_new [ $db eval {
+			select y + h
+			from items
+			where diagram_id = :diagram_id and
+			((type = 'arrow'
+				and y + h >= :y2
+				and ((b = 1 and x <= :x and x + a >= :x) or
+				     (b = 0 and x - a <= :x and x >= :x)))
+			or (type = 'horizontal'
+				and y >= :y2
+				and x <= :x and x + w >= :x))
+			order by y + h asc
+			limit 1
+		} ]
+		if { $y1_new == "" || $y2_new == "" } { return }
+		# extend line
+		set dy1 [ expr { $y1_new - $y1 } ]
+		set dy2 [ expr { $y2_new - $y2 } ]
+		if { $dy1 == 0 && $dy2 == 0 } { return }
+		set b_handle [ mv::hit_handle $item_id $x $y2 ]
+		if { $dy1 != 0 } {
+			mv::drag 0 $dy1
+			set dy2 [ expr { $dy2 - $dy1 } ]
+		}
+		if { $dy2 != 0 } {
+			mv::prepare_line_handle $item_id $b_handle
+			mv::resize $item_id $b_handle 0 $dy2
+		}
+	} elseif { $type == "horizontal" } {
+		set x1 $x
+		set x2 [ expr { $x + $w } ]
+		# closest line to the left (potential intersection)
+		set x1_new [ $db eval {
+			select x
+			from items
+			where diagram_id = :diagram_id and
+			(type = 'vertical'
+				and x <= :x1
+				and y <= :y and y + h >= :y)
+			order by x desc
+			limit 1
+		} ]
+		# closest line to the right (potential intersection)
+		set x2_new [ $db eval {
+			select x + w
+			from items
+			where diagram_id = :diagram_id and
+			(type = 'vertical'
+				and x >= :x2
+				and y <= :y and y + h >= :y)
+			order by x + w asc
+			limit 1
+		} ]
+		if { $x1_new == "" || $x2_new == "" } { return }
+		# extend line
+		set dx1 [ expr { $x1_new - $x1 } ]
+		set dx2 [ expr { $x2_new - $x2 } ]
+		if { $dx1 == 0 && $dx2 == 0 } { return }
+		set r_handle [ mv::hit_handle $item_id $x2 $y ]
+		if { $dx1 != 0 } {
+			mv::drag $dx1 0
+			set dx2 [ expr { $dx2 - $dx1 } ]
+		}
+		if { $dx2 != 0 } {
+			mv::prepare_line_handle $item_id $r_handle
+			mv::resize $item_id $r_handle $dx2 0
+		}
+	}
+
+	begin_transaction extend_line
+	take_selection_from_shadow $diagram_id
+	start_action [ mc2 "Change shape" ]
+	set changed [ mv::get_changed ]
+	foreach changed_item $changed {
+		take_resize_from_shadow $changed_item
+	}
+	mv::fill $diagram_id
+	commit_transaction extend_line
 }
 
 proc adjust_icon_sizes_current { } {
@@ -1190,6 +1311,7 @@ proc move_with_keys { key } {
 	variable db
 
 	if { ! [ has_selection ] } { return }
+	set diagram_id [ editor_state $db current_dia ]
 
 	set snap_size [ get_snap_size ]
 
@@ -1215,7 +1337,6 @@ proc move_with_keys { key } {
 	mv::drag $dx $dy
 
 	begin_transaction keymove
-	set diagram_id [ editor_state $db current_dia ]
 	take_selection_from_shadow $diagram_id
 	start_action  [ mc2 "Move items" ]
 	take_drag_from_shadow
