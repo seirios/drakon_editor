@@ -220,6 +220,10 @@ proc set_status { text } {
 	$status configure -text $text
 }
 
+proc clear_status { } {
+    set_status ""
+}
+
 proc acc { button } {
 	if { [ ui::is_mac ] } {
 		return ""
@@ -1459,13 +1463,13 @@ proc canvas_shift_key_press { window k n code } {
 		mwc::change_text_selected 1
 	} else {
 		if { $code == $codes(Up) } {
-
+			mwc::move_with_keys up 1
 		} elseif { $code == $codes(Down) } {
-
+			mwc::move_with_keys down 1
 		} elseif { $code == $codes(Left) } {
-
+			mwc::move_with_keys left 1
 		} elseif { $code == $codes(Right) } {
-
+			mwc::move_with_keys right 1
 		}
 	}
 }
@@ -1538,13 +1542,13 @@ proc canvas_key_press { window k n code } {
 		mwc::change_text_selected 0
 	} else {
 		if { $code == $codes(Up) } {
-			mwc::move_with_keys up
+			mwc::move_with_keys up 0
 		} elseif { $code == $codes(Down) } {
-			mwc::move_with_keys down
+			mwc::move_with_keys down 0
 		} elseif { $code == $codes(Left) } {
-			mwc::move_with_keys left
+			mwc::move_with_keys left 0
 		} elseif { $code == $codes(Right) } {
-			mwc::move_with_keys right
+			mwc::move_with_keys right 0
 		} elseif { $code == $codes(F2) } {
 			mwc::request_text_change 1
 		} elseif { $code == $codes(F3) } {

@@ -131,6 +131,7 @@ proc go_to_branch { {foo ""} } {
 		return
 	}
 	jumpto::go_to_branch $branches
+	mw::clear_status
 }
 
 proc zoom_vertices { vertices } {
@@ -245,10 +246,7 @@ proc delete { ignored } {
 	
 	if { ![ state is idle ] } { return }
 
-	set count [ $db onecolumn { select count(*) from items
-		where diagram_id = :diagram_id and selected = 1 } ]
-		
-	if { $count == 0 } { return }
+	if { ![ has_selection ] } { return }
 	
 	begin_transaction delete
 
@@ -266,21 +264,22 @@ proc tab_smart_jump { dir } {
 	
 	if { ![ state is idle ] } { return }
 
-	set count [ $db onecolumn { select count(*) from items
-		where diagram_id = :diagram_id and selected = 1 } ]
-		
-	if { $count == 0 } { return }
+	if { ![ has_selection_single ] } {
+		mw::set_status [ mc2 "More than one item selected." ]
+		return
+	}
 
 	lassign [ $db eval {
-		select item_id, type, text
-		from items
-		where diagram_id = :diagram_id
-			and selected = 1 } ] \
-		item_id type text
+		select item_id, type, text from items
+		where diagram_id = :diagram_id and selected = 1
+	} ] item_id type text
 
 	if { $type == "case" || $type == "loopstart" || $type == "blockstart" } {
 		graph::verify_one $db $diagram_id
-		if { [ graph::errors_occured ] } { return }
+		if { [ graph::errors_occured ] } {
+			mw::set_status [ mc2 "Some errors found." ]
+			return
+		}
 		set gdb "gdb"
 
 		set vertex_id [ $gdb onecolumn { select vertex_id from vertices
@@ -341,6 +340,8 @@ proc tab_smart_jump { dir } {
 	if { $next_item != "" } {
 		switch_to_item $next_item
 	}
+
+	mw::clear_status
 }
 
 proc center_on_selected { } {
@@ -350,13 +351,15 @@ proc center_on_selected { } {
 	
 	if { ![ state is idle ] } { return }
 
-	set count [ $db onecolumn { select count(*) from items
-		where diagram_id = :diagram_id and selected = 1 } ]
-		
-	if { $count == 0 } { return }
+	if { ![ has_selection ] } { return }
 
-	lassign [ $db eval { select item_id, type from items
-		where diagram_id = :diagram_id and selected = 1 } ] item_id type
+	# Approximate center item
+	set item_ids [ $db eval { select item_id from items
+		where diagram_id = :diagram_id and selected = 1
+		order by y, x
+	} ]
+	set middle [ expr { [ llength $item_ids ] / 2 } ]
+	set item_id [ lindex $item_ids $middle ]
 
 	center_on $item_id 0.3
 }
@@ -368,13 +371,9 @@ proc swap_selected { } {
 	
 	if { ![ state is idle ] } { return }
 
-	set count [ $db onecolumn { select count(*) from items
-		where diagram_id = :diagram_id and selected = 1 } ]
-		
-	if { $count == 0 } { return }
+	if { ![ has_selection ] } { return }
 
-	set item_ids [ $db eval { select item_id from items
-		where diagram_id = :diagram_id and selected = 1 } ]
+	set item_ids [ get_selected_items $diagram_id ]
 
 	# Swap multiple items only if all actions or shelves
 	if { $count > 1 } {
@@ -462,14 +461,12 @@ proc request_text_change { primary } {
 	variable db
 	set diagram_id [ editor_state $db current_dia ]
 	if { $diagram_id == "" } { return }
+
+	if { ![ has_selection_single ] } { return }
 	
-	set selected [ $db eval { select item_id
-					from items where diagram_id = :diagram_id
-					and selected = 1 } ]
+	set selected [ get_selected_items $diagram_id ]
 	
-	if { [ llength $selected ] != 1 } { return }
-	
-	set item_id [ lindex $selected 0 ]	
+	set item_id [ lindex $selected 0 ]
 
 	if { ![ mv::has_text $item_id ] } { return }
 	
@@ -880,15 +877,14 @@ proc change_text_selected { secondary } {
 	set diagram_id [ editor_state $db current_dia ]
 	if { $diagram_id == "" } { return }
 
-	set count [ $db onecolumn { select count(*) from items
-		where diagram_id = :diagram_id and selected = 1 } ]
-	if { $count != 1 } { return }
+	if { ![ has_selection_single ] } {
+		mw::set_status [ mc2 "More than one item selected." ]
+		return
+	}
 
 	lassign [ $db eval {
-		select item_id, type
-		from items
-		where diagram_id = :diagram_id
-			and selected = 1
+		select item_id, type from items
+		where diagram_id = :diagram_id and selected = 1
 	} ] item_id type
 
 	if { [ mv::has_text $item_id ] } {
@@ -900,6 +896,8 @@ proc change_text_selected { secondary } {
 		}
 		show_change_text_dialog $item_id $secondary
 	}
+
+	mw::clear_status
 }
 
 
@@ -1308,9 +1306,6 @@ proc lup { move_data } {
 
 proc rdown { cx cy } {
 	variable db
-	
-
-	
 	set diagram_id [ editor_state $db current_dia ]
 	if { $diagram_id == "" } { return }
 	
@@ -1334,11 +1329,12 @@ proc rdown { cx cy } {
 	}
 }
 
-proc move_with_keys { key } {
+proc move_with_keys { key shift } {
 	variable db
+	set diagram_id [ editor_state $db current_dia ]
+	if { $diagram_id == "" } { return }
 
 	if { ! [ has_selection ] } { return }
-	set diagram_id [ editor_state $db current_dia ]
 
 	set snap_size [ get_snap_size ]
 
@@ -1361,12 +1357,26 @@ proc move_with_keys { key } {
 		}
 	}
 
-	mv::drag $dx $dy
-
 	begin_transaction keymove
-	take_selection_from_shadow $diagram_id
-	start_action  [ mc2 "Move items" ]
-	take_drag_from_shadow
+
+	if { $shift } {
+		set selected [ get_selected_items $diagram_id ]
+		set first [ lindex $selected 0 ]
+		lassign [ $db eval {
+			select x, y + h
+			from items where item_id = :first
+		}] cx cy
+		alt::start $selected $cx $cy
+		alt::mouse_move $dx $dy
+		start_action  [ mc2 "Move and change items" ]
+		take_shapes_from_shadow [ mv::get_changed ]
+	} else {
+		mv::drag $dx $dy
+		take_selection_from_shadow $diagram_id
+		start_action  [ mc2 "Move items" ]
+		take_drag_from_shadow
+	}
+
 	mv::fill $diagram_id
 	commit_transaction keymove
 }
@@ -2120,7 +2130,7 @@ proc do_create_dia { new sil parent_node dialect } {
 proc take_selection_from_shadow { diagram_id } {
 	variable db
 	set new_selection [ mv::shadow_selection ]
-	set old_selection [ $db eval { select item_id from items where diagram_id = :diagram_id and selected = 1 } ]
+	set old_selection [ get_selected_items $diagram_id ]
 	set select {}
 	set deselect { }
 	set do { }
@@ -2186,9 +2196,8 @@ proc push_delete_items { diagram_id } {
 	set undo {}
 
 	
-	$db eval { select item_id
-					from items where diagram_id = :diagram_id
-					and selected = 1 } {
+	$db eval { select item_id from items
+			where diagram_id = :diagram_id and selected = 1 } {
 		set insert_item [ build_backup_item $item_id ]
 		set delete_item [ list delete items item_id $item_id ]
 		set insert_cnv [ list mv::insert $item_id ]
@@ -2219,7 +2228,8 @@ proc push_unselect_items { diagram_id } {
 	
 	set counter 0
 	
-	$db eval { select item_id from items where diagram_id = :diagram_id and selected = 1 } {
+	$db eval { select item_id from items
+			where diagram_id = :diagram_id and selected = 1 } {
 		lappend unselect [ list update items item_id $item_id selected 0 ]
 		lappend select [ list update items item_id $item_id selected 1 ]
 		lappend unselect_do [ list mv::deselect $item_id ]
@@ -3324,8 +3334,7 @@ proc get_context_commands { cx cy } {
 	set diagram_id [ editor_state $db current_dia ]
 	if { $diagram_id == "" } { return {} }
 	
-	set selected [ $db eval { select item_id from items 
-		where selected = 1 and diagram_id = :diagram_id } ]
+	set selected [ get_selected_items $diagram_id ]
 		
 	if { [ llength $selected ] == 0 } {
 		set copy_state disabled
@@ -3491,12 +3500,9 @@ proc get_selected_from_tree { } {
 
 proc current_dia_changed {} {
 	variable db
-
-	
 	
 	set old_id [ editor_state $db current_dia ]
 	set new_id [ get_selected_from_tree ]
-	
 
 	if { $new_id == "" && $old_id == "" } { return }
 	
@@ -3572,19 +3578,40 @@ proc get_dia_description { } {
 	variable db
 	set diagram_id [ editor_state $db current_dia ]
 	if { $diagram_id == "" } { return "" }
+
 	return [ mod::one $db description diagrams diagram_id $diagram_id ]
+}
+
+proc get_selected_items { diagram_id } {
+	variable db
+
+	return [ $db eval { select item_id from items
+		where diagram_id = :diagram_id and selected = 1 } ]
+}
+
+proc get_selected_count { diagram_id } {
+	variable db
+
+	return [ $db onecolumn { select count(*) from items
+		where diagram_id = :diagram_id and selected = 1 } ]
 }
 
 proc has_selection { } {
 	variable db
 	set diagram_id [ editor_state $db current_dia ]
 	if { $diagram_id == "" } { return 0 }
-	
-	set count [ $db onecolumn { select count(*) from items where diagram_id = :diagram_id
-		and selected = 1 } ]
-	
-	if { $count == 0 } { return 0 }
-	return 1
+
+	set count [ get_selected_count $diagram_id ]
+	return [ expr { $count != 0 } ]
+}
+
+proc has_selection_single { } {
+	variable db
+	set diagram_id [ editor_state $db current_dia ]
+	if { $diagram_id == "" } { return 0 }
+
+	set count [ get_selected_count $diagram_id ]
+	return [ expr { $count == 1 } ]
 }
 
 proc dia_properties { } {
@@ -3955,10 +3982,8 @@ proc get_colorful_items { } {
 	if { $diagram_id == "" } { return {} }
 	
 	set items [ $db eval {
-		select item_id
-		from items
-		where diagram_id = :diagram_id
-		and selected = 1
+		select item_id from items
+		where diagram_id = :diagram_id and selected = 1
 		and type not in ('vertical', 'horizontal', 'parallel')
 	} ]
 	
