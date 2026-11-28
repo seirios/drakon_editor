@@ -1395,6 +1395,7 @@ proc move_with_keys { window key shift } {
 	begin_transaction keymove
 
 	if { $shift } {
+		# SMART editing mode
 		set selected [ get_selected_items $diagram_id ]
 		set item_id [ lindex $selected 0 ]
 		lassign [ $db eval {
@@ -1453,7 +1454,7 @@ proc select_with_keys { window key shift } {
 				order by y desc limit 1
 			} ]
 			if { $next_item == "" } {
-				# Closest above
+				# Otherwise, closest above
 				set next_item [ $db onecolumn {
 					select item_id from items
 					where diagram_id = :diagram_id
@@ -1475,7 +1476,7 @@ proc select_with_keys { window key shift } {
 				order by y asc limit 1
 			} ]
 			if { $next_item == "" } {
-				# Closest below
+				# Otherwise, closest below
 				set next_item [ $db onecolumn {
 					select item_id from items
 					where diagram_id = :diagram_id
@@ -1497,7 +1498,7 @@ proc select_with_keys { window key shift } {
 				order by x desc limit 1
 			} ]
 			if { $next_item == "" } {
-				# Closest to the left
+				# Otherwise, closest to the left
 				set next_item [ $db onecolumn {
 					select item_id from items
 					where diagram_id = :diagram_id
@@ -1519,7 +1520,7 @@ proc select_with_keys { window key shift } {
 				order by x asc limit 1
 			} ]
 			if { $next_item == "" } {
-				# Closest to the right
+				# Otherwise, closest to the right
 				set next_item [ $db onecolumn {
 					select item_id from items
 					where diagram_id = :diagram_id
@@ -1532,7 +1533,19 @@ proc select_with_keys { window key shift } {
 	}
 
 	if { $next_item != "" } {
-		switch_to_item $next_item [ expr { ! $shift } ]
+		if { $shift } {
+			# Select without changing view
+			switch_to_item $next_item 0
+		} else {
+			# Select and center
+			switch_to_item $next_item 1
+			# Set origin for new items
+			lassign [ $db eval {
+				select x + w, y + h from items
+				where item_id = :next_item
+			} ] cx cy
+			insp::remember $cx $cy
+		}
 	}
 
 	mw::clear_status
