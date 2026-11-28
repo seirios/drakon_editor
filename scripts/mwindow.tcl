@@ -1439,13 +1439,13 @@ proc canvas_alt_key_press { window k n code s } {
 
 	array set codes [ ui::key_codes ]
 	if { $code == $codes(Up) } {
-		mwc::move_with_keys up $shift
+		mwc::select_with_keys $window up ${shift}
 	} elseif { $code == $codes(Down) } {
-		mwc::move_with_keys down $shift
+		mwc::select_with_keys $window down ${shift}
 	} elseif { $code == $codes(Left) } {
-		mwc::move_with_keys left $shift
+		mwc::select_with_keys $window left ${shift}
 	} elseif { $code == $codes(Right) } {
-		mwc::move_with_keys right $shift
+		mwc::select_with_keys $window right ${shift}
 	}
 }
 
@@ -1493,13 +1493,13 @@ proc canvas_shift_key_press { window k n code } {
 		mwc::change_text_selected 1
 	} else {
 		if { $code == $codes(Up) } {
-			mwc::select_with_keys $window up 1
+			mwc::move_with_keys $window up 1
 		} elseif { $code == $codes(Down) } {
-			mwc::select_with_keys $window down 1
+			mwc::move_with_keys $window down 1
 		} elseif { $code == $codes(Left) } {
-			mwc::select_with_keys $window left 1
+			mwc::move_with_keys $window left 1
 		} elseif { $code == $codes(Right) } {
-			mwc::select_with_keys $window right 1
+			mwc::move_with_keys $window right 1
 		}
 	}
 }
@@ -1572,13 +1572,13 @@ proc canvas_key_press { window k n code } {
 		mwc::change_text_selected 0
 	} else {
 		if { $code == $codes(Up) } {
-			mwc::select_with_keys $window up 0
+			mwc::move_with_keys $window up 0
 		} elseif { $code == $codes(Down) } {
-			mwc::select_with_keys $window down 0
+			mwc::move_with_keys $window down 0
 		} elseif { $code == $codes(Left) } {
-			mwc::select_with_keys $window left 0
+			mwc::move_with_keys $window left 0
 		} elseif { $code == $codes(Right) } {
-			mwc::select_with_keys $window right 0
+			mwc::move_with_keys $window right 0
 		} elseif { $code == $codes(F2) } {
 			mwc::request_text_change 1
 		} elseif { $code == $codes(F3) } {

@@ -1348,12 +1348,10 @@ proc rdown { cx cy } {
 	}
 }
 
-proc move_with_keys { key shift } {
+proc move_with_keys { window key shift } {
 	variable db
 	set diagram_id [ editor_state $db current_dia ]
 	if { $diagram_id == "" } { return }
-
-	if { ! [ has_selection ] } { return }
 
 	set snap_size [ get_snap_size ]
 
@@ -1374,6 +1372,24 @@ proc move_with_keys { key shift } {
 			set dx $snap_size
 			set dy 0
 		}
+	}
+
+	# Scroll if no selection
+	if { ! [ has_selection ] } {
+		set x0 [ $window canvasx 0 ]
+		set y0 [ $window canvasy 0 ]
+		set factor 5
+		if { $shift } {
+			set factor [ expr { 4 * $factor } ]
+		}
+		set dx [ expr { $factor * $dx } ]
+		set dy [ expr { $factor * $dy } ]
+		set x1 [ expr { $x0 + $dx } ]
+		set y1 [ expr { $y0 + $dy } ]
+		$window xview scroll $dx units
+		$window yview scroll $dy units
+		mwc::scroll $x1 $y1
+		return
 	}
 
 	begin_transaction keymove
@@ -1405,51 +1421,12 @@ proc select_with_keys { window key shift } {
 	set diagram_id [ editor_state $db current_dia ]
 	if { $diagram_id == "" } { return }
 
-	# Scroll if no selection
-	if { ! [ has_selection ] } {
-		set snap_size [ get_snap_size ]
-
-		switch $key {
-			"up" {
-				set dx 0
-				set dy -$snap_size
-			}
-			"down" {
-				set dx 0
-				set dy $snap_size
-			}
-			"left" {
-				set dx -$snap_size
-				set dy 0
-			}
-			"right" {
-				set dx $snap_size
-				set dy 0
-			}
-		}
-
-		set factor 5
-		if { $shift } {
-			set factor [ expr { 4 * $factor } ]
-		}
-
-		set x0 [ $window canvasx 0 ]
-		set y0 [ $window canvasy 0 ]
-		set dx [ expr { $factor * $dx } ]
-		set dy [ expr { $factor * $dy } ]
-		set x1 [ expr { $x0 + $dx } ]
-		set y1 [ expr { $y0 + $dy } ]
-		$window xview scroll $dx units
-		$window yview scroll $dy units
-		mwc::scroll $x1 $y1
-		return
-	} elseif { ! [ has_selection_single ] } {
+	if { ! [ has_selection_single ] } {
 		mw::set_status [ mc2 "More than one item selected." ]
 		return
 	}
 
 	set selected [ get_selected_items $diagram_id ]
-
 	set item_id [ lindex $selected 0 ]
 
 	lassign [ $db eval {
