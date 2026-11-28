@@ -1,6 +1,16 @@
 namespace eval graph {
 
+variable inactivating_types { action shelf output insertion }
 
+proc get_inactivating_types { } {
+	variable inactivating_types
+	return $inactivating_types
+}
+
+proc can_be_deactivated { type } {
+	variable inactivating_types
+	return [ contains $inactivating_types $type ]
+}
 
 proc copy_from { db } {
 	graph2::reset.counter
@@ -14,12 +24,12 @@ proc copy_from { db } {
 			set message [ mc2 "Elements of type '\$type' are not supported by the verifier yet." ]
 			p.error $diagram_id $item_id $message
 		}
+		# Handled as actions, so far
 		if { $type == "input" || $type == "process" } {
 			set type "action"
 		}
 		# Inactive icons are considered empty
-		if { $b == 1 && ( $type == "action" || $type == "shelf" ||
-				  $type == "output" || $type == "insertion" ) } {
+		if { $b == 1 && [ can_be_deactivated $type ] } {
 			set text ""
 			set text2 ""
 		}

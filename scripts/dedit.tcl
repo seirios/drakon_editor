@@ -264,7 +264,17 @@ proc tab_smart_jump { dir } {
 	
 	if { ![ state is idle ] } { return }
 
-	if { ![ has_selection_single ] } {
+	if { ![ has_selection ] } {
+		lassign [ find_diagram_rect $db $diagram_id ] left top width height
+		set home_item [ $db onecolumn {
+			select item_id from items
+			where diagram_id = :diagram_id
+			order by pow(((x - w) - :left),2) + pow(((y - h) - :top),2)
+			limit 1
+		} ]
+		switch_to_item $home_item
+		return
+	} elseif { ![ has_selection_single ] } {
 		mw::set_status [ mc2 "More than one item selected." ]
 		return
 	}
@@ -375,21 +385,21 @@ proc swap_selected { } {
 
 	set item_ids [ get_selected_items $diagram_id ]
 
-	# Swap multiple items only if all actions or shelves
-	if { $count > 1 } {
+	if { [ llength $item_ids ] == 1 } {
+		mwc::swap_item [ lindex $item_ids 0 ]
+	} else {
 		set item_types [ $db eval { select type from items
 			where diagram_id = :diagram_id and selected = 1 } ]
-		set type [ lindex $item_types 0 ]
-		if { $type != "action" && $type != "shelf" } { return }
-		set actions [ lsearch -exact -all $item_types "action" ]
-		set shelves [ lsearch -exact -all $item_types "shelf" ]
-		if { [ llength $actions ] + [ llength $shelves ] == [ llength $item_types ] } {
-			foreach id $item_ids {
-				mwc::swap_item $id
-			}
+		# Swap multiple items only if they all can be deactivated
+		set totlen 0
+		foreach type [ graph::get_inactivating_types ] {
+			set items [ lsearch -exact -all $item_types $type ]
+			incr totlen [ llength $items ]
 		}
-	} else {
-		mwc::swap_item [ lindex $item_ids 0 ]
+		if { $totlen != [ llength $item_types ] } { return }
+		foreach id $item_ids {
+			mwc::swap_item $id
+		}
 	}
 }
 
@@ -1387,7 +1397,10 @@ proc select_with_keys { key } {
 	set diagram_id [ editor_state $db current_dia ]
 	if { $diagram_id == "" } { return }
 
-	if { ! [ has_selection_single ] } { return }
+	if { ! [ has_selection_single ] } {
+		mw::set_status [ mc2 "More than one item selected." ]
+		return
+	}
 
 	set selected [ get_selected_items $diagram_id ]
 
@@ -1403,52 +1416,59 @@ proc select_with_keys { key } {
 	set y0 [ expr { $y - $h } ]
 	set y1 [ expr { $y + $h } ]
 
-	puts $key
+	set next_item ""
 	switch $key {
 		"up" {
+			set next_item [ $db onecolumn {
+				select item_id from items
+				where diagram_id = :diagram_id
+					and type not in ('vertical', 'horizontal', 'parallel', 'arrow')
+					and y + h <= :y0 and ((x - w <= :x0 and x + w >= :x0) or
+							      (x - w <= :x1 and x + w >= :x1) or
+							      (x - w >= :x0 and x + w <= :x1))
+				order by y desc limit 1
+			} ]
 		}
 		"down" {
+			set next_item [ $db onecolumn {
+				select item_id from items
+				where diagram_id = :diagram_id
+					and type not in ('vertical', 'horizontal', 'parallel', 'arrow')
+					and y - h >= :y1 and ((x - w <= :x0 and x + w >= :x0) or
+							      (x - w <= :x1 and x + w >= :x1) or
+							      (x - w >= :x0 and x + w <= :x1))
+				order by y asc limit 1
+			} ]
 		}
 		"left" {
+			set next_item [ $db onecolumn {
+				select item_id from items
+				where diagram_id = :diagram_id
+					and type not in ('vertical', 'horizontal', 'parallel', 'arrow')
+					and x + w <= :x0 and ((y - h <= :y0 and y + h >= :y0) or
+							      (y - h <= :y1 and y + h >= :y1) or
+							      (y - h >= :y0 and y + h <= :y1))
+				order by x desc limit 1
+			} ]
 		}
 		"right" {
-			set x_next [ $db onecolumn {
-				select x - w from items
+			set next_item [ $db onecolumn {
+				select item_id from items
 				where diagram_id = :diagram_id
-					and x - w > :x1
 					and type not in ('vertical', 'horizontal', 'parallel', 'arrow')
-				order by x - w limit 1
+					and x - w >= :x1 and ((y - h <= :y0 and y + h >= :y0) or
+							      (y - h <= :y1 and y + h >= :y1) or
+							      (y - h >= :y0 and y + h <= :y1))
+				order by x asc limit 1
 			} ]
-			if { $x_next == "" } { return }
-			set next_items [ $db eval {
-				select item_id
-				from items
-				where diagram_id = :diagram_id
-					and x - w = :x_next
-			} ]
-			set y_next [ $db eval {
-				select y - h
-				from items
-				where diagram_id = :diagram_id
-					and x - w = :x_next
-			} ]
-			set n_next [ llength $next_items ]
-			set dmin [ expr 10000000.0 ]
-			set imin $n_next
-			set i 0
-			while { $i < $n_next } {
-				set y [ lindex $y_next $i ]
-				set d [ expr { abs($y - $y0) } ]
-				if { $d < $dmin } {
-					set dmin $d
-					set imin $i
-				}
-				incr i
-			}
-			set next_item [ lindex $next_items $imin ]
-			switch_to_item $next_item
 		}
 	}
+
+	if { $next_item != "" } {
+		switch_to_item $next_item
+	}
+
+	mw::clear_status
 }
 
 proc select_all { } {
@@ -3633,9 +3653,8 @@ proc switch_to_item { item_id } {
 	variable db
 	set new_diagram_id [ mod::one $db diagram_id items item_id $item_id ]
 
-
 	switch_to_dia $new_diagram_id
-	
+
 	begin_transaction switch_to_item
 
 	push_unselect_items $new_diagram_id
