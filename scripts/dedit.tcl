@@ -266,13 +266,21 @@ proc tab_smart_jump { dir } {
 
 	if { ![ has_selection ] } {
 		lassign [ find_diagram_rect $db $diagram_id ] left top width height
-		set home_item [ $db onecolumn {
+		if { $dir > 0 } {
+			set x0 $left
+			set y0 $top
+		} else {
+			set x0 [ expr { $left + $width } ]
+			set y0 [ expr { $top + $height } ]
+		}
+		set jump_item [ $db onecolumn {
 			select item_id from items
 			where diagram_id = :diagram_id
-			order by pow(((x - w) - :left),2) + pow(((y - h) - :top),2)
+				and type not in ('vertical', 'horizontal', 'parallel', 'arrow')
+			order by pow(((x - w) - :x0),2) + pow(((y - h) - :y0),2)
 			limit 1
 		} ]
-		switch_to_item $home_item
+		switch_to_item $jump_item 1
 		return
 	} elseif { ![ has_selection_single ] } {
 		mw::set_status [ mc2 "More than one item selected." ]
@@ -348,7 +356,7 @@ proc tab_smart_jump { dir } {
 	}
 
 	if { $next_item != "" } {
-		switch_to_item $next_item
+		switch_to_item $next_item 1
 	}
 
 	mw::clear_status
@@ -1392,12 +1400,50 @@ proc move_with_keys { key shift } {
 	commit_transaction keymove
 }
 
-proc select_with_keys { key } {
+proc select_with_keys { window key shift } {
 	variable db
 	set diagram_id [ editor_state $db current_dia ]
 	if { $diagram_id == "" } { return }
 
-	if { ! [ has_selection_single ] } {
+	# Scroll if no selection
+	if { ! [ has_selection ] } {
+		set snap_size [ get_snap_size ]
+
+		switch $key {
+			"up" {
+				set dx 0
+				set dy -$snap_size
+			}
+			"down" {
+				set dx 0
+				set dy $snap_size
+			}
+			"left" {
+				set dx -$snap_size
+				set dy 0
+			}
+			"right" {
+				set dx $snap_size
+				set dy 0
+			}
+		}
+
+		set factor 5
+		if { $shift } {
+			set factor [ expr { 4 * $factor } ]
+		}
+
+		set x0 [ $window canvasx 0 ]
+		set y0 [ $window canvasy 0 ]
+		set dx [ expr { $factor * $dx } ]
+		set dy [ expr { $factor * $dy } ]
+		set x1 [ expr { $x0 + $dx } ]
+		set y1 [ expr { $y0 + $dy } ]
+		$window xview scroll $dx units
+		$window yview scroll $dy units
+		mwc::scroll $x1 $y1
+		return
+	} elseif { ! [ has_selection_single ] } {
 		mw::set_status [ mc2 "More than one item selected." ]
 		return
 	}
@@ -1419,6 +1465,7 @@ proc select_with_keys { key } {
 	set next_item ""
 	switch $key {
 		"up" {
+			# Above and within our shadow
 			set next_item [ $db onecolumn {
 				select item_id from items
 				where diagram_id = :diagram_id
@@ -1428,8 +1475,19 @@ proc select_with_keys { key } {
 							      (x - w >= :x0 and x + w <= :x1))
 				order by y desc limit 1
 			} ]
+			if { $next_item == "" } {
+				# Closest above
+				set next_item [ $db onecolumn {
+					select item_id from items
+					where diagram_id = :diagram_id
+						and type not in ('vertical', 'horizontal', 'parallel', 'arrow')
+						and y < :y
+					order by abs(y - :y), abs(x - :x) limit 1
+				} ]
+			}
 		}
 		"down" {
+			# Below and within our shadow
 			set next_item [ $db onecolumn {
 				select item_id from items
 				where diagram_id = :diagram_id
@@ -1439,8 +1497,19 @@ proc select_with_keys { key } {
 							      (x - w >= :x0 and x + w <= :x1))
 				order by y asc limit 1
 			} ]
+			if { $next_item == "" } {
+				# Closest below
+				set next_item [ $db onecolumn {
+					select item_id from items
+					where diagram_id = :diagram_id
+						and type not in ('vertical', 'horizontal', 'parallel', 'arrow')
+						and y > :y
+					order by abs(y - :y), abs(x - :x) limit 1
+				} ]
+			}
 		}
 		"left" {
+			# To the left and within our shadow
 			set next_item [ $db onecolumn {
 				select item_id from items
 				where diagram_id = :diagram_id
@@ -1450,8 +1519,19 @@ proc select_with_keys { key } {
 							      (y - h >= :y0 and y + h <= :y1))
 				order by x desc limit 1
 			} ]
+			if { $next_item == "" } {
+				# Closest to the left
+				set next_item [ $db onecolumn {
+					select item_id from items
+					where diagram_id = :diagram_id
+						and type not in ('vertical', 'horizontal', 'parallel', 'arrow')
+						and x < :x
+					order by abs(y - :y), abs(x - :x) limit 1
+				} ]
+			}
 		}
 		"right" {
+			# To the right and within our shadow
 			set next_item [ $db onecolumn {
 				select item_id from items
 				where diagram_id = :diagram_id
@@ -1461,11 +1541,21 @@ proc select_with_keys { key } {
 							      (y - h >= :y0 and y + h <= :y1))
 				order by x asc limit 1
 			} ]
+			if { $next_item == "" } {
+				# Closest to the right
+				set next_item [ $db onecolumn {
+					select item_id from items
+					where diagram_id = :diagram_id
+						and type not in ('vertical', 'horizontal', 'parallel', 'arrow')
+						and x > :x
+					order by abs(y - :y), abs(x - :x) limit 1
+				} ]
+			}
 		}
 	}
 
 	if { $next_item != "" } {
-		switch_to_item $next_item
+		switch_to_item $next_item [ expr { ! $shift } ]
 	}
 
 	mw::clear_status
@@ -3649,7 +3739,7 @@ proc center_on { item_id y_factor } {
 	}
 }
 
-proc switch_to_item { item_id } {
+proc switch_to_item { item_id do_center } {
 	variable db
 	set new_diagram_id [ mod::one $db diagram_id items item_id $item_id ]
 
@@ -3659,9 +3749,11 @@ proc switch_to_item { item_id } {
 
 	push_unselect_items $new_diagram_id
 	push_select_item $item_id
-	center_on $item_id 0.3
+	if { $do_center } {
+		center_on $item_id 0.3
+		save_view
+	}
 
-	save_view
 	commit_transaction switch_to_item
 	state reset
 }

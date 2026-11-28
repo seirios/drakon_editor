@@ -535,7 +535,7 @@ proc create_ui { } {
 
 	bind $canvas <KeyPress> { mw::canvas_key_press %W %K %N %k }
 	bind $canvas <Shift-KeyPress> { mw::canvas_shift_key_press %W %K %N %k }
-	bind $canvas <Alt-KeyPress> { mw::canvas_alt_key_press %W %K %N %k }
+	bind $canvas <Alt-KeyPress> { mw::canvas_alt_key_press %W %K %N %k %s }
 	bind $canvas <Double-ButtonPress-1> { mw::canvas_dclick %W %x %y }
 	if { [ ui::is_mac ] } {
 		bind $canvas <Double-ButtonPress-3> { mw::zoom_see_all }
@@ -543,9 +543,11 @@ proc create_ui { } {
 		bind $canvas <Double-ButtonPress-2> { mw::zoom_see_all }	
 	}
 	bind $canvas <Leave> insp::reset
-	bind $canvas <KeyPress-Tab> { mwc::tab_smart_jump 1; break }
-	bind $canvas <Shift-KeyPress-Tab> { mwc::tab_smart_jump -1; break }
-	bind $canvas <<PrevWindow>> { mwc::tab_smart_jump -1; break }
+
+        # Handle tab event, consume or not
+	bind $canvas <KeyPress-Tab> { if { [ mw::canvas_tab_handler %W %K %N %s 1 ] } { break } }
+	bind $canvas <Shift-KeyPress-Tab> { if { [ mw::canvas_tab_handler %W %K %N %s -1 ] } { break } }
+	bind $canvas <<PrevWindow>> { if { [ mw::canvas_tab_handler %W %K %N %s -1 ] } { break } }
 	
 	bind_shortcut . mw::shortcut_handler
 	bind_shortcut $canvas mw::canvas_shortcut_handler
@@ -789,7 +791,7 @@ proc show_match { } {
 		set match_object [ search::get_match_object ]
 		lassign $match_object type id
 		if { $type == "icon" || $type == "secondary" } {
-			mwc::switch_to_item $id
+			mwc::switch_to_item $id 1
 		} elseif { $type == "diagram_name" || $type == "diagram_description" } {
 			mwc::switch_to_dia $id
 		}
@@ -962,8 +964,6 @@ proc shortcut_handler { window code key } {
 }
 
 proc canvas_shortcut_handler { window code key } {
-
-
 	set key [ string tolower $key ]
 	array set codes [ ui::key_codes ]
 	if { $code == $codes(a) || $key == "a" } {
@@ -974,6 +974,21 @@ proc canvas_shortcut_handler { window code key } {
 		mwc::copy foo
 	} elseif { $code == $codes(v) || $key == "v"  } {
 		mwc::paste foo
+	}
+}
+
+proc canvas_tab_handler { window k n s incr } {
+	set shift [ shift_pressed $s ]
+	if { $shift } {
+		set ctrl [ control_pressed [ expr { $s - 1 } ] ]
+	} else {
+		set ctrl [ control_pressed $s ]
+	}
+	if { $ctrl } {
+		return 0
+	} else {
+		mwc::tab_smart_jump $incr
+		return 1
 	}
 }
 
@@ -1419,16 +1434,18 @@ proc canvas_rect { } {
 	return [ list $left $top $right $bottom ]
 }
 
-proc canvas_alt_key_press { window k n code } {
+proc canvas_alt_key_press { window k n code s } {
+	set shift [ shift_pressed $s ]
+
 	array set codes [ ui::key_codes ]
 	if { $code == $codes(Up) } {
-		mwc::select_with_keys up
+		mwc::move_with_keys up $shift
 	} elseif { $code == $codes(Down) } {
-		mwc::select_with_keys down
+		mwc::move_with_keys down $shift
 	} elseif { $code == $codes(Left) } {
-		mwc::select_with_keys left
+		mwc::move_with_keys left $shift
 	} elseif { $code == $codes(Right) } {
-		mwc::select_with_keys right
+		mwc::move_with_keys right $shift
 	}
 }
 
@@ -1476,13 +1493,13 @@ proc canvas_shift_key_press { window k n code } {
 		mwc::change_text_selected 1
 	} else {
 		if { $code == $codes(Up) } {
-			mwc::move_with_keys up 1
+			mwc::select_with_keys $window up 1
 		} elseif { $code == $codes(Down) } {
-			mwc::move_with_keys down 1
+			mwc::select_with_keys $window down 1
 		} elseif { $code == $codes(Left) } {
-			mwc::move_with_keys left 1
+			mwc::select_with_keys $window left 1
 		} elseif { $code == $codes(Right) } {
-			mwc::move_with_keys right 1
+			mwc::select_with_keys $window right 1
 		}
 	}
 }
@@ -1555,13 +1572,13 @@ proc canvas_key_press { window k n code } {
 		mwc::change_text_selected 0
 	} else {
 		if { $code == $codes(Up) } {
-			mwc::move_with_keys up 0
+			mwc::select_with_keys $window up 0
 		} elseif { $code == $codes(Down) } {
-			mwc::move_with_keys down 0
+			mwc::select_with_keys $window down 0
 		} elseif { $code == $codes(Left) } {
-			mwc::move_with_keys left 0
+			mwc::select_with_keys $window left 0
 		} elseif { $code == $codes(Right) } {
-			mwc::move_with_keys right 0
+			mwc::select_with_keys $window right 0
 		} elseif { $code == $codes(F2) } {
 			mwc::request_text_change 1
 		} elseif { $code == $codes(F3) } {
@@ -1792,7 +1809,7 @@ proc canvas_wheel { window delta s } {
 	variable canvas_height
 	set amount [ normalize_wheel $delta ]
 	set x0 [ $window canvasx 0 ]
-	set y0 [ $window canvasy 0 ]	
+	set y0 [ $window canvasy 0 ]
 
 	if { [ shift_pressed $s ] } {
 		set x1 [ expr { $x0 + $amount } ]
@@ -1885,7 +1902,7 @@ proc error_selected { listbox } {
 		mwc::switch_to_dia $diagram_id
 	} else {
 		set item [ lindex $items 0 ]
-		mwc::switch_to_item $item
+		mwc::switch_to_item $item 1
 	}
 }
 

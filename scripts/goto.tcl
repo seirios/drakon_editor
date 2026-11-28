@@ -93,7 +93,7 @@ proc goto_branch_callback { branch_name } {
 	
 	set item_id $diagrams($branch_name)
 	
-	mwc::switch_to_item $item_id
+	mwc::switch_to_item $item_id 1
 	return ""
 }
 
