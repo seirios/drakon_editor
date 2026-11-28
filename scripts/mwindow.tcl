@@ -535,7 +535,7 @@ proc create_ui { } {
 
 	bind $canvas <KeyPress> { mw::canvas_key_press %W %K %N %k }
 	bind $canvas <Shift-KeyPress> { mw::canvas_shift_key_press %W %K %N %k }
-	bind $canvas <Alt-KeyPress> { }
+	bind $canvas <Alt-KeyPress> { mw::canvas_alt_key_press %W %K %N %k }
 	bind $canvas <Double-ButtonPress-1> { mw::canvas_dclick %W %x %y }
 	if { [ ui::is_mac ] } {
 		bind $canvas <Double-ButtonPress-3> { mw::zoom_see_all }
@@ -1417,6 +1417,19 @@ proc canvas_rect { } {
 	set bottom [ expr { $top + $canvas_height } ]
 	
 	return [ list $left $top $right $bottom ]
+}
+
+proc canvas_alt_key_press { window k n code } {
+	array set codes [ ui::key_codes ]
+	if { $code == $codes(Up) } {
+		mwc::select_with_keys up
+	} elseif { $code == $codes(Down) } {
+		mwc::select_with_keys down
+	} elseif { $code == $codes(Left) } {
+		mwc::select_with_keys left
+	} elseif { $code == $codes(Right) } {
+		mwc::select_with_keys right
+	}
 }
 
 proc canvas_shift_key_press { window k n code } {

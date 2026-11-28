@@ -290,8 +290,8 @@ proc tab_smart_jump { dir } {
 	switch $type {
 		"case" {
 			lassign [ $gdb eval {
-				select src, ordinal from links where dst = :vertex_id } ] \
-				select ord
+				select src, ordinal from links where dst = :vertex_id
+			} ] select ord
 			set ordlen [ $gdb eval {
 				select count(*) from links where src = :select } ]
 			# ordinals are 1-based
@@ -1149,7 +1149,8 @@ proc p.find_pointing_to { item_id } {
 	lassign [ $db eval {
 		select text, diagram_id
 		from items
-		where item_id = :item_id } ] text diagram_id
+		where item_id = :item_id
+	} ] text diagram_id
 	return [ $db eval {
 		select item_id
 		from items
@@ -1361,11 +1362,11 @@ proc move_with_keys { key shift } {
 
 	if { $shift } {
 		set selected [ get_selected_items $diagram_id ]
-		set first [ lindex $selected 0 ]
+		set item_id [ lindex $selected 0 ]
 		lassign [ $db eval {
 			select x, y + h
-			from items where item_id = :first
-		}] cx cy
+			from items where item_id = :item_id
+		} ] cx cy
 		alt::start $selected $cx $cy
 		alt::mouse_move $dx $dy
 		start_action  [ mc2 "Move and change items" ]
@@ -1379,6 +1380,75 @@ proc move_with_keys { key shift } {
 
 	mv::fill $diagram_id
 	commit_transaction keymove
+}
+
+proc select_with_keys { key } {
+	variable db
+	set diagram_id [ editor_state $db current_dia ]
+	if { $diagram_id == "" } { return }
+
+	if { ! [ has_selection_single ] } { return }
+
+	set selected [ get_selected_items $diagram_id ]
+
+	set item_id [ lindex $selected 0 ]
+
+	lassign [ $db eval {
+		select x, y, w, h from items
+		where item_id = :item_id
+	} ] x y w h
+
+	set x0 [ expr { $x - $w } ]
+	set x1 [ expr { $x + $w } ]
+	set y0 [ expr { $y - $h } ]
+	set y1 [ expr { $y + $h } ]
+
+	puts $key
+	switch $key {
+		"up" {
+		}
+		"down" {
+		}
+		"left" {
+		}
+		"right" {
+			set x_next [ $db onecolumn {
+				select x - w from items
+				where diagram_id = :diagram_id
+					and x - w > :x1
+					and type not in ('vertical', 'horizontal', 'parallel', 'arrow')
+				order by x - w limit 1
+			} ]
+			if { $x_next == "" } { return }
+			set next_items [ $db eval {
+				select item_id
+				from items
+				where diagram_id = :diagram_id
+					and x - w = :x_next
+			} ]
+			set y_next [ $db eval {
+				select y - h
+				from items
+				where diagram_id = :diagram_id
+					and x - w = :x_next
+			} ]
+			set n_next [ llength $next_items ]
+			set dmin [ expr 10000000.0 ]
+			set imin $n_next
+			set i 0
+			while { $i < $n_next } {
+				set y [ lindex $y_next $i ]
+				set d [ expr { abs($y - $y0) } ]
+				if { $d < $dmin } {
+					set dmin $d
+					set imin $i
+				}
+				incr i
+			}
+			set next_item [ lindex $next_items $imin ]
+			switch_to_item $next_item
+		}
+	}
 }
 
 proc select_all { } {
@@ -1718,8 +1788,9 @@ proc add_tree_node { node_id } {
 	lassign [ $db eval {
 		select type, name, diagram_id, parent
 		from tree_nodes
-		where node_id = :node_id } ] type name diagram_id parent
-		
+		where node_id = :node_id
+	} ] type name diagram_id parent
+
 	if { [ is_diagram $type ] } {
 		set name [ $db onecolumn { select name from diagrams where diagram_id = :diagram_id } ]
 	}
@@ -2029,8 +2100,9 @@ proc get_parent_node { sibling } {
 	}
 	
 	set selected [ lindex $selection 0 ]
-	lassign [ $db eval {
-		select type, parent from tree_nodes where node_id = :selected } ] type parent
+	lassign [ $db eval { select type, parent
+		from tree_nodes where node_id = :selected
+	} ] type parent
 	if { [ is_diagram $type ] || $sibling } {
 		set parent_node $parent
 	} else {
@@ -3484,8 +3556,9 @@ proc get_selected_from_tree { } {
 	set selection [ mtree::get_selection ]
 	if { [ llength $selection ] != 1 } { return "" }
 	set selected_node [ lindex $selection 0 ]
-	lassign [ $db eval {
-		select type, diagram_id from tree_nodes where node_id = :selected_node } ] type diagram_id
+	lassign [ $db eval { select type, diagram_id
+		from tree_nodes where node_id = :selected_node
+	} ] type diagram_id
 	if { $type == "folder" } {
 		return ""
 	} elseif { [ is_diagram $type ] } {
@@ -3984,7 +4057,7 @@ proc get_colorful_items { } {
 	set items [ $db eval {
 		select item_id from items
 		where diagram_id = :diagram_id and selected = 1
-		and type not in ('vertical', 'horizontal', 'parallel')
+		and type not in ('vertical', 'horizontal', 'parallel', 'arrow')
 	} ]
 	
 	return $items
